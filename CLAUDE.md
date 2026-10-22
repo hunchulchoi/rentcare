@@ -39,8 +39,11 @@ cd car && ./gradlew :core:test :app:assembleDebug
 cd web && pnpm test && pnpm check && pnpm build
 pnpm db:migrate && pnpm dev --host 127.0.0.1 --port 5173   # emulator reaches it at 10.0.2.2:5173
 
-# Virtual Console (change SOC / telltales / tire pressure)
-adb forward tcp:8088 tcp:8088   # http://127.0.0.1:8088/
+# Virtual Console (change SOC / telltales / tire pressure / gear)
+scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
+
+# End-to-end scenarios (emulator + pnpm dev + migrated DB). Run before every demo/release.
+scripts/e2e.sh                  # wipes app data on the emulator, 10 checks
 ```
 
 ## Pleos facts (verified 2026-10-22, emulator 2.1.0)
