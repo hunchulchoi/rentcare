@@ -120,11 +120,41 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val probeRunning: StateFlow<Boolean> = _probeRunning
 
     private var statusJob: Job? = null
+    private var liveJob: Job? = null
 
     init {
         deps.vehicle.start()
         deps.navi.start()
         if (_report.value.received != null) startStatusPolling()
+        viewModelScope.launch {
+            // Re-subscribe when the rental (and so the powertrain) changes.
+            _rental.collect { r -> startLiveLevel(r?.powertrain) }
+        }
+    }
+
+    /**
+     * RENTCARE-6: keep the level fresh from SDK change events, so the verdict updates
+     * while the user charges/refuels without pressing refresh.
+     */
+    private fun startLiveLevel(powertrain: Powertrain?) {
+        liveJob?.cancel()
+        if (powertrain == null) return
+        liveJob = viewModelScope.launch {
+            while (isActive) {
+                val flow = if (powertrain == Powertrain.EV) deps.vehicle.socUpdates() else deps.vehicle.fuelUpdates()
+                runCatching {
+                    flow.collect { v ->
+                        if (v == null) return@collect
+                        val reading = Reading(v, System.currentTimeMillis())
+                        _ret.update {
+                            it.copy(state = if (powertrain == Powertrain.EV) it.state.copy(soc = reading) else it.state.copy(fuelPercent = reading))
+                        }
+                        recompute()
+                    }
+                }
+                delay(5_000) // listener failed (unsupported / service restart): retry later
+            }
+        }
     }
 
     val language: String get() = _rental.value?.language ?: "ko"
@@ -176,7 +206,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     VehicleState(soc = soc?.let { Reading(it, now) }, batteryCapacityKwh = cap?.let { it / 1000.0 }?.takeIf { it > 0 })
                 }
             }
-            val (trip, tripError) = readTrip(r)
+            val (rawTrip, tripError) = readTrip(r)
+            val trip = rawTrip?.copy(socAtRequest = state.soc?.value)
             _telltales.value = runCatching { deps.vehicle.activeTelltales() }.getOrDefault(emptyList())
             _ret.update { it.copy(state = state, trip = trip, tripError = tripError, readError = readError, loading = false) }
             recompute()

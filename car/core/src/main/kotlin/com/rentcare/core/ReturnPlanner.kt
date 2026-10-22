@@ -22,6 +22,8 @@ data class TripEstimate(
     val driveSeconds: Int,
     val estimatedSocAtDest: Int?,
     val readAtMillis: Long,
+    /** SOC when the trip was requested. Lets us shift the estimate after charging without a new request. */
+    val socAtRequest: Int? = null,
 )
 
 /** Vehicle-specific consumption model. Only use with verified numbers for the model. */
@@ -203,7 +205,11 @@ class ReturnPlanner(private val config: PlannerConfig = PlannerConfig()) {
 
         val trip = freshTrip(rawTrip, now)
         reasons += tripReasons(rawTrip, now)
-        val arrival = trip?.estimatedSocAtDest?.takeIf { it in 0..100 }
+        val arrival = trip?.estimatedSocAtDest?.takeIf { it in 0..100 }?.let { est ->
+            // Consumption to the destination is the same; only the starting SOC changed.
+            val base = trip.socAtRequest ?: return@let est
+            (est + (current - base)).coerceIn(0, 100)
+        }
         if (trip != null && arrival == null) reasons += Reason.ARRIVAL_SOC_UNAVAILABLE
 
         if (arrival == null) {

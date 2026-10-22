@@ -133,6 +133,18 @@ class ReturnPlannerTest {
         assertTrue(RentalError.RULE_POWERTRAIN_MISMATCH in r.validate())
     }
 
+    @Test fun `ev - charged after trip request - arrival shifted by soc change`() {
+        val r = rental(Powertrain.EV, ReturnRule.EvSameAsPickup(pickupSoc = 80))
+        // trip requested at SOC 60 -> arrival 40; now charged to 95 -> arrival 75
+        val t = TripEstimate(100_000, 3600, estimatedSocAtDest = 40, readAtMillis = now, socAtRequest = 60)
+        val a = planner.assess(r, VehicleState(soc = Reading(95, now), batteryCapacityKwh = 77.4), t, now)
+        assertEquals(75, a.projectedArrivalPercent)
+        assertEquals(Verdict.CHARGE, a.verdict)
+        val a2 = planner.assess(r, VehicleState(soc = Reading(100, now), batteryCapacityKwh = 77.4), t, now)
+        assertEquals(80, a2.projectedArrivalPercent)
+        assertEquals(Verdict.NO_ACTION, a2.verdict)
+    }
+
     // ---- Departure ----
 
     @Test fun `departure - drive plus stop plus buffer`() {
