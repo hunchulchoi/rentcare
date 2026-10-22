@@ -78,8 +78,10 @@ scripts/e2e.sh                  # wipes app data on the emulator, 10 checks
 
 ## Secrets
 
-- Infisical `/postgres`: DATABASE_URL, POSTGRES_* (stage.devfor.link). The server has **no TLS yet**:
-  `web/.env` sets `DATABASE_SSL=disable` as a temporary, explicit exception. Remove it once SSL is on.
+- Infisical `/postgres`: DATABASE_URL, POSTGRES_* (stage.devfor.link). TLS 1.3 on (2026-10-23) with a
+  **self-signed** cert: connections are encrypted but the server is not verified. Add the server CA as
+  `DATABASE_SSL_CA` (PEM) in Infisical `/postgres` or switch to a Let's Encrypt cert to get verification.
+- When restarting the web server, kill the old one by PID (check `lsof -iTCP:3000`), not by pattern.
 
 - Infisical (`.env` machine identity) path `/pleos`: Pleos CLIENT_ID / CLIENT_SECRET / CRN / PROJECT_ID.
 - Plane API key: `~/.config/plane/env`. Plane project id: `.env` `PLANE_PROJECT`.

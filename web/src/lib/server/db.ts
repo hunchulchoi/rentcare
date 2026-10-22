@@ -1,7 +1,7 @@
 import postgres from 'postgres';
 import { config } from './config';
 import { sha256Hex } from './crypto';
-import { dbSsl } from './db-ssl';
+import { dbSslOptions } from './db-ssl';
 
 let client: postgres.Sql | undefined;
 
@@ -11,7 +11,7 @@ export function db(): postgres.Sql {
 		client = postgres(config.databaseUrl, {
 			max: 10,
 			onnotice: () => {},
-			ssl: dbSsl(config.databaseUrl, config.databaseSsl)
+			ssl: dbSslOptions(config.databaseUrl, config.databaseSsl, config.databaseSslCa)
 		});
 	}
 	return client;

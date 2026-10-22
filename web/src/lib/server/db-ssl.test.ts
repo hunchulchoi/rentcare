@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dbSsl } from './db-ssl';
+import { dbSsl, dbSslOptions } from './db-ssl';
 
 describe('dbSsl', () => {
 	it('requires TLS for remote hosts by default', () => {
@@ -15,5 +15,11 @@ describe('dbSsl', () => {
 	});
 	it('respects sslmode in the URL', () => {
 		expect(dbSsl('postgres://u:p@db.example/x?sslmode=verify-full', undefined)).toBe('verify-full');
+	});
+	it('verifies the server with a pinned CA when one is given', () => {
+		const pem = '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----';
+		expect(dbSslOptions('postgres://u:p@stage.devfor.link/r', undefined, pem)).toEqual({ ca: pem, rejectUnauthorized: true });
+		expect(dbSslOptions('postgres://u:p@stage.devfor.link/r', undefined, undefined)).toBe('require');
+		expect(dbSslOptions('postgres://u:p@127.0.0.1/r', undefined, pem)).toBe(false);
 	});
 });

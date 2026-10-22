@@ -7,6 +7,10 @@ const optional = (value: string | undefined) => (value && value.trim() !== '' ? 
 
 export const variables = defineEnvVars({
 	DATABASE_URL: { schema: optional, description: 'PostgreSQL connection string' },
+	DATABASE_SSL_CA: {
+		schema: optional,
+		description: 'PEM CA/certificate of the DB server; enables certificate verification'
+	},
 	DATABASE_SSL: {
 		schema: optional,
 		description: 'disable | require | verify-full. Default: require for non-local hosts'

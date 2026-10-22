@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import postgres from 'postgres';
-import { dbSsl } from '../src/lib/server/db-ssl.ts';
+import { dbSslOptions } from '../src/lib/server/db-ssl.ts';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -11,7 +11,7 @@ if (!url) {
 	process.exit(1);
 }
 
-const sql = postgres(url, { max: 1, onnotice: () => {}, ssl: dbSsl(url, process.env.DATABASE_SSL) });
+const sql = postgres(url, { max: 1, onnotice: () => {}, ssl: dbSslOptions(url, process.env.DATABASE_SSL, process.env.DATABASE_SSL_CA) });
 try {
 	const schema = await readFile(new URL('../db/schema.sql', import.meta.url), 'utf8');
 	await sql.unsafe(schema);
