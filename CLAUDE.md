@@ -56,6 +56,10 @@ scripts/e2e.sh                  # wipes app data on the emulator, 10 checks
 - The emulator does **not** block a non-DO app while driving (Requires DO = true, app stays resumed).
   Detailed input is gated by `InputGate` (CarUxRestrictions + gear). Test with `scripts/vconsole.sh gear Drive`.
 
+- **Never toggle airplane mode on the emulator** (`cmd connectivity airplane-mode`): the guest loses its
+  network and does not recover; a reboot hung the emulator (2026-10-22). Simulate outages by stopping the
+  local server instead.
+
 ## Product rules (from the plan)
 
 - Never guess a value we do not have: show "정보 부족" with the reason. Readings older than 10 min are stale.

@@ -24,6 +24,26 @@ android {
         buildConfigField("String", "VENDOR_ID", "\"${prop("rentcare.vendorId", "demo-jeju")}\"")
     }
 
+    // Release signing: keystore lives outside the repo; secrets come from Gradle properties or env.
+    //   rentcare.signing.storeFile / RENTCARE_SIGNING_STORE_FILE
+    //   rentcare.signing.storePassword / RENTCARE_SIGNING_STORE_PASSWORD
+    //   rentcare.signing.keyAlias / RENTCARE_SIGNING_KEY_ALIAS
+    //   rentcare.signing.keyPassword / RENTCARE_SIGNING_KEY_PASSWORD
+    fun secret(p: String, env: String) = (findProperty(p) as String?) ?: System.getenv(env)
+    val storeFilePath = secret("rentcare.signing.storeFile", "RENTCARE_SIGNING_STORE_FILE")
+    signingConfigs {
+        if (storeFilePath != null) {
+            create("release") {
+                storeFile = file(storeFilePath)
+                storePassword = secret("rentcare.signing.storePassword", "RENTCARE_SIGNING_STORE_PASSWORD")
+                keyAlias = secret("rentcare.signing.keyAlias", "RENTCARE_SIGNING_KEY_ALIAS")
+                keyPassword = secret("rentcare.signing.keyPassword", "RENTCARE_SIGNING_KEY_PASSWORD")
+                enableV2Signing = true
+                enableV3Signing = true // key rotation / lineage (Pleos: why minSdk >= 28)
+            }
+        }
+    }
+
     buildTypes {
         debug {
             // Cleartext only to the emulator host loopback, see res/xml/network_security_config_debug.xml
@@ -33,6 +53,8 @@ android {
         }
         release {
             isMinifyEnabled = false
+            isDebuggable = false
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config"
             // No default: a release must name its HTTPS domain explicitly (Pleos security guide).
             buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.releaseApiBaseUrl", "")}\"")
@@ -85,6 +107,21 @@ val checkReleaseConfig by tasks.registering {
             "rentcare.releaseApiBaseUrl must be an https:// domain (got '$url')"
         }
         require(key.isNotBlank()) { "rentcare.releaseCarApiKey is required for release" }
+        require(project.findProperty("rentcare.allowUnsigned") == "true" ||
+            ((findProperty("rentcare.signing.storeFile") ?: System.getenv("RENTCARE_SIGNING_STORE_FILE")) != null)) {
+            "release signing is not configured (set rentcare.signing.* or -Prentcare.allowUnsigned=true for a local check)"
+        }
     }
 }
 tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(checkReleaseConfig) }
+
+// Contest naming: <team>_<app>_release.apk (RENTCARE-30). Set rentcare.team, default "team".
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.outputs.forEach { out ->
+            (out as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(
+                "${prop("rentcare.team", "team")}_RentCare_release.apk",
+            )
+        }
+    }
+}

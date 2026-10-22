@@ -45,6 +45,23 @@ rentcare.vendorId=demo-jeju
 
 Debug builds allow cleartext HTTP only to `10.0.2.2`. Release builds are HTTPS-only.
 
+## Release build
+
+The release build refuses to run unless all of these are set (Gradle `-P` or env):
+
+| property | env | what |
+|---|---|---|
+| `rentcare.releaseApiBaseUrl` | – | `https://` domain (no IP, no localhost) |
+| `rentcare.releaseCarApiKey` | – | server `CAR_API_KEY` |
+| `rentcare.signing.storeFile` | `RENTCARE_SIGNING_STORE_FILE` | keystore path **outside the repo** |
+| `rentcare.signing.storePassword` | `RENTCARE_SIGNING_STORE_PASSWORD` | |
+| `rentcare.signing.keyAlias` | `RENTCARE_SIGNING_KEY_ALIAS` | |
+| `rentcare.signing.keyPassword` | `RENTCARE_SIGNING_KEY_PASSWORD` | |
+| `rentcare.team` | – | APK name `<team>_RentCare_release.apk` (contest rule) |
+
+Signed with APK Signature Scheme v3 (key rotation; reason for minSdk 28). Check with
+`apksigner verify --verbose app/build/outputs/apk/release/<team>_RentCare_release.apk`.
+
 ## SDK facts (AAR inspection + Pleos Connect Emulator 2.1.0 run, 2026-10-22)
 
 Probe results on the emulator (IONIQ 5-like EV profile):
