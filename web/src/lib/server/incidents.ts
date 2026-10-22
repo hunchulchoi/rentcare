@@ -4,6 +4,7 @@ import { MAX_FILE_BYTES, MAX_FILES_PER_INCIDENT, magicMatches, resolveMime, sani
 import type { IncidentStatus, IncidentType } from '../i18n';
 import { formatReceiptNo, isoZ, kstDayKey } from '../receipt';
 import { sha256Hex } from './crypto';
+import { incidentTokenMatches, issueIncidentToken } from './incident-token';
 import { db } from './db';
 import { removeFile, saveFile } from './storage';
 import type { IncidentInput } from './validate';
@@ -16,6 +17,8 @@ export interface CreatedIncident {
 	status: IncidentStatus;
 	attachCode: string;
 	attachCodeExpiresAt: string;
+	/** Shown once to the creating car; required for status and car attachments. */
+	incidentToken: string;
 }
 
 export type CreateResult =
@@ -53,9 +56,15 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 			const e = existing[0];
 			if (e.vendor_id !== input.vendorId) return { kind: 'key_conflict' } as const;
 			const { code, expiresAt } = await issueAttachCode(sql, e.id, now);
+			// Rotate: the replaying car gets a fresh token, the previous one stops working.
+			const t = issueIncidentToken();
+			await sql`update incidents set car_token_hash = ${t.hash} where id = ${e.id}`;
 			return {
 				kind: 'replayed',
-				incident: { id: e.id, receiptNo: e.receipt_no, status: e.status, attachCode: code, attachCodeExpiresAt: isoZ(expiresAt) }
+				incident: {
+					id: e.id, receiptNo: e.receipt_no, status: e.status, attachCode: code,
+					attachCodeExpiresAt: isoZ(expiresAt), incidentToken: t.token
+				}
 			} as const;
 		}
 
@@ -69,6 +78,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 			returning last_no`;
 		const receiptNo = formatReceiptNo(day, last_no);
 
+		const token = issueIncidentToken();
 		const r = input.rental;
 		const v = input.vehicle;
 		const l = input.location;
@@ -78,7 +88,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 				rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 				vehicle_read, fuel_percent, soc, vehicle_read_at,
 				latitude, longitude, address, location_read_at, location_source, location_edited,
-				created_at
+				car_token_hash, created_at
 			) values (
 				${input.vendorId}, ${receiptNo}, ${idempotencyKey}, ${input.type}, ${input.language}, ${input.note},
 				${input.occurredAt}, ${input.demo},
@@ -86,16 +96,26 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 				${v !== null}, ${v?.fuelPercent ?? null}, ${v?.soc ?? null}, ${v?.readAt ?? null},
 				${l?.latitude ?? null}, ${l?.longitude ?? null}, ${l?.address ?? null}, ${l?.readAt ?? null},
 				${l?.source ?? null}, ${l?.edited ?? null},
-				${now}
+				${token.hash}, ${now}
 			)
 			returning id`;
 
 		const { code, expiresAt } = await issueAttachCode(sql, row.id, now);
 		return {
 			kind: 'created',
-			incident: { id: row.id, receiptNo, status: 'RECEIVED', attachCode: code, attachCodeExpiresAt: isoZ(expiresAt) }
+			incident: {
+				id: row.id, receiptNo, status: 'RECEIVED', attachCode: code,
+				attachCodeExpiresAt: isoZ(expiresAt), incidentToken: token.token
+			}
 		} as const;
 	});
+}
+
+/** True only for the car holding this incident's current token. */
+export async function carMayAccess(id: string, token: string | null): Promise<boolean> {
+	if (!token) return false;
+	const rows = await db()<{ car_token_hash: string | null }[]>`select car_token_hash from incidents where id = ${id}`;
+	return rows.length === 1 && incidentTokenMatches(token, rows[0].car_token_hash);
 }
 
 export async function getIncidentStatus(id: string) {

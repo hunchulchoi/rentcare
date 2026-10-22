@@ -86,7 +86,8 @@ a fresh attach code is issued and the previous one stops working):
   "status": "RECEIVED",
   "attachCode": "K7Q2M9",
   "attachCodeExpiresAt": "2026-10-23T03:10:00Z",
-  "attachUrl": "https://host/m"
+  "attachUrl": "https://host/m",
+  "incidentToken": "43-char base64url, only for the creating car"
 }
 ```
 
@@ -94,9 +95,17 @@ a fresh attach code is issued and the previous one stops working):
   and shows `attachCode` separately for the user to type on the phone.
 - Attach code: 6 chars from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, stored hashed (SHA-256), valid 24h.
 
+### Incident token (v2, 2026-10-22)
+
+`CAR_API_KEY` alone only allows **creating** incidents. The create response carries `incidentToken`
+(32 random bytes, base64url). The server stores only its SHA-256. Status polling and car attachments
+require it in `X-Incident-Token`. A replay with the same `Idempotency-Key` rotates the token
+(the previous one stops working), like the attach code. The car stores it encrypted and never logs it.
+
 ## GET /api/incidents/{id}
 
-Car polls status. Headers: `Authorization`.
+Car polls status. Headers: `Authorization`, `X-Incident-Token: <incidentToken>`.
+Missing or wrong token → `404 not_found` (same as an unknown id, so existence is not revealed).
 
 ```json
 {
@@ -113,7 +122,7 @@ Car polls status. Headers: `Authorization`.
 
 ## POST /api/incidents/{id}/attachments
 
-Car direct attach (only for files the car can legally access). Headers: `Authorization`.
+Car direct attach (only for files the car can legally access). Headers: `Authorization`, `X-Incident-Token`.
 `multipart/form-data`, field `file` (one file per request).
 
 - Allowed: `image/jpeg`, `image/png`, `image/heic`, `video/mp4`, `video/quicktime`.

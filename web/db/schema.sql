@@ -89,3 +89,6 @@ create index if not exists attachments_incident_idx on attachments (incident_id,
 -- Demo vendor. The staff token hash is filled from DEMO_VENDOR_TOKEN by `pnpm db:migrate`
 -- (and synced by the server on the first login attempt).
 insert into vendors (id, name) values ('demo-jeju', '제주 데모렌터카') on conflict (id) do nothing;
+
+-- v2: per-incident car token (only the creating car can read status / add files). Hash only.
+alter table incidents add column if not exists car_token_hash text;

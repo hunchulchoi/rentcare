@@ -54,6 +54,8 @@ data class IncidentCreated(
     val attachCode: String,
     val attachCodeExpiresAt: String,
     val attachUrl: String,
+    /** Required for status polling and car attachments (X-Incident-Token). Never shown or logged. */
+    val incidentToken: String,
 )
 
 @Serializable

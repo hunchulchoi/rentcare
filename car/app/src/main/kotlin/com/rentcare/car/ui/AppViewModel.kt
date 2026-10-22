@@ -400,9 +400,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshStatusOnce() {
-        val id = _report.value.received?.id ?: return
+        val rec = _report.value.received ?: return
         work.launch { token ->
-            when (val res = deps.api.status(id)) {
+            when (val res = deps.api.status(rec.id, rec.incidentToken)) {
                 is ApiResult.Ok -> _report.update {
                     it.copy(
                         acknowledged = res.value.status == com.rentcare.core.IncidentStatus.ACKNOWLEDGED,

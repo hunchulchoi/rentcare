@@ -45,10 +45,11 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
         return execute(request, IncidentCreated.serializer())
     }
 
-    suspend fun status(id: String): ApiResult<IncidentStatusDto> {
+    suspend fun status(id: String, incidentToken: String): ApiResult<IncidentStatusDto> {
         val request = Request.Builder()
             .url("$baseUrl/api/incidents/$id")
             .header("Authorization", "Bearer $apiKey")
+            .header("X-Incident-Token", incidentToken)
             .get()
             .build()
         return execute(request, IncidentStatusDto.serializer())
