@@ -1,0 +1,16 @@
+import { redirect } from '@sveltejs/kit';
+import { SESSION_COOKIE, listIncidents, logout } from '#lib/server/vendor.ts';
+import type { Actions, PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ locals }) => {
+	const vendor = locals.vendor!; // guaranteed by hooks.server.ts
+	return { incidents: await listIncidents(vendor.vendorId) };
+};
+
+export const actions: Actions = {
+	logout: async ({ cookies }) => {
+		await logout(cookies.get(SESSION_COOKIE));
+		cookies.delete(SESSION_COOKIE, { path: '/vendor' });
+		redirect(303, '/vendor/login');
+	}
+};

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only experiment: getTelltalesInfo fails with "need Permission" on Emulator 2.1.0
+  even with CAR_SAFETY (its @RequiresPermission). Check whether the PRIVATE_* permission is what
+  the service actually checks. Not in release until Pleos confirms third-party apps may use it.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="pleos.car.permission.PRIVATE_CAR_SAFETY" />
+    <uses-permission android:name="pleos.car.permission.PRIVATE_CAR_INFO" />
+</manifest>

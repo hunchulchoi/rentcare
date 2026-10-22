@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-feature android:name="android.hardware.type.automotive" android:required="true" />
+
+    <!-- Pleos Vehicle SDK: declare only the domains we read. -->
+    <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />  <!-- Fuel, EvBattery -->
+    <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />   <!-- Odometer (range) -->
+    <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />  <!-- Tire, Safety (telltales) -->
+    <uses-permission android:name="pleos.car.permission.CAR_INFO" />    <!-- CarInfo capabilities -->
+
+    <!-- Pleos NaviHelper -->
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />        <!-- get*Info, requestTrip -->
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" /> <!-- requestRoute(WithWaypoints) -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:name=".RentcareApp"
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="${networkConfig}"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+
+        <!--
+          Not declared distraction-optimized on purpose: detailed input and attachment review
+          happen while parked (Pleos driving restriction policy). The system blocks the app while driving.
+        -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:configChanges="locale|layoutDirection|orientation|screenSize|screenLayout|smallestScreenSize|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -1,0 +1,23 @@
+# Local development database for web/. Usage: docker compose up -d db
+# The schema is applied automatically on the first start (empty volume) only;
+# for an existing volume run `pnpm db:migrate` in web/ (idempotent).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: rentcare
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rentcare} # local dev only
+      POSTGRES_DB: rentcare
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - ./web/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - rentcare-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rentcare -d rentcare']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  rentcare-db:

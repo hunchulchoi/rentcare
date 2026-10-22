@@ -1,0 +1,116 @@
+:root {
+	--fg: #1b1f24;
+	--muted: #5b6470;
+	--bg: #ffffff;
+	--panel: #f5f7fa;
+	--border: #d8dde3;
+	--accent: #0b5cad;
+	--accent-fg: #ffffff;
+	--ok: #1a7f37;
+	--ok-bg: #eef8f0;
+	--ok-border: #9bd3a8;
+	--err: #c62828;
+	--warn-bg: #fff4e0;
+	--warn-border: #f0b860;
+	color-scheme: light;
+}
+* {
+	box-sizing: border-box;
+}
+html {
+	-webkit-text-size-adjust: 100%;
+}
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+	line-height: 1.5;
+}
+main {
+	max-width: 960px;
+	margin: 0 auto;
+	padding: 1rem;
+}
+h1 {
+	font-size: 1.4rem;
+	margin: 0.5rem 0 1rem;
+}
+h2 {
+	font-size: 1.1rem;
+	margin: 1.5rem 0 0.5rem;
+}
+a {
+	color: var(--accent);
+}
+label {
+	display: block;
+	font-weight: 600;
+	margin: 0.75rem 0 0.25rem;
+}
+input:not([type='file']):not([type='checkbox']),
+textarea {
+	width: 100%;
+	padding: 0.6rem 0.7rem;
+	font-size: 1rem;
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	background: #fff;
+}
+button,
+.button {
+	display: inline-block;
+	width: 100%;
+	margin-top: 0.75rem;
+	padding: 0.75rem 1rem;
+	font-size: 1rem;
+	font-weight: 600;
+	border: 1px solid var(--accent);
+	border-radius: 6px;
+	background: var(--accent);
+	color: var(--accent-fg);
+	cursor: pointer;
+}
+button.secondary,
+.button.secondary {
+	background: #fff;
+	color: var(--accent);
+}
+button.link {
+	width: auto;
+	margin: 0;
+	padding: 0 0.25rem;
+	border: none;
+	background: none;
+	color: var(--muted);
+}
+button:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+.error {
+	color: var(--err);
+	margin: 0.5rem 0;
+}
+.badge {
+	display: inline-block;
+	padding: 0.05rem 0.45rem;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	border: 1px solid var(--border);
+	background: var(--panel);
+	white-space: nowrap;
+}
+.badge.demo {
+	background: var(--warn-bg);
+	border-color: var(--warn-border);
+}
+.badge.RECEIVED {
+	background: #e8f0fb;
+	border-color: #9dbbe6;
+}
+.badge.ACKNOWLEDGED {
+	background: var(--ok-bg);
+	border-color: var(--ok-border);
+}

@@ -1,0 +1,37 @@
+// Attach codes: 6 chars from an alphabet without look-alikes (no I, L, O, 0, 1).
+
+export const ATTACH_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+export const ATTACH_CODE_LENGTH = 6;
+export const ATTACH_CODE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Generate a code with unbiased rejection sampling.
+ * `randomBytes` is injectable for tests; defaults to Web Crypto.
+ */
+export function generateAttachCode(
+	randomBytes: (n: number) => Uint8Array = (n) => crypto.getRandomValues(new Uint8Array(n))
+): string {
+	const alphabetLength = ATTACH_CODE_ALPHABET.length; // 31
+	const limit = 256 - (256 % alphabetLength); // reject bytes >= 248 to avoid modulo bias
+	let out = '';
+	while (out.length < ATTACH_CODE_LENGTH) {
+		for (const b of randomBytes(ATTACH_CODE_LENGTH * 2)) {
+			if (b >= limit) continue;
+			out += ATTACH_CODE_ALPHABET[b % alphabetLength];
+			if (out.length === ATTACH_CODE_LENGTH) break;
+		}
+	}
+	return out;
+}
+
+/**
+ * Normalize user input: trim, drop spaces/hyphens, upper-case.
+ * Returns null if the result is not a well-formed code.
+ */
+export function normalizeAttachCode(input: unknown): string | null {
+	if (typeof input !== 'string' || input.length > 32) return null;
+	const s = input.replace(/[\s-]/g, '').toUpperCase();
+	if (s.length !== ATTACH_CODE_LENGTH) return null;
+	for (const ch of s) if (!ATTACH_CODE_ALPHABET.includes(ch)) return null;
+	return s;
+}

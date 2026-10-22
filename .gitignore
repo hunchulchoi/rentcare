@@ -1,0 +1,24 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.DS_Store
+*.iml
+
+# car (Android / Gradle)
+car/.gradle/
+car/build/
+car/*/build/
+car/local.properties
+car/.kotlin/
+*.keystore
+*.jks
+
+# web (SvelteKit)
+web/node_modules/
+web/.svelte-kit/
+web/build/
+web/storage/
