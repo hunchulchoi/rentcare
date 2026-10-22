@@ -19,6 +19,7 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "VENDOR_ID", "\"${prop("rentcare.vendorId", "demo-jeju")}\"")
     }
 
@@ -66,6 +67,10 @@ dependencies {
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.okhttp)
     implementation(libs.zxing.core)
+
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(kotlin("test"))
 }
 
 // Fail release builds that would ship an HTTP / IP / empty server address.

@@ -12,11 +12,10 @@ import kotlinx.serialization.Serializable
 data class PendingReport(val idempotencyKey: String, val request: IncidentRequest)
 
 /**
- * Local storage for the current rental and its reports. Private app storage only.
- * [clearAll] runs when the rental ends so the next renter sees nothing.
- * TODO(RENTCARE-16): encrypt at rest before real rentals.
+ * Local storage for the current rental and its reports. Private app storage, every value
+ * encrypted with [SecureBox] (RENTCARE-16). [clearAll] runs when the rental ends.
  */
-class RentalStore(context: Context) {
+class RentalStore(context: Context, private val box: SecureBox = SecureBox()) {
     private val prefs = context.applicationContext.getSharedPreferences("rentcare", Context.MODE_PRIVATE)
 
     fun loadRental(): Rental? = read(KEY_RENTAL) { RentcareJson.decodeFromString(Rental.serializer(), it) }
@@ -32,10 +31,15 @@ class RentalStore(context: Context) {
 
     fun clearAll() = prefs.edit().clear().apply()
 
-    private fun <T> read(key: String, decode: (String) -> T): T? =
-        prefs.getString(key, null)?.let { runCatching { decode(it) }.getOrNull() }
+    /** Unreadable values (plaintext from an older build, tampered, key lost) are deleted, not used. */
+    private fun <T> read(key: String, decode: (String) -> T): T? {
+        val stored = prefs.getString(key, null) ?: return null
+        val value = box.decrypt(stored)?.let { runCatching { decode(it) }.getOrNull() }
+        if (value == null) remove(key)
+        return value
+    }
 
-    private fun write(key: String, value: String) = prefs.edit().putString(key, value).apply()
+    private fun write(key: String, value: String) = prefs.edit().putString(key, box.encrypt(value)).apply()
     private fun remove(key: String) = prefs.edit().remove(key).apply()
 
     private companion object {

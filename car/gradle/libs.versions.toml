@@ -9,6 +9,8 @@ lifecycle = "2.8.7"
 okhttp = "4.12.0"
 zxing = "3.5.3"
 junit = "5.11.3"
+androidxTestJunit = "1.2.1"
+androidxTestRunner = "1.6.2"
 pleosVehicle = "2.3.2"
 pleosNavi = "3.0.5"
 
@@ -28,6 +30,8 @@ lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-com
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+androidx-test-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestJunit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 junit-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 pleos-vehicle = { module = "ai.pleos.playground:Vehicle", version.ref = "pleosVehicle" }
 pleos-navi = { module = "ai.pleos.playground:NaviHelper", version.ref = "pleosNavi" }
