@@ -29,7 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rentcare.car.R
+import com.rentcare.car.BuildConfig
 import com.rentcare.core.IncidentType
+import com.rentcare.core.UrlPolicy
 import com.rentcare.core.NOTE_MAX_LENGTH
 
 fun incidentLabel(t: IncidentType) = when (t) {
@@ -154,7 +156,11 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
         }
         Section(stringResource(R.string.attach_title)) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                QrCode(rec.attachUrl)
+                if (UrlPolicy.isSafeAttachUrl(rec.attachUrl, BuildConfig.API_BASE_URL)) {
+                    QrCode(rec.attachUrl)
+                } else {
+                    Text(stringResource(R.string.attach_url_rejected), color = MaterialTheme.colorScheme.error)
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.attach_step1, rec.attachUrl))
                     Text(stringResource(R.string.attach_step2))

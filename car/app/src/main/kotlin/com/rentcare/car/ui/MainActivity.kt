@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rentcare.car.BuildConfig
 import com.rentcare.car.R
 import java.util.Locale
 
@@ -77,7 +78,7 @@ private fun Root(vm: AppViewModel, startTab: Tab) {
     var tab by rememberSaveable { mutableStateOf(startTab) }
     Row(Modifier.fillMaxSize()) {
         NavigationRail {
-            Tab.entries.forEach { t ->
+            Tab.entries.filter { it != Tab.PROBE || BuildConfig.DEBUG }.forEach { t ->
                 NavigationRailItem(
                     selected = tab == t,
                     onClick = { tab = t },
@@ -93,7 +94,7 @@ private fun Root(vm: AppViewModel, startTab: Tab) {
             Tab.ROUTE -> RouteScreen(vm, m)
             Tab.REPORT -> ReportScreen(vm, m, onSent = { tab = Tab.STATUS })
             Tab.STATUS -> StatusScreen(vm, m, onNew = { tab = Tab.REPORT })
-            Tab.PROBE -> ProbeScreen(vm, m)
+            Tab.PROBE -> if (BuildConfig.DEBUG) ProbeScreen(vm, m)
         }
     }
 }

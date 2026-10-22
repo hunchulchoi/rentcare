@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -17,8 +19,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
-        buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.apiBaseUrl", "http://10.0.2.2:5173")}\"")
-        buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.carApiKey", "dev-car-key")}\"")
         buildConfigField("String", "VENDOR_ID", "\"${prop("rentcare.vendorId", "demo-jeju")}\"")
     }
 
@@ -26,10 +26,15 @@ android {
         debug {
             // Cleartext only to the emulator host loopback, see res/xml/network_security_config_debug.xml
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config_debug"
+            buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.apiBaseUrl", "http://10.0.2.2:5173")}\"")
+            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.carApiKey", "dev-car-key")}\"")
         }
         release {
             isMinifyEnabled = false
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config"
+            // No default: a release must name its HTTPS domain explicitly (Pleos security guide).
+            buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.releaseApiBaseUrl", "")}\"")
+            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.releaseCarApiKey", "")}\"")
         }
     }
 
@@ -62,3 +67,18 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.zxing.core)
 }
+
+// Fail release builds that would ship an HTTP / IP / empty server address.
+val checkReleaseConfig by tasks.registering {
+    val url = prop("rentcare.releaseApiBaseUrl", "")
+    val key = prop("rentcare.releaseCarApiKey", "")
+    doLast {
+        val host = runCatching { URI(url).host }.getOrNull().orEmpty()
+        val isIp = Regex("""^\d{1,3}(\.\d{1,3}){3}$""").matches(host) || host.contains(':') || !host.contains('.')
+        require(url.startsWith("https://") && host.isNotEmpty() && !isIp && host != "localhost") {
+            "rentcare.releaseApiBaseUrl must be an https:// domain (got '$url')"
+        }
+        require(key.isNotBlank()) { "rentcare.releaseCarApiKey is required for release" }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(checkReleaseConfig) }

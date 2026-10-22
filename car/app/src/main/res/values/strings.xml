@@ -147,4 +147,5 @@
     <string name="probe_title">Pleos SDK check (RENTCARE-1)</string>
     <string name="probe_note">Reads each API once and records value, error and time. API presence ≠ support on a real car.</string>
     <string name="probe_run">Run all checks</string>
+    <string name="attach_url_rejected">Server sent an unexpected address. QR hidden; ask the rental company.</string>
 </resources>

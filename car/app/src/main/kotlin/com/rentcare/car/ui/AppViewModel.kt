@@ -392,7 +392,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- SDK probe (RENTCARE-1) ----
 
     fun runProbe() {
-        if (_probeRunning.value) return
+        if (!BuildConfig.DEBUG || _probeRunning.value) return
         viewModelScope.launch {
             _probeRunning.value = true
             _probe.value = emptyList()
@@ -437,7 +437,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: Exception) {
             ProbeRow(name, e.message ?: e.javaClass.simpleName, ok = false, System.currentTimeMillis())
         }
-        android.util.Log.i("RentcareProbe", "${if (row.ok) "OK" else "FAIL"} | ${row.name} | ${row.value}")
+        if (BuildConfig.DEBUG) {
+            // Never log location values (security guide): keep the API name and outcome only.
+            val value = if (row.name.startsWith("NaviHelper.getCurrentLocationInfo")) "<redacted>" else row.value
+            android.util.Log.i("RentcareProbe", "${if (row.ok) "OK" else "FAIL"} | ${row.name} | $value")
+        }
         _probe.update { it + row }
     }
 
