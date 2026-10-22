@@ -13,6 +13,16 @@ bad()  { echo "  FAIL $1"; fail=$((fail+1)); echo "       screen: $($UI texts | 
 check(){ if $UI has "$2"; then ok "$1"; else bad "$1 (missing: $2)"; fi; }
 wait_for(){ for _ in $(seq 1 "${3:-15}"); do $UI has "$2" && { ok "$1"; return; }; sleep 1; done; bad "$1 (missing: $2)"; }
 
+# Outage simulation: stop/start the local production server (never airplane mode on the emulator).
+SERVER_CMD=${E2E_SERVER_CMD:-"scripts/with-secrets.sh /postgres -- pnpm --dir web start"}
+SERVER_LOG=${TMPDIR:-/tmp}/rentcare-e2e-server.log
+server_pid() { lsof -nP -iTCP@127.0.0.1:3000 -sTCP:LISTEN -t 2>/dev/null | head -1; }
+server_stop() { local p; p=$(server_pid); [[ -n "$p" ]] && kill "$p"; for _ in $(seq 1 10); do [[ -z "$(server_pid)" ]] && return 0; sleep 1; done; return 1; }
+server_start() {
+  nohup sh -c "$SERVER_CMD" >"$SERVER_LOG" 2>&1 &
+  for _ in $(seq 1 40); do [[ "$(curl -s -o /dev/null -w '%{http_code}' -m 3 "$B/")" == 200 ]] && return 0; sleep 1; done; return 1
+}
+
 restart_app() { "$ADB" shell am force-stop --user current com.rentcare.car; "$ADB" shell am start -n com.rentcare.car/.ui.MainActivity >/dev/null; sleep 4; }
 
 echo "== setup: Park, SOC 100, lights off, demo EV rental"
@@ -58,6 +68,39 @@ curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H '
 $UI tap "새로고침" || true
 wait_for "S4 car shows staff seen" "✔ 업체 담당자 확인" 20
 $VC telltale TPMS Off >/dev/null; rm -f "$jar"
+
+echo "== S6a same Idempotency-Key x5 in parallel -> one incident"
+key=$(uuidgen | tr A-Z a-z); car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); out=$(mktemp -d)
+now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+body='{"vendorId":"demo-jeju","type":"OTHER","language":"ko","note":"e2e S6a","occurredAt":"'$now'","demo":true,
+"rental":{"rentalId":"E2E-S6","vehiclePlate":"00하0000","vehicleModel":"IONIQ 5","powertrain":"EV","returnPlace":"e2e","returnAt":"'$now'"},
+"vehicle":null,"location":null}'
+for i in 1 2 3 4 5; do
+  curl -s -m 20 -o "$out/$i" -w '%{http_code}\n' -X POST "$B/api/incidents" -H "Authorization: Bearer $car" \
+    -H "Idempotency-Key: $key" -H 'Content-Type: application/json' -d "$body" > "$out/$i.code" &
+done; wait
+ids=$(cat "$out"/? | grep -oE '"id":"[0-9a-f-]{36}"' | sort -u | wc -l | tr -d ' ')
+codes=$(cat "$out"/*.code | sort -u | tr '\n' ' ')
+[[ "$ids" == 1 ]] && ok "S6a one id for 5 parallel posts (http: $codes)" || bad "S6a ids=$ids http: $codes"
+rm -rf "$out"
+
+echo "== S6b server down -> not received -> server back -> resend once"
+vendor_count() { curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | sort -u | wc -l | tr -d ' '; }
+jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
+before=$(vendor_count)
+$UI tap "새 접수"; sleep 2
+$UI tap "기타"; sleep 1
+$UI tap "제주 데모렌터카에 보내기에 동의"; sleep 1
+server_stop
+$UI tap "접수 보내기"
+wait_for "S6b not received, retry offered while server is down" "미전송 접수 버리기" 40
+check "S6b says resend is safe" "다시 보내기를 누르세요. 같은 접수가 중복되지 않습니다."
+server_start || bad "S6b server restart"
+$UI tap "접수 보내기"
+wait_for "S6b received after server is back" "✔ 기본 접수 완료" 20
+after=$(vendor_count)
+[[ $((after - before)) -eq 1 ]] && ok "S6b vendor list grew by exactly 1 ($before -> $after)" || bad "S6b vendor count $before -> $after"
+rm -f "$jar"
 
 echo "== S5 end rental wipes local data"
 $UI tap "대여 정보"; sleep 1; $UI tap "반납 완료"; sleep 1; $UI tap "반납 완료" 2; sleep 2
