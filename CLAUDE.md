@@ -37,7 +37,9 @@ cd car && ./gradlew :core:test :app:assembleDebug
 
 # web
 cd web && pnpm test && pnpm check && pnpm build
-pnpm db:migrate && pnpm build && pnpm start     # prod server on 127.0.0.1:3000 (web/.env PORT/HOST)
+# DB: Infisical /postgres (stage.devfor.link, PostgreSQL 18). Secrets are injected, never written to disk:
+scripts/with-secrets.sh /postgres -- sh -c 'cd web && node --env-file-if-exists=.env scripts/migrate.ts'
+pnpm build && scripts/with-secrets.sh /postgres -- pnpm --dir web start   # 127.0.0.1:3000
 tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLIC_BASE_URL
 # Host change (e.g. https://rentcare.devfor.link): edit PUBLIC_BASE_URL in web/.env only,
 # then rebuild the car app — it reads PUBLIC_BASE_URL and CAR_API_KEY from web/.env.
@@ -75,6 +77,9 @@ scripts/e2e.sh                  # wipes app data on the emulator, 10 checks
 - Demo data is marked as demo (`demo: true`).
 
 ## Secrets
+
+- Infisical `/postgres`: DATABASE_URL, POSTGRES_* (stage.devfor.link). The server has **no TLS yet**:
+  `web/.env` sets `DATABASE_SSL=disable` as a temporary, explicit exception. Remove it once SSL is on.
 
 - Infisical (`.env` machine identity) path `/pleos`: Pleos CLIENT_ID / CLIENT_SECRET / CRN / PROJECT_ID.
 - Plane API key: `~/.config/plane/env`. Plane project id: `.env` `PLANE_PROJECT`.

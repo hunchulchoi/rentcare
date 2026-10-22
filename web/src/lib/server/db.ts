@@ -1,13 +1,18 @@
 import postgres from 'postgres';
 import { config } from './config';
 import { sha256Hex } from './crypto';
+import { dbSsl } from './db-ssl';
 
 let client: postgres.Sql | undefined;
 
 export function db(): postgres.Sql {
 	if (!client) {
 		if (!config.databaseUrl) throw new Error('DATABASE_URL is not set');
-		client = postgres(config.databaseUrl, { max: 10, onnotice: () => {} });
+		client = postgres(config.databaseUrl, {
+			max: 10,
+			onnotice: () => {},
+			ssl: dbSsl(config.databaseUrl, config.databaseSsl)
+		});
 	}
 	return client;
 }
