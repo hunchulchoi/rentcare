@@ -1,3 +1,4 @@
+import { errorId, routeForLog } from '#lib/server/log-safe.ts';
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { SESSION_COOKIE, getSession } from '#lib/server/vendor.ts';
 
@@ -27,7 +28,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 // Returning nothing keeps SvelteKit's safe defaults (500 / "Internal Error" for unknown errors).
 export const handleError: HandleServerError = (input) => {
 	if (input.kind !== 'unknown') return;
-	const e = input.error;
-	const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-	console.error(`[rentcare] ${input.event.request.method} ${input.event.url.pathname}: ${msg}`);
+	console.error(
+		`[rentcare] ${input.event.request.method} ${routeForLog(input.event.url.pathname)}: ${errorId(input.error)}`
+	);
 };

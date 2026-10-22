@@ -143,6 +143,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         deps.navi.start()
         deps.driving.start()
         viewModelScope.launch {
+            // Staleness is time-based: re-run the planner so a 10-minute-old value turns into
+            // "info missing" even when no new event arrives (Codex review).
+            while (isActive) {
+                delay(30_000)
+                recompute()
+            }
+        }
+        viewModelScope.launch {
             while (isActive) {
                 runCatching { deps.vehicle.gearUpdates().collect { _gear.value = it } }
                 _gear.value = null
