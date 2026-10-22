@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rentcare.car.R
 import com.rentcare.car.BuildConfig
 import com.rentcare.core.IncidentType
+import com.rentcare.core.InputGate
 import com.rentcare.core.UrlPolicy
 import com.rentcare.core.NOTE_MAX_LENGTH
 
@@ -46,8 +47,10 @@ fun incidentLabel(t: IncidentType) = when (t) {
 fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
     val rental by vm.rental.collectAsStateWithLifecycle()
     val ui by vm.report.collectAsStateWithLifecycle()
+    val gate by vm.inputGate.collectAsStateWithLifecycle()
     val r = rental ?: return Column(modifier) { NoRental() }
     val d = ui.draft
+    val allowed = gate == InputGate.Decision.ALLOWED
 
     LaunchedEffect(ui.received?.id) { if (ui.received != null) onSent() }
     LaunchedEffect(Unit) { if (d.location == null) vm.loadVehicleLocation() }
@@ -56,11 +59,17 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
         Text(stringResource(R.string.report_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.parked_notice), style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.emergency_contact, r.vendorName, r.vendorPhone), fontWeight = FontWeight.Bold)
+        if (!allowed) {
+            Text(
+                stringResource(if (gate == InputGate.Decision.BLOCKED_DRIVING) R.string.blocked_driving else R.string.blocked_not_parked),
+                color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold,
+            )
+        }
 
         Section(stringResource(R.string.type_title)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 IncidentType.entries.forEach { t ->
-                    FilterChip(d.type == t, { vm.updateDraft { it.copy(type = t) } }, { Text(stringResource(incidentLabel(t))) })
+                    FilterChip(d.type == t, { vm.updateDraft { it.copy(type = t) } }, { Text(stringResource(incidentLabel(t))) }, enabled = allowed)
                 }
             }
         }
@@ -80,10 +89,10 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
             var lat by remember(loc) { mutableStateOf(loc?.latitude?.toString().orEmpty()) }
             var lon by remember(loc) { mutableStateOf(loc?.longitude?.toString().orEmpty()) }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = vm::loadVehicleLocation) { Text(stringResource(R.string.load_location)) }
-                Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true)
-                Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true)
-                OutlinedButton(onClick = {
+                OutlinedButton(onClick = vm::loadVehicleLocation, enabled = allowed) { Text(stringResource(R.string.load_location)) }
+                Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true, enabled = allowed)
+                Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true, enabled = allowed)
+                OutlinedButton(enabled = allowed, onClick = {
                     val la = lat.toDoubleOrNull()
                     val lo = lon.toDoubleOrNull()
                     if (la != null && lo != null && la in -90.0..90.0 && lo in -180.0..180.0) vm.editLocation(la, lo)
@@ -95,7 +104,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
             Field(
                 stringResource(R.string.note_hint), d.note,
                 { v -> vm.updateDraft { it.copy(note = v.take(NOTE_MAX_LENGTH)) } },
-                Modifier.fillMaxWidth(), singleLine = false,
+                Modifier.fillMaxWidth(), singleLine = false, enabled = allowed,
             )
             Text(stringResource(R.string.note_original), style = MaterialTheme.typography.bodySmall)
         }
@@ -106,6 +115,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
             Row(
                 Modifier.toggleable(
                     value = d.confirmedRecipient,
+                    enabled = allowed,
                     role = Role.Checkbox,
                     onValueChange = { c -> vm.updateDraft { it.copy(confirmedRecipient = c) } },
                 ),
@@ -118,7 +128,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
 
         val sending = ui.send == SendState.Sending
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Button(onClick = vm::send, enabled = d.type != null && d.confirmedRecipient && !sending) {
+            Button(onClick = vm::send, enabled = allowed && d.type != null && d.confirmedRecipient && !sending) {
                 Text(stringResource(if (sending) R.string.sending else R.string.send))
             }
             (ui.send as? SendState.Failed)?.let { f ->

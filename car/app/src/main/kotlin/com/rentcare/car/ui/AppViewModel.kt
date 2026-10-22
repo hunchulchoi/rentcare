@@ -23,6 +23,8 @@ import com.rentcare.core.LocationSource
 import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
 import com.rentcare.core.Reading
+import com.rentcare.core.Gear
+import com.rentcare.core.InputGate
 import com.rentcare.core.Rental
 import com.rentcare.core.RentalWork
 import com.rentcare.core.RentalDto
@@ -33,7 +35,10 @@ import com.rentcare.core.VehicleState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
@@ -115,6 +120,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _telltales = MutableStateFlow<List<ActiveTelltale>>(emptyList())
     val telltales: StateFlow<List<ActiveTelltale>> = _telltales
 
+    private val _gear = MutableStateFlow<Gear?>(null)
+
+    /** RENTCARE-17: detailed input only when the platform (or Park, if unknown) allows it. */
+    val inputGate: StateFlow<InputGate.Decision> =
+        combine(deps.driving.requiresDistractionOptimization, _gear) { dO, g -> InputGate.decide(dO, g) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, InputGate.Decision.BLOCKED_NOT_PARKED)
+
     private val _probe = MutableStateFlow<List<ProbeRow>>(emptyList())
     val probe: StateFlow<List<ProbeRow>> = _probe
     private val _probeRunning = MutableStateFlow(false)
@@ -128,6 +140,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         deps.vehicle.start()
         deps.navi.start()
+        deps.driving.start()
+        viewModelScope.launch {
+            while (isActive) {
+                runCatching { deps.vehicle.gearUpdates().collect { _gear.value = it } }
+                _gear.value = null
+                delay(5_000)
+            }
+        }
         if (_report.value.received != null) startStatusPolling()
         viewModelScope.launch {
             // Re-subscribe when the rental (and so the powertrain) changes.
@@ -299,6 +319,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val draft = _report.value.draft
         val type = draft.type ?: return
         if (!draft.confirmedRecipient || _report.value.send == SendState.Sending) return
+        if (inputGate.value != InputGate.Decision.ALLOWED) return
 
         // Reuse the stored request on retry so the server sees the same key and body.
         val pending = deps.store.loadPending() ?: PendingReport(

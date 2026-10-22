@@ -69,6 +69,7 @@ fun Field(
     modifier: Modifier = Modifier,
     number: Boolean = false,
     singleLine: Boolean = true,
+    enabled: Boolean = true,
 ) {
     OutlinedTextField(
         value = value,
@@ -76,6 +77,7 @@ fun Field(
         label = { Text(label) },
         modifier = modifier,
         singleLine = singleLine,
+        enabled = enabled,
         keyboardOptions = if (number) KeyboardOptions(keyboardType = KeyboardType.Decimal) else KeyboardOptions.Default,
     )
 }

@@ -25,9 +25,11 @@
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
         <!--
-          Not declared distraction-optimized on purpose: detailed input and attachment review
-          happen while parked (Pleos driving restriction policy). The system blocks the app while driving.
+          Not declared distraction-optimized. Whether a non-DO app is usable while driving depends on the
+          regional policy, so the app also blocks detailed input itself via CarUxRestrictions (InputGate).
         -->
+        <uses-library android:name="android.car" android:required="false" />
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"

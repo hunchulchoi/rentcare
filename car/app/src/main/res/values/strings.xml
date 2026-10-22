@@ -148,4 +148,6 @@
     <string name="probe_note">Reads each API once and records value, error and time. API presence ≠ support on a real car.</string>
     <string name="probe_run">Run all checks</string>
     <string name="attach_url_rejected">Server sent an unexpected address. QR hidden; ask the rental company.</string>
+    <string name="blocked_driving">Driving: details are locked. Stop safely first. In an emergency call 112 / 119.</string>
+    <string name="blocked_not_parked">Waiting for the car to be in Park. Stop safely to fill in the report.</string>
 </resources>

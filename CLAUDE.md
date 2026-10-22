@@ -50,6 +50,8 @@ adb forward tcp:8088 tcp:8088   # http://127.0.0.1:8088/
 - Telltales and capability list need `PRIVATE_CAR_SAFETY` / `PRIVATE_CAR_INFO` → declared in the
   **debug manifest only** until Pleos confirms third-party use (RENTCARE-26). Never add them to release.
 - Navi results arrive as listener events; subscribe before sending the request.
+- The emulator does **not** block a non-DO app while driving (Requires DO = true, app stays resumed).
+  Detailed input is gated by `InputGate` (CarUxRestrictions + gear). Test with `scripts/vconsole.sh gear Drive`.
 
 ## Product rules (from the plan)
 

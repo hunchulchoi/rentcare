@@ -148,4 +148,6 @@
     <string name="probe_note">각 API를 한 번씩 호출해 값·오류·시각을 기록합니다. 에뮬레이터 결과가 실차 지원을 뜻하지 않습니다.</string>
     <string name="probe_run">전체 검증 실행</string>
     <string name="attach_url_rejected">서버가 예상과 다른 주소를 보냈습니다. QR을 숨겼습니다. 업체에 문의하세요.</string>
+    <string name="blocked_driving">주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119.</string>
+    <string name="blocked_not_parked">P단 정차 상태를 확인하는 중입니다. 안전하게 정차한 뒤 작성하세요.</string>
 </resources>

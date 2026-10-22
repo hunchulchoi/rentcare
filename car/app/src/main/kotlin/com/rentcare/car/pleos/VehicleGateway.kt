@@ -7,6 +7,9 @@ import ai.pleos.playground.vehicle.constant.telltale.TelltaleState
 import ai.pleos.playground.vehicle.constant.telltale.TelltaleType
 import ai.pleos.playground.vehicle.listener.EvBatteryStateOfChargeListener
 import ai.pleos.playground.vehicle.listener.FuelPercentListener
+import ai.pleos.playground.vehicle.listener.GearSelectionListener
+import ai.pleos.playground.vehicle.constant.control.VehicleGear
+import com.rentcare.core.Gear
 import android.content.Context
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -59,6 +62,22 @@ class VehicleGateway(context: Context) {
     suspend fun gear(): String = call<Any?> { ok, fail ->
         vehicle.getGear().getCurrentGearSelectionState(ok, fail)
     }.toString()
+
+    fun gearUpdates(): Flow<Gear> = callbackFlow {
+        val listener = object : GearSelectionListener {
+            override fun onSelected(gear: VehicleGear?) {
+                trySend(gear?.toCore() ?: Gear.UNKNOWN)
+            }
+
+            override fun onFailed(e: Exception) {
+                close(e)
+            }
+        }
+        runCatching { call<Any?> { ok, fail -> vehicle.getGear().getCurrentGearSelectionState(ok, fail) } }
+            .getOrNull()?.let { trySend((it as VehicleGear).toCore()) }
+        vehicle.getGear().registerGearSelection(listener)
+        awaitClose { vehicle.getGear().unregisterGearSelection(listener) }
+    }
 
     // ---- Safety / tire ----
 
@@ -149,3 +168,11 @@ data class ActiveTelltale(val type: TelltaleType, val state: TelltaleState, val 
 
 class VehicleReadException(cause: Exception) :
     Exception("${cause.javaClass.simpleName}: ${cause.message}", cause)
+
+fun VehicleGear.toCore(): Gear = when (this) {
+    VehicleGear.GEAR_PARK -> Gear.PARK
+    VehicleGear.GEAR_REVERSE -> Gear.REVERSE
+    VehicleGear.GEAR_NEUTRAL -> Gear.NEUTRAL
+    VehicleGear.GEAR_UNKNOWN -> Gear.UNKNOWN
+    else -> Gear.DRIVE
+}

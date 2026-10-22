@@ -68,7 +68,8 @@
 - `CarUxRestrictionsManager.registerListener()` → `onUxRestrictionsChanged()`로 제한 상태 수신.
 - DO를 선언한 앱은 `CarUxRestrictions`와 `ActiveRestrictions`를 모두 확인하고 기능별 제한을 직접 적용해야 한다.
 - DO 미선언 앱의 사용 가능 여부는 지역 정책이 정한다. 플랫폼이 지역 규격에 따라 `ActiveRestrictions`를 전달한다.
-- 렌트케어: DO 미선언. 미선언 앱의 주행 중 사용 가능 여부는 지역 정책에 따르므로 "시스템이 항상 막는다"고 가정하면 안 된다. CarUxRestrictions 리스너로 상세 입력을 직접 막아야 한다 (RENTCARE-17, 미구현).
+- 렌트케어: DO 미선언. 미선언 앱의 주행 중 사용 가능 여부는 지역 정책에 따르므로 "시스템이 항상 막는다"고 가정하면 안 된다.
+- **실측(에뮬레이터 2.1.0):** 기어 D + 40 km/h에서 `Requires DO? true`인데도 비-DO 앱 화면이 그대로 열려 있었다. 따라서 앱이 직접 막는다: `DrivingGateway`(CarUxRestrictions 현재값 + 리스너) + 기어 구독 → `InputGate`. 주행 중 접수 화면의 유형 선택·위치·메모·동의·전송 버튼이 모두 비활성, P단 복귀 시 해제 확인.
 
 ## 7. Codex 준수 리뷰 (2026-10-22, 커밋 0b52b91 기준)
 

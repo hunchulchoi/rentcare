@@ -12,6 +12,7 @@ fun prop(name: String, default: String) = (findProperty(name) as String?) ?: def
 android {
     namespace = "com.rentcare.car"
     compileSdk = 35
+    useLibrary("android.car")
 
     defaultConfig {
         applicationId = "com.rentcare.car"
