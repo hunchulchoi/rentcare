@@ -32,6 +32,7 @@ import com.rentcare.core.ReturnPlanner
 import com.rentcare.core.TripEstimate
 import com.rentcare.core.VehicleDto
 import com.rentcare.core.VehicleState
+import com.rentcare.core.Warnings
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -284,6 +285,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateDraft(f: (IncidentDraft) -> IncidentDraft) = _report.update { it.copy(draft = f(it.draft)) }
 
+    /** Read warning lights and pre-select a matching report type (renter can change it). */
+    fun loadWarnings() {
+        work.launch { token ->
+            val list = runCatching { deps.vehicle.activeTelltales() }.getOrDefault(emptyList())
+            if (!work.isCurrent(token)) return@launch
+            _telltales.value = list
+            val suggested = Warnings.suggestType(list.map { it.type.name })
+            if (suggested != null) updateDraft { if (it.type == null) it.copy(type = suggested) else it }
+        }
+    }
+
     fun loadVehicleLocation() {
         work.launch { token ->
             updateDraft { it.copy(locationLoading = true, locationError = false) }
@@ -378,6 +390,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Instant.ofEpochMilli(r.returnAtMillis).toString(),
             ),
             vehicle = if (readAt == null) null else VehicleDto(st.fuelPercent?.value, st.soc?.value, readAt),
+            warnings = Warnings.forRequest(_telltales.value.map { it.type.name }),
             location = d.location?.let {
                 LocationDto(
                     it.latitude, it.longitude, it.address,

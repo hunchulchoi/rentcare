@@ -18,11 +18,11 @@ class ApiDtoTest {
             vendorId = "demo-jeju", type = IncidentType.TIRE, language = "en", note = null,
             occurredAt = "2026-10-22T12:00:00Z", demo = true,
             rental = RentalDto("R", "P", "M", Powertrain.EV, "place", "2026-10-23T00:00:00Z"),
-            vehicle = null, location = null,
+            vehicle = null, location = null, warnings = listOf("TPMS"),
         )
         val keys = Regex("\"(\\w+)\":").findAll(RentcareJson.encodeToString(IncidentRequest.serializer(), req)).map { it.groupValues[1] }.toSet()
         assertEquals(
-            setOf("vendorId", "type", "language", "note", "occurredAt", "demo", "rental", "vehicle", "location",
+            setOf("vendorId", "type", "language", "note", "occurredAt", "demo", "rental", "vehicle", "location", "warnings",
                 "rentalId", "vehiclePlate", "vehicleModel", "powertrain", "returnPlace", "returnAt"),
             keys,
         )

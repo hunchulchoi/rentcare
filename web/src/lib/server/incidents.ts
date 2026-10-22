@@ -88,7 +88,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 				rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 				vehicle_read, fuel_percent, soc, vehicle_read_at,
 				latitude, longitude, address, location_read_at, location_source, location_edited,
-				car_token_hash, created_at
+				car_token_hash, warnings, created_at
 			) values (
 				${input.vendorId}, ${receiptNo}, ${idempotencyKey}, ${input.type}, ${input.language}, ${input.note},
 				${input.occurredAt}, ${input.demo},
@@ -96,7 +96,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 				${v !== null}, ${v?.fuelPercent ?? null}, ${v?.soc ?? null}, ${v?.readAt ?? null},
 				${l?.latitude ?? null}, ${l?.longitude ?? null}, ${l?.address ?? null}, ${l?.readAt ?? null},
 				${l?.source ?? null}, ${l?.edited ?? null},
-				${token.hash}, ${now}
+				${token.hash}, ${input.warnings}, ${now}
 			)
 			returning id`;
 

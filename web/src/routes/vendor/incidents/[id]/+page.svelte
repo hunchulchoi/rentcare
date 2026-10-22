@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { fmtBytes, fmtKst } from '#lib/format.ts';
-	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel } from '#lib/i18n.ts';
+	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, warningLabelKo } from '#lib/i18n.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -56,6 +56,15 @@
 	<dt>접수 시각</dt>
 	<dd>{fmtKst(i.created_at)}</dd>
 </dl>
+
+<h3>접수 시 켜진 차량 경고등</h3>
+{#if i.warnings?.length}
+	<ul class="warnings">
+		{#each i.warnings as w (w)}<li>{warningLabelKo(w)} <small>({w})</small></li>{/each}
+	</ul>
+{:else}
+	<p class="muted">없음 또는 확인 불가</p>
+{/if}
 
 <h3>원문 <small>(번역하지 않은 사용자 입력)</small></h3>
 {#if i.note}

@@ -21,6 +21,8 @@ data class IncidentRequest(
     val rental: RentalDto,
     val vehicle: VehicleDto?,
     val location: LocationDto?,
+    /** Relevant car warning lights on at report time (see [Warnings]). */
+    val warnings: List<String> = emptyList(),
 )
 
 @Serializable

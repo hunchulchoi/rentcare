@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INCIDENT_TYPES, INCIDENT_TYPE_LABELS, MOBILE_STRINGS, pickUiLang, typeLabel } from './i18n';
+import { INCIDENT_TYPES, INCIDENT_TYPE_LABELS, MOBILE_STRINGS, pickUiLang, typeLabel, warningLabelKo } from './i18n';
 
 describe('i18n', () => {
 	it('has a label for every incident type in every UI language', () => {
@@ -15,5 +15,10 @@ describe('i18n', () => {
 		expect(pickUiLang('fr', 'ko-KR,ko;q=0.9')).toBe('ko');
 		expect(pickUiLang(null, 'ja-JP,en;q=0.5')).toBe('en');
 		expect(pickUiLang(null, null)).toBe('en');
+	});
+	it('labels car warning lights in Korean, falls back to the code', () => {
+		expect(warningLabelKo('TPMS')).toBe('타이어 공기압 경고');
+		expect(warningLabelKo('LOW_VOLT_BATTERY')).toBe('12V 배터리 경고');
+		expect(warningLabelKo('NEW_THING')).toBe('NEW_THING');
 	});
 });

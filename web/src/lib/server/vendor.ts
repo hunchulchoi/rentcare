@@ -99,6 +99,7 @@ export interface IncidentDetailRow {
 	location_read_at: Date | null;
 	location_source: LocationSource | null;
 	location_edited: boolean | null;
+	warnings: string[];
 	status: IncidentStatus;
 	acknowledged_at: Date | null;
 	acknowledged_by: string | null;
@@ -121,7 +122,7 @@ export async function getIncidentDetail(vendorId: string, id: string) {
 		select id, receipt_no, type, language, note, occurred_at, demo,
 			rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 			vehicle_read, fuel_percent, soc, vehicle_read_at,
-			latitude, longitude, address, location_read_at, location_source, location_edited,
+			latitude, longitude, address, location_read_at, location_source, location_edited, warnings,
 			status, acknowledged_at, acknowledged_by, created_at
 		from incidents where id = ${id} and vendor_id = ${vendorId}`;
 	if (!rows.length) return null;

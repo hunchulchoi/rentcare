@@ -30,10 +30,13 @@ export interface IncidentInput {
 		latitude: number;
 		longitude: number;
 		address: string | null;
-		readAt: Date;
+		/** null for a manually entered location (no reading). */
+		readAt: Date | null;
 		source: LocationSource;
 		edited: boolean;
 	} | null;
+	/** Car warning lights on when reporting (Pleos TelltaleType names). */
+	warnings: string[];
 }
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
@@ -129,7 +132,9 @@ class Checker {
 	}
 }
 
-const TOP_KEYS = ['vendorId', 'type', 'language', 'note', 'occurredAt', 'demo', 'rental', 'vehicle', 'location'];
+const TOP_KEYS = ['vendorId', 'type', 'language', 'note', 'occurredAt', 'demo', 'rental', 'vehicle', 'location', 'warnings'];
+export const WARNINGS_MAX = 20;
+const WARNING_RE = /^[A-Z][A-Z0-9_]{0,39}$/;
 const RENTAL_KEYS = ['rentalId', 'vehiclePlate', 'vehicleModel', 'powertrain', 'returnPlace', 'returnAt'];
 const VEHICLE_KEYS = ['fuelPercent', 'soc', 'readAt'];
 const LOCATION_KEYS = ['latitude', 'longitude', 'address', 'readAt', 'source', 'edited'];
@@ -190,12 +195,25 @@ export function validateIncidentInput(body: unknown): ValidationResult<IncidentI
 			const latitude = c.number(l.latitude, '$.location.latitude', -90, 90);
 			const longitude = c.number(l.longitude, '$.location.longitude', -180, 180);
 			const address = c.string(l.address, '$.location.address', 500, { nullable: true });
-			const readAt = c.date(l.readAt, '$.location.readAt');
+			const readAt = c.date(l.readAt, '$.location.readAt', { nullable: true });
 			const source = c.oneOf(l.source, '$.location.source', LOCATION_SOURCES);
 			const edited = c.boolean(l.edited, '$.location.edited');
-			if (typeof latitude === 'number' && typeof longitude === 'number' && readAt && source && edited !== undefined) {
+			if (readAt === null && source === 'VEHICLE') c.fail('$.location.readAt', 'required for VEHICLE source');
+			if (typeof latitude === 'number' && typeof longitude === 'number' && readAt !== undefined && source && edited !== undefined) {
 				location = { latitude, longitude, address: address ?? null, readAt, source, edited };
 			}
+		}
+	}
+
+	const warnings: string[] = [];
+	if (o.warnings !== undefined && o.warnings !== null) {
+		if (!Array.isArray(o.warnings) || o.warnings.length > WARNINGS_MAX) {
+			c.fail('$.warnings', `must be an array of at most ${WARNINGS_MAX} codes`);
+		} else {
+			o.warnings.forEach((w: unknown, i: number) => {
+				if (typeof w !== 'string' || !WARNING_RE.test(w)) c.fail(`$.warnings[${i}]`, 'invalid code');
+				else if (!warnings.includes(w)) warnings.push(w);
+			});
 		}
 	}
 
@@ -205,6 +223,6 @@ export function validateIncidentInput(body: unknown): ValidationResult<IncidentI
 
 	return {
 		ok: true,
-		value: { vendorId, type, language, note: note ?? null, occurredAt, demo, rental, vehicle, location }
+		value: { vendorId, type, language, note: note ?? null, occurredAt, demo, rental, vehicle, location, warnings }
 	};
 }

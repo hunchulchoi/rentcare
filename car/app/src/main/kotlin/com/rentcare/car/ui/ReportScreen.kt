@@ -33,6 +33,7 @@ import com.rentcare.car.BuildConfig
 import com.rentcare.core.IncidentType
 import com.rentcare.core.InputGate
 import com.rentcare.core.UrlPolicy
+import com.rentcare.core.Warnings
 import com.rentcare.core.NOTE_MAX_LENGTH
 
 fun incidentLabel(t: IncidentType) = when (t) {
@@ -53,7 +54,12 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
     val allowed = gate == InputGate.Decision.ALLOWED
 
     LaunchedEffect(ui.received?.id) { if (ui.received != null) onSent() }
-    LaunchedEffect(Unit) { if (d.location == null) vm.loadVehicleLocation() }
+    LaunchedEffect(Unit) {
+        if (d.location == null) vm.loadVehicleLocation()
+        vm.loadWarnings()
+    }
+    val telltales by vm.telltales.collectAsStateWithLifecycle()
+    val warnings = Warnings.relevant(telltales.map { it.type.name })
 
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.report_title), style = MaterialTheme.typography.headlineSmall)
@@ -71,6 +77,13 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
                 IncidentType.entries.forEach { t ->
                     FilterChip(d.type == t, { vm.updateDraft { it.copy(type = t) } }, { Text(stringResource(incidentLabel(t))) }, enabled = allowed)
                 }
+            }
+        }
+
+        if (warnings.isNotEmpty()) {
+            Section(stringResource(R.string.report_warnings_title)) {
+                Text(warnings.joinToString(" · "))
+                Text(stringResource(R.string.report_warnings_note), style = MaterialTheme.typography.bodySmall)
             }
         }
 

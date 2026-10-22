@@ -114,3 +114,5 @@ button:disabled {
 	background: var(--ok-bg);
 	border-color: var(--ok-border);
 }
+
+.muted { color: var(--muted); }

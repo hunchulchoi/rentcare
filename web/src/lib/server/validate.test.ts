@@ -178,4 +178,25 @@ describe('parseIdempotencyKey', () => {
 		expect(parseIdempotencyKey('abc')).toBeNull();
 		expect(parseIdempotencyKey('6f1c2b3a11114222833344445555666')).toBeNull();
 	});
+
+	it('accepts optional warnings, dedupes them, defaults to none', () => {
+		const ok = validateIncidentInput({ ...sample(), warnings: ['TPMS', 'LOW_VOLT_BATTERY', 'TPMS'] });
+		expect(ok.ok && ok.value.warnings).toEqual(['TPMS', 'LOW_VOLT_BATTERY']);
+		const none = validateIncidentInput(sample());
+		expect(none.ok && none.value.warnings).toEqual([]);
+	});
+
+	it('rejects bad warning codes and more than 20', () => {
+		expect(errorsOf({ ...sample(), warnings: ['tpms'] }).join()).toContain('$.warnings[0]');
+		expect(errorsOf({ ...sample(), warnings: 'TPMS' }).join()).toContain('$.warnings');
+		expect(errorsOf({ ...sample(), warnings: Array.from({ length: 21 }, (_, i) => `W${i}`) }).join()).toContain('$.warnings');
+	});
+
+	it('accepts a manually entered location without read time', () => {
+		const b = sample();
+		b.location = { ...b.location, readAt: null, source: 'MANUAL', edited: true };
+		const r = validateIncidentInput(b);
+		expect(r.ok).toBe(true);
+		expect(r.ok && r.value.location?.readAt).toBeNull();
+	});
 });

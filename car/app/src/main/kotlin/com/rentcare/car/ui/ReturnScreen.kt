@@ -81,10 +81,11 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
         ui.tripError?.let { Text(stringResource(R.string.trip_unavailable, it), color = MaterialTheme.colorScheme.error) }
         ui.readError?.let { Text(stringResource(R.string.read_failed, it), color = MaterialTheme.colorScheme.error) }
 
-        if (telltales.isNotEmpty()) {
+        val faults = telltales.filter { it.type.name in com.rentcare.core.Warnings.FAULT_CODES }
+        if (faults.isNotEmpty()) {
             Section(stringResource(R.string.telltales_title)) {
                 Text(stringResource(R.string.telltales_note), style = MaterialTheme.typography.bodySmall)
-                telltales.forEach { Text("• ${it.type} (${it.state})") }
+                faults.forEach { Text("• ${it.type} (${it.state})") }
             }
         }
 

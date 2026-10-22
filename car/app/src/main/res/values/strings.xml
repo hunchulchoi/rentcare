@@ -150,4 +150,6 @@
     <string name="attach_url_rejected">Server sent an unexpected address. QR hidden; ask the rental company.</string>
     <string name="blocked_driving">Driving: details are locked. Stop safely first. In an emergency call 112 / 119.</string>
     <string name="blocked_not_parked">Waiting for the car to be in Park. Stop safely to fill in the report.</string>
+    <string name="report_warnings_title">Warning lights on now (sent with the report)</string>
+    <string name="report_warnings_note">Shown as on the dashboard. Follow the car\'s own instructions first.</string>
 </resources>

@@ -148,3 +148,29 @@ export function mobileError(lang: UiLang, code: string | undefined): string {
 	const key = `err_${code ?? 'unknown'}` as keyof MobileStrings;
 	return MOBILE_STRINGS[lang][key] ?? MOBILE_STRINGS[lang].err_unknown;
 }
+
+/** Korean names of car warning lights (Pleos TelltaleType) for vendor screens. */
+const WARNING_LABELS_KO: Record<string, string> = {
+	TPMS: '타이어 공기압 경고',
+	LOW_VOLT_BATTERY: '12V 배터리 경고',
+	ENGINE: '엔진 경고',
+	ENGINE_OIL_PRESSURE: '엔진오일 압력 경고',
+	ENGINE_TEMPERATURE: '엔진 과열 경고',
+	MASTER_WARNING: '마스터 경고',
+	ABS: 'ABS 경고',
+	ESC: '차체자세제어(ESC) 경고',
+	MDPS: '전동 조향(MDPS) 경고',
+	AIRBAG: '에어백 경고',
+	EV_SYSTEM: '전기차 시스템 경고',
+	HEV_SYSTEM: '하이브리드 시스템 경고',
+	POWER_DOWN: '출력 제한',
+	LOW_EV_BATTERY: '구동 배터리 부족',
+	LOW_FUEL: '연료 부족',
+	DOOR_OPEN: '문 열림',
+	TRUNK_OPEN: '트렁크 열림',
+	IMMOBILIZER: '이모빌라이저 경고'
+};
+
+export function warningLabelKo(code: string): string {
+	return WARNING_LABELS_KO[code] ?? code;
+}

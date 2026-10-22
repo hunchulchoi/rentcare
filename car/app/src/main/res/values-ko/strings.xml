@@ -150,4 +150,6 @@
     <string name="attach_url_rejected">서버가 예상과 다른 주소를 보냈습니다. QR을 숨겼습니다. 업체에 문의하세요.</string>
     <string name="blocked_driving">주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119.</string>
     <string name="blocked_not_parked">P단 정차 상태를 확인하는 중입니다. 안전하게 정차한 뒤 작성하세요.</string>
+    <string name="report_warnings_title">현재 켜진 경고등 (접수에 함께 전달)</string>
+    <string name="report_warnings_note">계기판 표시 그대로 전달합니다. 차량 자체 안내를 먼저 따르세요.</string>
 </resources>

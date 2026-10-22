@@ -92,3 +92,6 @@ insert into vendors (id, name) values ('demo-jeju', '제주 데모렌터카') on
 
 -- v2: per-incident car token (only the creating car can read status / add files). Hash only.
 alter table incidents add column if not exists car_token_hash text;
+
+-- v3: car warning lights on when the report was made (Pleos TelltaleType names)
+alter table incidents add column if not exists warnings text[] not null default '{}';
