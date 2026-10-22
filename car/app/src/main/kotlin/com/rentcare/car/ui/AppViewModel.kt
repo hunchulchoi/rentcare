@@ -24,6 +24,7 @@ import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
 import com.rentcare.core.Reading
 import com.rentcare.core.Rental
+import com.rentcare.core.RentalWork
 import com.rentcare.core.RentalDto
 import com.rentcare.core.ReturnPlanner
 import com.rentcare.core.TripEstimate
@@ -119,6 +120,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _probeRunning = MutableStateFlow(false)
     val probeRunning: StateFlow<Boolean> = _probeRunning
 
+    /** All work for the current rental; reset on rental end (Codex review: late replies). */
+    private val work = RentalWork(viewModelScope)
     private var statusJob: Job? = null
     private var liveJob: Job? = null
 
@@ -139,7 +142,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun startLiveLevel(powertrain: Powertrain?) {
         liveJob?.cancel()
         if (powertrain == null) return
-        liveJob = viewModelScope.launch {
+        liveJob = work.launch { token ->
             while (isActive) {
                 val flow = if (powertrain == Powertrain.EV) deps.vehicle.socUpdates() else deps.vehicle.fuelUpdates()
                 runCatching {
@@ -173,7 +176,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Rental ended: wipe rental data, reports, codes. Vehicle state is not ours to reset. */
     fun endRental() {
+        work.reset() // cancel sends, polls, reads; invalidate late callbacks first
         statusJob?.cancel()
+        liveJob?.cancel()
         deps.store.clearAll()
         _rental.value = null
         _ret.value = ReturnUi()
@@ -190,7 +195,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshReturn() {
         val r = _rental.value ?: return
-        viewModelScope.launch {
+        work.launch { token ->
             _ret.update { it.copy(loading = true, readError = null, tripError = null) }
             val now = System.currentTimeMillis()
             var readError: String? = null
@@ -246,7 +251,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _ret.update { it.copy(routeMessage = "NO_COORDINATES") }
             return
         }
-        viewModelScope.launch {
+        work.launch { token ->
             val res = deps.navi.routeWithWaypoints(
                 GeoPoint(lat, lon, r.returnPlace.name, r.returnPlace.address),
                 _inputs.value.stations.take(2),
@@ -260,7 +265,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun updateDraft(f: (IncidentDraft) -> IncidentDraft) = _report.update { it.copy(draft = f(it.draft)) }
 
     fun loadVehicleLocation() {
-        viewModelScope.launch {
+        work.launch { token ->
             updateDraft { it.copy(locationLoading = true, locationError = false) }
             val loc = deps.navi.currentLocation()
             updateDraft {
@@ -301,10 +306,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             request = buildRequest(r, type, draft),
         ).also { deps.store.savePending(it) }
 
-        viewModelScope.launch {
+        work.launch { token ->
             _report.update { it.copy(send = SendState.Sending) }
             when (val res = deps.api.createIncident(pending.request, pending.idempotencyKey)) {
                 is ApiResult.Ok -> {
+                    if (!work.isCurrent(token)) return@launch
                     deps.store.saveReceived(res.value)
                     deps.store.savePending(null)
                     _report.update { it.copy(send = SendState.Idle, received = res.value, draft = IncidentDraft()) }
@@ -363,7 +369,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun startStatusPolling() {
         statusJob?.cancel()
-        statusJob = viewModelScope.launch {
+        statusJob = work.launch { token ->
             while (isActive) {
                 refreshStatusOnce()
                 if (_report.value.acknowledged) break
@@ -374,7 +380,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshStatusOnce() {
         val id = _report.value.received?.id ?: return
-        viewModelScope.launch {
+        work.launch { token ->
             when (val res = deps.api.status(id)) {
                 is ApiResult.Ok -> _report.update {
                     it.copy(

@@ -48,7 +48,11 @@ class SecureStoreTest {
         )
         store.saveRental(rental)
         assertEquals(rental, store.loadRental())
-        val xml = File(ctx.applicationInfo.dataDir, "shared_prefs/rentcare.xml").readText()
+        // SharedPreferences.apply() writes to disk asynchronously; wait for the file.
+        val file = File(ctx.applicationInfo.dataDir, "shared_prefs/rentcare.xml")
+        val deadline = System.currentTimeMillis() + 3_000
+        while (!(file.exists() && file.readText().contains("rental")) && System.currentTimeMillis() < deadline) Thread.sleep(50)
+        val xml = file.readText()
         assertFalse(xml.contains("99하9999") || xml.contains("R-PLAIN-CHECK"), "plaintext leaked: $xml")
     }
 
