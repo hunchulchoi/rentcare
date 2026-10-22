@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # End-to-end scenarios on the Pleos emulator + local web server (RENTCARE-18).
-# Needs: emulator running with the debug app installed, `pnpm dev` on :5173, migrated DB,
+# Needs: emulator running with the debug app installed, web server reachable at web/.env PUBLIC_BASE_URL, migrated DB,
 # web/.env with DEMO_VENDOR_TOKEN. Uses Korean UI (demo rental language ko).
 set -uo pipefail
 cd "$(dirname "$0")/.."
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
-UI=scripts/ui.sh; VC=scripts/vconsole.sh; B=http://127.0.0.1:5173
+UI=scripts/ui.sh; VC=scripts/vconsole.sh
+B=$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-); B=${B:-http://127.0.0.1:5173}
 pass=0; fail=0
 ok()   { echo "  PASS $1"; pass=$((pass+1)); }
 bad()  { echo "  FAIL $1"; fail=$((fail+1)); echo "       screen: $($UI texts | head -40 | tr '\n' '|')"; }

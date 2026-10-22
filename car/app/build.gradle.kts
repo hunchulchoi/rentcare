@@ -9,6 +9,15 @@ plugins {
 
 fun prop(name: String, default: String) = (findProperty(name) as String?) ?: default
 
+// Server address and car key come from web/.env (one place for both sides). Gradle -P overrides.
+// Move hosts by editing PUBLIC_BASE_URL there, e.g. https://rentcare.devfor.link
+val webEnv: Map<String, String> = rootProject.file("../web/.env").takeIf { it.exists() }?.readLines()
+    ?.mapNotNull { line -> line.trim().takeIf { it.isNotEmpty() && !it.startsWith("#") && '=' in it } }
+    ?.associate { it.substringBefore('=').trim() to it.substringAfter('=').trim() }
+    .orEmpty()
+val envBaseUrl = webEnv["PUBLIC_BASE_URL"].orEmpty()
+val envCarKey = webEnv["CAR_API_KEY"].orEmpty()
+
 android {
     namespace = "com.rentcare.car"
     compileSdk = 35
@@ -48,8 +57,8 @@ android {
         debug {
             // Cleartext only to the emulator host loopback, see res/xml/network_security_config_debug.xml
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config_debug"
-            buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.apiBaseUrl", "http://10.0.2.2:5173")}\"")
-            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.carApiKey", "dev-car-key")}\"")
+            buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.apiBaseUrl", envBaseUrl.ifEmpty { "http://10.0.2.2:5173" })}\"")
+            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.carApiKey", envCarKey.ifEmpty { "dev-car-key" })}\"")
         }
         release {
             isMinifyEnabled = false
@@ -57,8 +66,8 @@ android {
             signingConfigs.findByName("release")?.let { signingConfig = it }
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config"
             // No default: a release must name its HTTPS domain explicitly (Pleos security guide).
-            buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.releaseApiBaseUrl", "")}\"")
-            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.releaseCarApiKey", "")}\"")
+            buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.releaseApiBaseUrl", envBaseUrl)}\"")
+            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.releaseCarApiKey", envCarKey)}\"")
         }
     }
 
@@ -98,8 +107,8 @@ dependencies {
 
 // Fail release builds that would ship an HTTP / IP / empty server address.
 val checkReleaseConfig by tasks.registering {
-    val url = prop("rentcare.releaseApiBaseUrl", "")
-    val key = prop("rentcare.releaseCarApiKey", "")
+    val url = prop("rentcare.releaseApiBaseUrl", envBaseUrl)
+    val key = prop("rentcare.releaseCarApiKey", envCarKey)
     doLast {
         val host = runCatching { URI(url).host }.getOrNull().orEmpty()
         val isIp = Regex("""^\d{1,3}(\.\d{1,3}){3}$""").matches(host) || host.contains(':') || !host.contains('.')

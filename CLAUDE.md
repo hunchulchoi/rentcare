@@ -37,7 +37,11 @@ cd car && ./gradlew :core:test :app:assembleDebug
 
 # web
 cd web && pnpm test && pnpm check && pnpm build
-pnpm db:migrate && pnpm dev --host 127.0.0.1 --port 5173   # emulator reaches it at 10.0.2.2:5173
+pnpm db:migrate && pnpm build && pnpm start     # prod server on 127.0.0.1:3000 (web/.env PORT/HOST)
+tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLIC_BASE_URL
+# Host change (e.g. https://rentcare.devfor.link): edit PUBLIC_BASE_URL in web/.env only,
+# then rebuild the car app — it reads PUBLIC_BASE_URL and CAR_API_KEY from web/.env.
+# Never expose `pnpm dev` publicly (it serves source files).
 
 # Virtual Console (change SOC / telltales / tire pressure / gear)
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
