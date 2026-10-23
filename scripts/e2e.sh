@@ -155,6 +155,7 @@ code=$($UI texts | grep -oE '^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$' | head -1)
 [[ "$(curl -s "$B/m?lang=en")" == *"Add photos &amp; videos"* ]] && ok "S7 phone page in English before code" || bad "S7 phone page language"
 m=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H "Accept: text/html" --data-urlencode "code=$code")
 [[ "$m" == *"$receipt"* && "$m" == *"Car won't start"* && "$m" == *'lang="en"'* ]] && ok "S7 phone shows same report in English ($receipt)" || bad "S7 phone verify (code=${code:-none})"
+node scripts/browser-login-check.mjs "$B" --code-check "$code" >/dev/null && ok "S7 phone 6-box code input auto-verifies in a real browser" || bad "S7 6-box code input"
 png=$(mktemp -d)/e2e.png
 python3 -c 'import struct,zlib,sys;r=lambda t,d:struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d));open(sys.argv[1],"wb").write(b"\x89PNG\r\n\x1a\n"+r(b"IHDR",struct.pack(">IIBBBBB",1,1,8,2,0,0,0))+r(b"IDAT",zlib.compress(b"\x00\xff\x00\x00"))+r(b"IEND",b""))' "$png"
 local_before=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')

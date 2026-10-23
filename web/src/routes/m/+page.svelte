@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CodeBoxes from '#lib/CodeBoxes.svelte';
 	import Logo from '#lib/Logo.svelte';
 	import { enhance } from '$app/forms';
 	import { ACCEPT_ATTR, MAX_FILE_BYTES, resolveMime } from '#lib/files.ts';
@@ -18,6 +19,7 @@
 	}
 
 	let code = $state('');
+	let formEl = $state<HTMLFormElement>();
 	let verifiedCode = $state(''); // kept in memory only; sent in POST bodies
 	let verifying = $state(false);
 	let uploading = $state(false);
@@ -117,6 +119,7 @@
 	{#if !verified}
 		<p>{t.intro}</p>
 		<form
+			bind:this={formEl}
 			method="POST"
 			action="?/verify"
 			use:enhance={() => {
@@ -129,23 +132,18 @@
 				};
 			}}
 		>
-			<label for="code">{t.codeLabel}</label>
-			<input
-				id="code"
-				name="code"
+			<p class="code-label" id="code-label">{t.codeLabel}</p>
+			<CodeBoxes
 				bind:value={code}
-				class="code-input"
-				placeholder={t.codePlaceholder}
-				autocomplete="off"
-				autocapitalize="characters"
-				spellcheck="false"
-				maxlength="8"
-				required
+				label={t.codeLabel}
+				disabled={verifying}
+				invalid={!!(form && 'error' in form && form.error)}
+				oncomplete={() => formEl?.requestSubmit()}
 			/>
 			{#if form && 'error' in form && form.error}
 				<p class="error" role="alert">{mobileError(lang, form.error)}</p>
 			{/if}
-			<button type="submit" disabled={verifying}>{verifying ? t.verifying : t.verify}</button>
+			<button type="submit" disabled={verifying || code.length !== 6}>{verifying ? t.verifying : t.verify}</button>
 		</form>
 	{:else}
 		<div class="notice" role="status">
@@ -205,12 +203,9 @@
 	.mobile {
 		max-width: 480px;
 	}
-	.code-input {
-		font-size: 1.6rem;
-		letter-spacing: 0.3em;
-		text-transform: uppercase;
-		text-align: center;
-		font-family: ui-monospace, monospace;
+	.code-label {
+		font-weight: 600;
+		margin: 0.75rem 0 0.25rem;
 	}
 	.notice {
 		background: var(--ok-bg);

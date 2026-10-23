@@ -24,6 +24,16 @@ export function generateAttachCode(
 	return out;
 }
 
+/** For the 6-box input while typing: upper-case, keep only code characters, at most 6. */
+export function cleanCodeInput(raw: string): string {
+	let out = '';
+	for (const ch of raw.toUpperCase()) {
+		if (ATTACH_CODE_ALPHABET.includes(ch)) out += ch;
+		if (out.length === ATTACH_CODE_LENGTH) break;
+	}
+	return out;
+}
+
 /**
  * Normalize user input: trim, drop spaces/hyphens, upper-case.
  * Returns null if the result is not a well-formed code.

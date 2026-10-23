@@ -49,3 +49,15 @@ describe('normalizeAttachCode', () => {
 		expect(normalizeAttachCode('x'.repeat(100))).toBeNull();
 	});
 });
+
+describe('cleanCodeInput (6-box input)', () => {
+	it('upper-cases, drops separators and characters the code never uses, keeps at most 6', async () => {
+		const { cleanCodeInput } = await import('./attach-code');
+		expect(cleanCodeInput('k7q2m9')).toBe('K7Q2M9');
+		expect(cleanCodeInput('K7Q-2M9')).toBe('K7Q2M9');
+		expect(cleanCodeInput(' k 7 q ')).toBe('K7Q');
+		expect(cleanCodeInput('K7Q2M9XYZ')).toBe('K7Q2M9');
+		expect(cleanCodeInput('O0I1L')).toBe('');
+		expect(cleanCodeInput('한글K7')).toBe('K7');
+	});
+});

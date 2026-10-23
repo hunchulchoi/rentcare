@@ -13,6 +13,7 @@ const listCheck = process.argv.includes('--list-check');
 const path = arg('--path');
 const hover = process.argv.includes('--hover');
 const actionCheck = arg('--action-check'); // incident detail path
+const codeCheck = arg('--code-check'); // attach code: phone page 6-box input, no login
 const width = Number(arg('--width') ?? 1400);
 const token = readFileSync('web/.env', 'utf8').match(/^DEMO_VENDOR_TOKEN=(.*)$/m)?.[1]?.trim();
 if (!base || !token) throw new Error('usage: browser-login-check.mjs <base url> (needs DEMO_VENDOR_TOKEN in web/.env)');
@@ -41,6 +42,32 @@ try {
 
 	await send('Page.enable');
 	await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 600 });
+	if (codeCheck) {
+		await send('Page.navigate', { url: `${base}/m?lang=ko` });
+		if (!(await waitFor(`!!document.querySelector('.boxes input') && !!document.querySelector('form')?.isConnected`, 30000))) throw new Error('code input not found');
+		await sleep(800); // hydration
+		// Type like a person: lower case, a hyphen and a space mixed in, one key at a time.
+		const typed = codeCheck.slice(0, 3).toLowerCase() + '- ' + codeCheck.slice(3).toLowerCase();
+		let boxes = '';
+		for (const [k, ch] of [...typed].entries()) {
+			if (k === typed.length - 1) boxes = await evalJs(`[...document.querySelectorAll('.boxes .box')].map(b => b.innerText).join('')`);
+			if (k === typed.length - 1 && shot) {
+				const { data } = await send('Page.captureScreenshot', { format: 'png' });
+				writeFileSync(shot, Buffer.from(data, 'base64'));
+			}
+			await evalJs(`(() => { const i = document.querySelector('.boxes input'); i.focus(); i.value = i.value + ${JSON.stringify('__C__')}.replace('__C__', ${JSON.stringify(ch)}); i.dispatchEvent(new InputEvent('input', { bubbles: true })); return true })()`);
+			await sleep(60);
+		}
+		const verified = await waitFor(`!!document.querySelector('.notice')`, 15000);
+		const pass = boxes === codeCheck.slice(0, 5) && verified;
+		console.log(`${pass ? 'PASS' : 'FAIL'} 6-box code: typed '${typed}' → boxes before last key=${boxes}, auto-verified on 6th=${verified}`);
+		process.exitCode = pass ? 0 : 1;
+		ws.close();
+		proc.kill();
+		await sleep(300);
+		rmSync(profile, { recursive: true, force: true });
+		process.exit(process.exitCode ?? 0);
+	}
 	await send('Page.navigate', { url: `${base}/vendor/login` });
 	if (!(await waitFor(`!!document.querySelector('input[name=token]')`))) throw new Error('login form not found');
 	await evalJs(`(() => { const f = document.querySelector('form'); f.querySelector('input[name=token]').value = ${JSON.stringify(token)};
