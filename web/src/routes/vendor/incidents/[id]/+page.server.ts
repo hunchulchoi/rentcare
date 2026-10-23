@@ -1,5 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
-import { acknowledge, getIncidentDetail } from '#lib/server/vendor.ts';
+import { parseActionForm } from '#lib/incident-actions.ts';
+import { acknowledge, addIncidentAction, getIncidentDetail } from '#lib/server/vendor.ts';
 import { isUuid } from '#lib/server/validate.ts';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -18,5 +19,14 @@ export const actions: Actions = {
 		const ok = await acknowledge(vendor.vendorId, params.id, vendor.staffLabel ?? '업체 직원');
 		if (!ok) error(404, 'Not found');
 		return { acknowledged: true };
+	},
+	addAction: async ({ locals, params, request }) => {
+		const vendor = locals.vendor!;
+		if (!isUuid(params.id)) error(404, 'Not found');
+		const parsed = parseActionForm(await request.formData());
+		if (!parsed.ok) return fail(400, { actionError: parsed.error });
+		const ok = await addIncidentAction(vendor.vendorId, params.id, parsed.value, vendor.staffLabel ?? '업체 직원');
+		if (!ok) error(404, 'Not found');
+		return { actionSaved: true };
 	}
 };

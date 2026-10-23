@@ -1,18 +1,35 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	import { fmtBytes, fmtKst } from '#lib/format.ts';
 	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, typeLabel, warningLabelKo } from '#lib/i18n.ts';
+	import { ACTION_BODY_MAX, ACTION_TYPES, ACTION_TYPE_LABELS_KO, timeline, type ActionKind, type ActionType } from '#lib/incident-actions.ts';
 	import StaticMap from '#lib/StaticMap.svelte';
 	import StatusBadge from '#lib/StatusBadge.svelte';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 	const i = $derived(data.incident);
 	const hasCoords = $derived(i.latitude !== null && i.longitude !== null);
 	const kakaoUrl = $derived(hasCoords ? `https://map.kakao.com/link/map/${encodeURIComponent(i.receipt_no)},${i.latitude},${i.longitude}` : '');
 	const googleUrl = $derived(hasCoords ? `https://www.google.com/maps/search/?api=1&query=${i.latitude},${i.longitude}` : '');
 	const level = $derived(i.soc !== null ? { label: '배터리', value: i.soc } : i.fuel_percent !== null ? { label: '연료', value: i.fuel_percent } : null);
 	let submitting = $state(false);
+
+	// Vendor log (internal): notes and actions, newest first.
+	const history = $derived(timeline(i, data.actions).reverse());
+	let kind = $state<ActionKind>('ACTION');
+	let actionType = $state<ActionType>('CALL');
+	let body = $state('');
+	let saving = $state(false);
+	let ready = $state(false);
+	onMount(() => (ready = true));
+	const ERR: Record<string, string> = {
+		empty: '메모 내용을 입력하세요.',
+		too_long: `${ACTION_BODY_MAX}자 이하로 입력하세요.`,
+		action_type: '조치 유형을 고르세요.',
+		kind: '다시 시도하세요.'
+	};
 </script>
 
 <svelte:head>
@@ -56,6 +73,66 @@
 			{:else}
 				<p class="muted">없음 또는 확인 불가</p>
 			{/if}
+		</section>
+
+		<section class="card log">
+			<h2>처리 기록 <small>업체 내부용 · 고객에게 보이지 않음</small></h2>
+			<form
+				method="POST"
+				action="?/addAction"
+				class="log-form"
+				data-ready={ready ? '1' : undefined}
+				use:enhance={() => {
+					saving = true;
+					return async ({ result, update }) => {
+						await update({ reset: false });
+						if (result.type === 'success') body = '';
+						saving = false;
+					};
+				}}
+			>
+				<div class="seg" role="radiogroup" aria-label="기록 종류">
+					<label class:on={kind === 'ACTION'}><input type="radio" name="kind" value="ACTION" bind:group={kind} />조치</label>
+					<label class:on={kind === 'NOTE'}><input type="radio" name="kind" value="NOTE" bind:group={kind} />메모</label>
+				</div>
+				{#if kind === 'ACTION'}
+					<div class="types" role="radiogroup" aria-label="조치 유형">
+						{#each ACTION_TYPES as t (t)}
+							<label class:on={actionType === t}><input type="radio" name="actionType" value={t} bind:group={actionType} />{ACTION_TYPE_LABELS_KO[t]}</label>
+						{/each}
+					</div>
+				{/if}
+				<textarea
+					name="body"
+					rows="3"
+					maxlength={ACTION_BODY_MAX}
+					bind:value={body}
+					placeholder={kind === 'ACTION' ? '조치 내용 (선택) 예: 10:20 견인 기사 출발, 30분 내 도착 예정' : '내부 메모 예: 고객이 내일 오전 반납 희망'}
+				></textarea>
+				<div class="log-actions">
+					{#if form?.actionError}<span class="err" role="alert">{ERR[form.actionError] ?? form.actionError}</span>{/if}
+					<button type="submit" class="save" disabled={saving || (kind === 'NOTE' && !body.trim())}>{saving ? '저장 중…' : kind === 'ACTION' ? '조치 기록' : '메모 저장'}</button>
+				</div>
+			</form>
+
+			<ol class="timeline">
+				{#each history as e, n (n)}
+					<li class={`t-${e.kind}`}>
+						<span class="dot" aria-hidden="true"></span>
+						<div class="t-body">
+							<div class="t-head">
+								<strong>
+									{#if e.kind === 'REPORTED'}차량에서 접수{:else if e.kind === 'ACKNOWLEDGED'}업체 확인{:else if e.kind === 'NOTE'}메모{:else}{ACTION_TYPE_LABELS_KO[e.action_type ?? 'OTHER']}{/if}
+								</strong>
+								<span class="muted small">
+									{fmtKst(e.at)}{#if (e.kind === 'ACKNOWLEDGED' || e.kind === 'NOTE' || e.kind === 'ACTION') && e.staff}{` · ${e.staff}`}{/if}
+								</span>
+							</div>
+							{#if (e.kind === 'NOTE' || e.kind === 'ACTION') && e.body}<p class="t-text">{e.body}</p>{/if}
+						</div>
+					</li>
+				{/each}
+			</ol>
 		</section>
 
 		<section class="card">
@@ -386,6 +463,126 @@
 		height: 100%;
 		background: #00756f;
 		border-radius: 999px;
+	}
+	.log-form {
+		display: grid;
+		gap: 10px;
+		margin-bottom: 18px;
+	}
+	.log-form .seg,
+	.types {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.log-form .seg label,
+	.types label {
+		display: inline-flex;
+		align-items: center;
+		margin: 0;
+		padding: 6px 14px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		font-weight: 500;
+		font-size: 0.9rem;
+		cursor: pointer;
+		background: #fff;
+	}
+	.log-form .seg label.on {
+		background: var(--fg);
+		border-color: var(--fg);
+		color: #fff;
+	}
+	.types label.on {
+		background: #e3f4f2;
+		border-color: #00756f;
+		color: #00564f;
+		font-weight: 700;
+	}
+	.log-form input[type='radio'] {
+		position: absolute;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.log-form label:has(input:focus-visible) {
+		outline: 2px solid #00756f;
+		outline-offset: 2px;
+	}
+	.log-form textarea {
+		border-radius: 14px;
+		resize: vertical;
+	}
+	.log-actions {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 12px;
+	}
+	.save {
+		width: auto;
+		margin: 0;
+		padding: 10px 22px;
+		border-radius: 999px;
+		border: 0;
+		background: #00756f;
+		color: #fff;
+		font-weight: 700;
+	}
+	.save:disabled {
+		opacity: 0.5;
+	}
+	.err {
+		color: var(--err);
+		font-size: 0.9rem;
+	}
+	.timeline {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.timeline li {
+		position: relative;
+		display: flex;
+		gap: 12px;
+		padding: 0 0 16px;
+	}
+	.timeline li:not(:last-child)::before {
+		content: '';
+		position: absolute;
+		left: 6px;
+		top: 16px;
+		bottom: 0;
+		width: 2px;
+		background: var(--border);
+	}
+	.dot {
+		flex: none;
+		width: 14px;
+		height: 14px;
+		margin-top: 4px;
+		border-radius: 50%;
+		background: #a4a8ae;
+		box-shadow: 0 0 0 3px #fff;
+	}
+	.t-ACTION .dot {
+		background: #00756f;
+	}
+	.t-ACKNOWLEDGED .dot {
+		background: #00753a;
+	}
+	.t-REPORTED .dot {
+		background: #0052cc;
+	}
+	.t-head {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 10px;
+		align-items: baseline;
+	}
+	.t-text {
+		margin: 4px 0 0;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 	}
 	.muted {
 		color: var(--muted);

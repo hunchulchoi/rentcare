@@ -12,6 +12,7 @@ const shot = arg('--shot');
 const listCheck = process.argv.includes('--list-check');
 const path = arg('--path');
 const hover = process.argv.includes('--hover');
+const actionCheck = arg('--action-check'); // incident detail path
 const width = Number(arg('--width') ?? 1400);
 const token = readFileSync('web/.env', 'utf8').match(/^DEMO_VENDOR_TOKEN=(.*)$/m)?.[1]?.trim();
 if (!base || !token) throw new Error('usage: browser-login-check.mjs <base url> (needs DEMO_VENDOR_TOKEN in web/.env)');
@@ -67,6 +68,21 @@ try {
 		const pass = before > 0 && tireRows.length > 0 && tireRows.every((t) => t === '타이어 이상') && ackOnly && sortedAsc;
 		console.log(`${pass ? 'PASS' : 'FAIL'} vendor list: rows=${before}, search 타이어 → ${tireRows.length} rows all tire=${tireRows.every((t) => t === '타이어 이상')}, status 확인함 only=${ackOnly}, receipt sort asc=${sortedAsc}`);
 		if (!pass) process.exitCode = 1;
+	}
+	if (ok && actionCheck) {
+		// Staff log: record a tow request in a real browser and see it in the timeline.
+		await send('Page.navigate', { url: `${base}${actionCheck}` });
+		if (!(await waitFor(`!!document.querySelector('form.log-form') && !!document.querySelector('[data-ready]')`, 30000))) throw new Error('log form not ready');
+		const marker = `e2e-${Date.now()}`;
+		await evalJs(`(() => { const f = document.querySelector('form.log-form');
+			f.querySelector('input[name=kind][value=ACTION]').click();
+			f.querySelector('input[name=actionType][value=TOW]').click();
+			const t = f.querySelector('textarea'); t.value = ${JSON.stringify('__M__')}.replace('__M__', ${JSON.stringify(marker)}); t.dispatchEvent(new Event('input', { bubbles: true }));
+			setTimeout(() => f.requestSubmit(), 50); return true })()`);
+		const saved = await waitFor(`[...document.querySelectorAll('.timeline li')].some(li => li.innerText.includes('견인 요청') && li.innerText.includes(${JSON.stringify('__M__')}.replace('__M__', ${JSON.stringify(marker)})))`, 15000);
+		const cleared = await evalJs(`document.querySelector('form.log-form textarea').value === ''`);
+		console.log(`${saved && cleared ? 'PASS' : 'FAIL'} staff log: tow action saved=${saved}, form cleared=${cleared}`);
+		if (!(saved && cleared)) process.exitCode = 1;
 	}
 	if (ok && shot) {
 		if (path) {

@@ -75,6 +75,7 @@ page=$(curl -s -b "$jar" "$B$id")
 curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''
 $UI tap "새로고침" || true
 wait_for "S4 car shows staff seen" "✔ 업체 담당자 확인" 20
+node scripts/browser-login-check.mjs "$B" --action-check "$id" >/dev/null && ok "S4 browser: staff logs a tow action on the incident" || bad "S4 staff action log"
 $VC telltale TPMS Off >/dev/null; rm -f "$jar"
 
 echo "== S6a same Idempotency-Key x5 in parallel -> one incident"

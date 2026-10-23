@@ -95,3 +95,16 @@ alter table incidents add column if not exists car_token_hash text;
 
 -- v3: car warning lights on when the report was made (Pleos TelltaleType names)
 alter table incidents add column if not exists warnings text[] not null default '{}';
+
+-- v5: vendor-side log per incident — internal notes and actions taken. Never sent to the car.
+create table if not exists incident_actions (
+	id uuid primary key default gen_random_uuid(),
+	incident_id uuid not null references incidents(id) on delete cascade,
+	kind text not null check (kind in ('NOTE', 'ACTION')),
+	action_type text check (action_type in ('CALL', 'DISPATCH', 'TOW', 'REPLACEMENT', 'REPAIR', 'OTHER')),
+	body text check (body is null or char_length(body) <= 2000),
+	staff text,
+	created_at timestamptz not null default now(),
+	check ((kind = 'NOTE' and body is not null and action_type is null) or (kind = 'ACTION' and action_type is not null))
+);
+create index if not exists incident_actions_incident_idx on incident_actions (incident_id, created_at);

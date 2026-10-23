@@ -1,6 +1,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import type { IncidentStatus, IncidentType, LocationSource } from '../i18n';
 import type { ListRow } from '../incident-list.ts';
+import type { ActionInput, ActionRow } from '../incident-actions.ts';
 import { randomToken, sha256Hex } from './crypto';
 import { db, syncDemoVendor } from './db';
 
@@ -121,7 +122,20 @@ export async function getIncidentDetail(vendorId: string, id: string) {
 	const attachments = await sql<AttachmentRow[]>`
 		select id, original_name, mime_type, size_bytes::float8 as size_bytes, source, created_at
 		from attachments where incident_id = ${id} order by created_at`;
-	return { incident: rows[0], attachments };
+	const actions = await sql<ActionRow[]>`
+		select id, kind, action_type, body, staff, created_at
+		from incident_actions where incident_id = ${id} order by created_at`;
+	return { incident: rows[0], attachments, actions };
+}
+
+/** Append a note/action to the vendor's own incident. False when the incident is not theirs. */
+export async function addIncidentAction(vendorId: string, id: string, a: ActionInput, staff: string): Promise<boolean> {
+	const rows = await db()`
+		insert into incident_actions (incident_id, kind, action_type, body, staff)
+		select i.id, ${a.kind}, ${a.actionType}, ${a.body}, ${staff}
+		from incidents i where i.id = ${id} and i.vendor_id = ${vendorId}
+		returning id`;
+	return rows.length === 1;
 }
 
 export async function acknowledge(vendorId: string, id: string, by: string): Promise<boolean> {
