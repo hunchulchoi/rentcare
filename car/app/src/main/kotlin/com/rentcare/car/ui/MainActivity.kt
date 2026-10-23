@@ -29,6 +29,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -118,12 +120,16 @@ private fun SideMenu(current: Tab, onSelect: (Tab) -> Unit) {
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val haptic = LocalHapticFeedback.current
         Tab.entries.filter { it != Tab.PROBE || BuildConfig.DEBUG }.forEach { t ->
             val selected = t == current
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(RoundedCornerShape(36.dp))
                     .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                    .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(t) })
+                    .selectable(selected = selected, role = Role.Tab, onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onSelect(t)
+                    })
                     .padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
