@@ -3,7 +3,7 @@
 # attach code, vendor downloads it. Checks the bytes and that nothing was written under web/storage.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-B=$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)
+B=${RENTCARE_BASE_URL:-$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)}
 car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
 pass=0; fail=0; ok(){ echo "  PASS $1"; pass=$((pass+1)); }; bad(){ echo "  FAIL $1"; fail=$((fail+1)); }
 d=$(mktemp -d); now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
