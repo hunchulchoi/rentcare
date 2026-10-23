@@ -3,6 +3,7 @@
 	import { fmtBytes, fmtKst } from '#lib/format.ts';
 	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, warningLabelKo } from '#lib/i18n.ts';
 	import StaticMap from '#lib/StaticMap.svelte';
+	import StatusBadge from '#lib/StatusBadge.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,7 +23,7 @@
 <h1>
 	{i.receipt_no}
 	{#if i.demo}<span class="badge demo">데모 접수</span>{/if}
-	<span class={`badge ${i.status}`}>{STATUS_LABELS_KO[i.status]}</span>
+	<StatusBadge status={i.status} />
 </h1>
 
 <section class="ack">

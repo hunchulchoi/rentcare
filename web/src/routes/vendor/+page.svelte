@@ -11,7 +11,7 @@
 		type Updater
 	} from '@tanstack/table-core';
 	import { onMount } from 'svelte';
-	import StaticMap from '#lib/StaticMap.svelte';
+	import StatusBadge from '#lib/StatusBadge.svelte';
 	import { fmtKst } from '#lib/format.ts';
 	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, type IncidentStatus } from '#lib/i18n.ts';
 	import { incidentMatches, locationText, type ListRow } from '#lib/incident-list.ts';
@@ -144,11 +144,6 @@
 							<div class="sub plate">{i.vehicle_plate}</div>
 						</td>
 						<td><div class="loc">
-							{#if i.latitude !== null && i.longitude !== null}
-								<a class="thumb" href={`/vendor/incidents/${i.id}`} aria-label={`${i.receipt_no} 위치`}>
-									<StaticMap lat={i.latitude} lon={i.longitude} tileBase="/vendor/map" zoom={15} height={72} width={140} attribution={false} pin={26} />
-								</a>
-							{/if}
 							<div class="loc-text">
 								<div>{locationText(i)}</div>
 								{#if i.location_source}<div class="sub">{LOCATION_SOURCE_LABELS_KO[i.location_source]}</div>{/if}
@@ -156,7 +151,7 @@
 						</div></td>
 						<td class="nowrap">{LANGUAGE_NAMES_KO[i.language] ?? i.language}</td>
 						<td class="num">{i.attachments}</td>
-						<td class="nowrap"><span class={`badge ${i.status}`}>{STATUS_LABELS_KO[i.status]}</span></td>
+						<td class="nowrap"><StatusBadge status={i.status} /></td>
 					</tr>
 				{:else}
 					<tr><td colspan={columns.length} class="empty">조건에 맞는 신고가 없습니다.</td></tr>
@@ -170,7 +165,6 @@
 		<span>{table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}</span>
 		<button type="button" class="secondary" disabled={!table.getCanNextPage()} onclick={() => table.nextPage()}>다음</button>
 	</div>
-	<p class="osm">지도 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors</p>
 {/if}
 
 <style>
@@ -276,16 +270,7 @@
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		min-width: 300px;
-	}
-	.thumb {
-		flex: none;
-		width: 140px;
-		display: block;
-	}
-	.thumb :global(.map) {
-		margin: 0;
-		border-radius: 10px;
+		min-width: 200px;
 	}
 	.loc-text {
 		min-width: 0;
@@ -306,10 +291,5 @@
 		width: auto;
 		margin: 0;
 		padding: 0.35rem 1rem;
-	}
-	.osm {
-		text-align: right;
-		color: var(--muted);
-		font-size: 0.75rem;
 	}
 </style>
