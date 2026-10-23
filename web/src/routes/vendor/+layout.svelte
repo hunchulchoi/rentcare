@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Logo from '#lib/Logo.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { data, children }: LayoutProps = $props();
@@ -9,7 +10,7 @@
 </svelte:head>
 
 <header class="vendor-bar">
-	<a href="/vendor" class="brand">RentCare 업체용</a>
+	<a href="/vendor" class="brand"><Logo height={32} /> <span>업체용</span></a>
 	{#if data.vendor}
 		<span class="who">{data.vendor.name}{data.vendor.staff ? ` · ${data.vendor.staff}` : ''}</span>
 		<form method="POST" action="/vendor?/logout">
@@ -33,6 +34,9 @@
 		flex-wrap: wrap;
 	}
 	.brand {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
 		font-weight: 700;
 		text-decoration: none;
 		color: var(--fg);

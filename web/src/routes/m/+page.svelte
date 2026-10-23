@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Logo from '#lib/Logo.svelte';
 	import { enhance } from '$app/forms';
 	import { ACCEPT_ATTR, MAX_FILE_BYTES, resolveMime } from '#lib/files.ts';
 	import { MOBILE_STRINGS, mobileError, typeLabel, type UiLang } from '#lib/i18n.ts';
@@ -110,6 +111,7 @@
 </svelte:head>
 
 <main class="mobile" lang={lang}>
+	<Logo height={36} />
 	<h1>{t.title}</h1>
 
 	{#if !verified}
