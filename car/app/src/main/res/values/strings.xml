@@ -156,4 +156,7 @@
     <string name="pending_note">Not delivered yet. Sending again will not create a duplicate.</string>
     <string name="resend">Send again</string>
     <string name="pending_written_at">Written at</string>
+    <string name="map_now">Now</string>
+    <string name="map_return">Return</string>
+    <string name="map_now_far">Your car is about %1$d km away, so it is not on this map.</string>
 </resources>

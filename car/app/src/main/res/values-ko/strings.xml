@@ -156,4 +156,7 @@
     <string name="pending_note">아직 업체에 전달되지 않았습니다. 다시 보내도 중복 접수되지 않습니다.</string>
     <string name="resend">다시 보내기</string>
     <string name="pending_written_at">작성 시각</string>
+    <string name="map_now">현재 위치</string>
+    <string name="map_return">반납</string>
+    <string name="map_now_far">현재 차량 위치는 약 %1$d km 떨어져 있어 지도에서 뺐습니다.</string>
 </resources>

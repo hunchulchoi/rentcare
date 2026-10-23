@@ -139,6 +139,18 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
 
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.route_title), style = MaterialTheme.typography.headlineSmall)
+        val report by vm.report.collectAsStateWithLifecycle()
+        LaunchedEffect(Unit) { if (report.draft.location == null) vm.loadVehicleLocation() }
+        val nowLabel = stringResource(R.string.map_now)
+        val returnLabel = stringResource(R.string.map_return)
+        val now = report.draft.location?.let { MapMarker(it.latitude, it.longitude, nowLabel, PinBlue) }
+        val markers = buildList {
+            inputs.stations.forEachIndexed { i, st -> add(MapMarker(st.latitude, st.longitude, "${i + 1}", PinTeal)) }
+            val rl = r.returnPlace.latitude
+            val ro = r.returnPlace.longitude
+            if (rl != null && ro != null) add(MapMarker(rl, ro, returnLabel, PinRed))
+        }
+        MarkersMap(vm, markers, height = 340.dp, extra = now, droppedNote = { km -> stringResource(R.string.map_now_far, km) })
         Section(stringResource(R.string.return_place)) {
             Text("${r.returnPlace.name} (${r.returnPlace.latitude ?: "-"}, ${r.returnPlace.longitude ?: "-"})")
         }
