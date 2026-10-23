@@ -27,6 +27,16 @@ class UrlPolicyTest {
         assertFalse(UrlPolicy.isSafeAttachUrl("javascript:alert(1)", api))
     }
 
+    @Test fun `attach url may carry only the UI language, nothing else`() {
+        val api = "https://api.rentcare.example"
+        assertTrue(UrlPolicy.isSafeAttachUrl("https://api.rentcare.example/m?lang=en", api))
+        assertTrue(UrlPolicy.isSafeAttachUrl("https://api.rentcare.example/m?lang=ko", api))
+        assertFalse(UrlPolicy.isSafeAttachUrl("https://api.rentcare.example/m?lang=xx", api))
+        assertFalse(UrlPolicy.isSafeAttachUrl("https://api.rentcare.example/m?lang=en&code=ABC123", api))
+        assertFalse(UrlPolicy.isSafeAttachUrl("https://api.rentcare.example/m?code=ABC123&lang=en", api))
+        assertFalse(UrlPolicy.isSafeAttachUrl("https://api.rentcare.example/m?lang=en#ABC123", api))
+    }
+
     @Test fun `debug emulator host is accepted only when api uses it too`() {
         val api = "http://10.0.2.2:5173"
         assertTrue(UrlPolicy.isSafeAttachUrl("http://10.0.2.2:5173/m", api))

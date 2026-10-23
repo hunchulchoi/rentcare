@@ -115,6 +115,33 @@ after=$(vendor_count)
 [[ $((after - before)) -eq 1 ]] && ok "S6c vendor list grew by exactly 1 ($before -> $after)" || bad "S6c vendor count $before -> $after"
 rm -f "$jar"
 
+echo "== S7 English user: car in English, vendor in Korean, phone page in English"
+$UI tap "대여 정보"; sleep 1; $UI tap "English"; sleep 2
+$UI tap "Status"; sleep 1; $UI tap "New report"; sleep 2
+$UI tap "Report"; sleep 3
+check "S7 car UI in English" "Car won't start"
+$UI tap "Car won't start"; sleep 1
+$UI tap "Describe in your language"; sleep 1; "$ADB" shell input text "Engine%sdead%safter%sstop"; sleep 1
+"$ADB" shell input keyevent 4; sleep 1
+$UI tap "Send to 제주 데모렌터카"; sleep 1; $UI tap "Send report"
+wait_for "S7 received in English" "✔ Report received" 15
+receipt=$($UI texts | grep -oE 'RC-[0-9]{8}-[0-9]{4}' | head -1)
+if $UI hasdesc "$B/m?lang=en"; then ok "S7 QR opens phone page in English"; else bad "S7 QR url ($B/m?lang=en)"; fi
+code=$($UI texts | grep -oE '^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$' | head -1)
+[[ "$(curl -s "$B/m?lang=en")" == *"Add photos &amp; videos"* ]] && ok "S7 phone page in English before code" || bad "S7 phone page language"
+m=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H "Accept: text/html" --data-urlencode "code=$code")
+[[ "$m" == *"$receipt"* && "$m" == *"Car won't start"* && "$m" == *'lang="en"'* ]] && ok "S7 phone shows same report in English ($receipt)" || bad "S7 phone verify (code=${code:-none})"
+jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
+id=$(curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | head -1)
+page=$(curl -s -b "$jar" "$B$id")
+[[ "$page" == *"$receipt"* && "$page" == *"시동 불가"* && "$page" == *"영어"* && "$page" == *"Engine dead after stop"* ]] \
+  && ok "S7 vendor sees Korean type, language 영어, original note" || bad "S7 vendor detail"
+curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''
+$UI tap "Refresh" || true
+wait_for "S7 car shows staff seen in English" "✔ Seen by rental company staff" 20
+rm -f "$jar"
+$UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
+
 echo "== S5 end rental wipes local data"
 $UI tap "대여 정보"; sleep 1; $UI tap "반납 완료"; sleep 1; $UI tap "반납 완료" 2; sleep 2
 $UI tap "접수 상태"; sleep 1

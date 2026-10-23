@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { attachUrl } from '#lib/server/attach-url.ts';
 import { apiError, requireCarAuth } from '#lib/server/api.ts';
 import { config } from '#lib/server/config.ts';
 import { createIncident } from '#lib/server/incidents.ts';
@@ -42,7 +43,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 	const base = config.publicBaseUrl ?? url.origin;
 	return json(
-		{ ...result.incident, attachUrl: `${base}/m` },
+		{ ...result.incident, attachUrl: attachUrl(base, v.value.language) },
 		{ status: result.kind === 'created' ? 201 : 200, headers: { 'cache-control': 'no-store' } }
 	);
 };

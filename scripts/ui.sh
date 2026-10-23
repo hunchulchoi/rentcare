@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tiny adb UI driver for the car app.
-#   scripts/ui.sh tap "<exact text>" [nth, default 1]   scripts/ui.sh texts   scripts/ui.sh has "<text>"
+#   scripts/ui.sh tap "<exact text>" [nth, default 1]   scripts/ui.sh texts   scripts/ui.sh has "<text>"   scripts/ui.sh hasdesc "<content description>"
 set -euo pipefail
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
 dump() { "$ADB" shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; "$ADB" shell cat /sdcard/ui.xml; }
@@ -12,5 +12,6 @@ case "${1:-}" in
     "$ADB" shell input tap $(( (x1+x2)/2 )) $(( (y1+y2)/2 )) ;;
   texts) dump | grep -oE 'text="[^"]+"' | sed 's/^text="//; s/"$//' ;;
   has) dump | grep -qF "text=\"$2\"" ;;
+  hasdesc) dump | grep -qF "content-desc=\"$2\"" ;;
   *) sed -n '2,3p' "$0"; exit 1 ;;
 esac

@@ -90,12 +90,14 @@ a fresh attach code is issued and the previous one stops working):
   "status": "RECEIVED",
   "attachCode": "K7Q2M9",
   "attachCodeExpiresAt": "2026-10-23T03:10:00Z",
-  "attachUrl": "https://host/m",
+  "attachUrl": "https://host/m?lang=en",
   "incidentToken": "43-char base64url, only for the creating car"
 }
 ```
 
-- `attachUrl` is a plain address, never contains the code or any token. The car shows it as a QR,
+- `attachUrl` is a plain address, never contains the code or any token. The only query allowed is
+  `lang=<ko|en>` (the report language, v4 2026-10-23) so the phone opens in the user's language before
+  the code is typed; other languages get no query. The car rejects any other query. The car shows it as a QR,
   and shows `attachCode` separately for the user to type on the phone.
 - Attach code: 6 chars from `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, stored hashed (SHA-256), valid 24h.
 
