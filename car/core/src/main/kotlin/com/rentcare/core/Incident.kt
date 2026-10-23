@@ -64,19 +64,28 @@ data class IncidentCreated(
 data class IncidentStatusDto(
     val id: String,
     val receiptNo: String,
-    val status: IncidentStatus,
+    /** Unknown future values decode as RECEIVED (coerceInputValues) instead of failing. */
+    val status: IncidentStatus = IncidentStatus.RECEIVED,
     val acknowledgedAt: String? = null,
+    val resolvedAt: String? = null,
     val attachments: Int = 0,
 )
 
+/** In order (docs/api.md v6). None of them means dispatch or repair is guaranteed. */
 @Serializable
-enum class IncidentStatus { RECEIVED, ACKNOWLEDGED }
+enum class IncidentStatus {
+    RECEIVED, ACKNOWLEDGED, IN_PROGRESS, RESOLVED;
+
+    fun reached(step: IncidentStatus): Boolean = ordinal >= step.ordinal
+    val isFinal: Boolean get() = this == RESOLVED
+}
 
 @Serializable
 data class ApiError(val error: String, val message: String? = null)
 
 val RentcareJson = Json {
     ignoreUnknownKeys = true
+    coerceInputValues = true
     explicitNulls = true
     encodeDefaults = true
 }

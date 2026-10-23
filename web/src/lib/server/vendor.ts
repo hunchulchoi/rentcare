@@ -1,7 +1,7 @@
 import type { Cookies } from '@sveltejs/kit';
 import type { IncidentStatus, IncidentType, LocationSource } from '../i18n';
 import type { ListRow } from '../incident-list.ts';
-import type { ActionInput, ActionRow } from '../incident-actions.ts';
+import { statusAfterLog, type ActionInput, type ActionRow } from '../incident-actions.ts';
 import { randomToken, sha256Hex } from './crypto';
 import { db, syncDemoVendor } from './db';
 
@@ -96,6 +96,8 @@ export interface IncidentDetailRow {
 	status: IncidentStatus;
 	acknowledged_at: Date | null;
 	acknowledged_by: string | null;
+	resolved_at: Date | null;
+	resolved_by: string | null;
 	created_at: Date;
 }
 
@@ -116,7 +118,7 @@ export async function getIncidentDetail(vendorId: string, id: string) {
 			rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 			vehicle_read, fuel_percent, soc, vehicle_read_at,
 			latitude, longitude, address, location_read_at, location_source, location_edited, warnings,
-			status, acknowledged_at, acknowledged_by, created_at
+			status, acknowledged_at, acknowledged_by, resolved_at, resolved_by, created_at
 		from incidents where id = ${id} and vendor_id = ${vendorId}`;
 	if (!rows.length) return null;
 	const attachments = await sql<AttachmentRow[]>`
@@ -130,12 +132,42 @@ export async function getIncidentDetail(vendorId: string, id: string) {
 
 /** Append a note/action to the vendor's own incident. False when the incident is not theirs. */
 export async function addIncidentAction(vendorId: string, id: string, a: ActionInput, staff: string): Promise<boolean> {
+	return db().begin(async (sql) => {
+		const cur = await sql<{ status: IncidentStatus }[]>`
+			select status from incidents where id = ${id} and vendor_id = ${vendorId} for update`;
+		if (!cur.length) return false;
+		await sql`
+			insert into incident_actions (incident_id, kind, action_type, body, staff)
+			values (${id}, ${a.kind}, ${a.actionType}, ${a.body}, ${staff})`;
+		const next = statusAfterLog(cur[0].status, a.kind);
+		if (next !== cur[0].status) {
+			// Handling implies the report was seen: fill the staff check if it was skipped.
+			await sql`
+				update incidents set status = ${next},
+					acknowledged_at = coalesce(acknowledged_at, now()), acknowledged_by = coalesce(acknowledged_by, ${staff})
+				where id = ${id}`;
+		}
+		return true;
+	});
+}
+
+/** Staff marks handling finished (조치완료). Only from IN_PROGRESS or ACKNOWLEDGED. */
+export async function resolveIncident(vendorId: string, id: string, by: string): Promise<boolean> {
 	const rows = await db()`
-		insert into incident_actions (incident_id, kind, action_type, body, staff)
-		select i.id, ${a.kind}, ${a.actionType}, ${a.body}, ${staff}
-		from incidents i where i.id = ${id} and i.vendor_id = ${vendorId}
+		update incidents set status = 'RESOLVED', resolved_at = now(), resolved_by = ${by},
+			acknowledged_at = coalesce(acknowledged_at, now()), acknowledged_by = coalesce(acknowledged_by, ${by})
+		where id = ${id} and vendor_id = ${vendorId} and status in ('ACKNOWLEDGED', 'IN_PROGRESS')
 		returning id`;
-	return rows.length === 1;
+	return rows.length === 1 || (await db()`select 1 from incidents where id = ${id} and vendor_id = ${vendorId}`).length > 0;
+}
+
+/** Back to handling (다시 조치중). */
+export async function reopenIncident(vendorId: string, id: string): Promise<boolean> {
+	const rows = await db()`
+		update incidents set status = 'IN_PROGRESS', resolved_at = null, resolved_by = null
+		where id = ${id} and vendor_id = ${vendorId} and status = 'RESOLVED'
+		returning id`;
+	return rows.length === 1 || (await db()`select 1 from incidents where id = ${id} and vendor_id = ${vendorId}`).length > 0;
 }
 
 export async function acknowledge(vendorId: string, id: string, by: string): Promise<boolean> {

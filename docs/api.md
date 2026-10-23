@@ -119,12 +119,22 @@ Missing or wrong token → `404 not_found` (same as an unknown id, so existence 
   "receiptNo": "RC-20261022-0007",
   "status": "RECEIVED",
   "acknowledgedAt": null,
+  "resolvedAt": null,
   "attachments": 2
 }
 ```
 
-`status`: `RECEIVED` (server stored it, receipt number issued) | `ACKNOWLEDGED` (vendor staff confirmed seeing it).
-`ACKNOWLEDGED` is not a dispatch/repair confirmation.
+`status` (v6, 2026-10-23), in order:
+
+| value | meaning | set by |
+|---|---|---|
+| `RECEIVED` | server stored it, receipt number issued | car report |
+| `ACKNOWLEDGED` | vendor staff confirmed seeing it | "확인" button |
+| `IN_PROGRESS` | vendor is handling it (조치중) | first staff **action** in the log (also marks it acknowledged) |
+| `RESOLVED` | vendor marked handling finished (조치완료) | "조치 완료" button; "다시 조치중" goes back to `IN_PROGRESS` |
+
+None of these is a dispatch or repair guarantee. Action details (tow, call, …) stay internal to the vendor;
+the car only sees the status. Cars must treat an unknown future value as "received" (do not crash).
 
 ## POST /api/incidents/{id}/attachments
 

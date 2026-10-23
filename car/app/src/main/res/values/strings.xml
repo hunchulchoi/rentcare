@@ -170,4 +170,6 @@
     <string name="navi_steps">1) Send the route to the navigation  2) Pick a charger there and tap \"Add as waypoint\"  3) Get the stops here.</string>
     <string name="remain_km">%1$.1f km to go</string>
     <string name="reason_arrival_inconsistent">The navigation estimate is above the current level, so it is not used.</string>
+    <string name="step_in_progress">Rental company is handling it</string>
+    <string name="step_resolved">Marked done by the rental company</string>
 </resources>

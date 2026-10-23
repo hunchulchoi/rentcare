@@ -108,3 +108,10 @@ create table if not exists incident_actions (
 	check ((kind = 'NOTE' and body is not null and action_type is null) or (kind = 'ACTION' and action_type is not null))
 );
 create index if not exists incident_actions_incident_idx on incident_actions (incident_id, created_at);
+
+-- v6: handling status — IN_PROGRESS (first staff action) and RESOLVED (staff marked done).
+alter table incidents drop constraint if exists incidents_status_check;
+alter table incidents add constraint incidents_status_check
+	check (status in ('RECEIVED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'));
+alter table incidents add column if not exists resolved_at timestamptz;
+alter table incidents add column if not exists resolved_by text;

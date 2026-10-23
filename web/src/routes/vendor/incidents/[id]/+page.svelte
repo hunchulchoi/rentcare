@@ -15,6 +15,13 @@
 	const googleUrl = $derived(hasCoords ? `https://www.google.com/maps/search/?api=1&query=${i.latitude},${i.longitude}` : '');
 	const level = $derived(i.soc !== null ? { label: '배터리', value: i.soc } : i.fuel_percent !== null ? { label: '연료', value: i.fuel_percent } : null);
 	let submitting = $state(false);
+	const busy = () => {
+		submitting = true;
+		return async ({ update }: { update: () => Promise<void> }) => {
+			await update();
+			submitting = false;
+		};
+	};
 
 	// Vendor log (internal): notes and actions, newest first.
 	const history = $derived(timeline(i, data.actions).reverse());
@@ -122,10 +129,10 @@
 						<div class="t-body">
 							<div class="t-head">
 								<strong>
-									{#if e.kind === 'REPORTED'}차량에서 접수{:else if e.kind === 'ACKNOWLEDGED'}업체 확인{:else if e.kind === 'NOTE'}메모{:else}{ACTION_TYPE_LABELS_KO[e.action_type ?? 'OTHER']}{/if}
+									{#if e.kind === 'REPORTED'}차량에서 접수{:else if e.kind === 'ACKNOWLEDGED'}업체 확인{:else if e.kind === 'RESOLVED'}조치 완료{:else if e.kind === 'NOTE'}메모{:else}{ACTION_TYPE_LABELS_KO[e.action_type ?? 'OTHER']}{/if}
 								</strong>
 								<span class="muted small">
-									{fmtKst(e.at)}{#if (e.kind === 'ACKNOWLEDGED' || e.kind === 'NOTE' || e.kind === 'ACTION') && e.staff}{` · ${e.staff}`}{/if}
+									{fmtKst(e.at)}{#if e.kind !== 'REPORTED' && e.staff}{` · ${e.staff}`}{/if}
 								</span>
 							</div>
 							{#if (e.kind === 'NOTE' || e.kind === 'ACTION') && e.body}<p class="t-text">{e.body}</p>{/if}
@@ -181,26 +188,25 @@
 	</div>
 
 	<aside class="side">
-		<section class="card ack" class:done={i.status === 'ACKNOWLEDGED'}>
-			<h2>업체 확인</h2>
-			{#if i.status === 'ACKNOWLEDGED'}
-				<p class="ack-done">✔ {fmtKst(i.acknowledged_at)}<br /><span class="muted">{i.acknowledged_by ?? '-'}</span></p>
-			{:else}
-				<form
-					method="POST"
-					action="?/acknowledge"
-					use:enhance={() => {
-						submitting = true;
-						return async ({ update }) => {
-							await update();
-							submitting = false;
-						};
-					}}
-				>
+		<section class="card ack" class:done={i.status === 'RESOLVED'} class:working={i.status === 'IN_PROGRESS'}>
+			<h2>처리 상태 <StatusBadge status={i.status} /></h2>
+			{#if i.status === 'RECEIVED'}
+				<form method="POST" action="?/acknowledge" use:enhance={busy}>
 					<button type="submit" class="primary" disabled={submitting}>{submitting ? '처리 중…' : '확인했습니다'}</button>
 				</form>
+				<p class="muted small">조치를 기록하면 자동으로 '조치중'이 됩니다.</p>
+			{:else if i.status === 'ACKNOWLEDGED' || i.status === 'IN_PROGRESS'}
+				<p class="ack-line">확인 {fmtKst(i.acknowledged_at)} · {i.acknowledged_by ?? '-'}</p>
+				<form method="POST" action="?/resolve" use:enhance={busy}>
+					<button type="submit" class="primary done-btn" disabled={submitting}>{submitting ? '처리 중…' : '조치 완료'}</button>
+				</form>
+			{:else}
+				<p class="ack-done">✔ 조치 완료 {fmtKst(i.resolved_at)}<br /><span class="muted">{i.resolved_by ?? '-'}</span></p>
+				<form method="POST" action="?/reopen" use:enhance={busy}>
+					<button type="submit" class="ghost" disabled={submitting}>다시 조치중으로</button>
+				</form>
 			{/if}
-			<p class="muted small">"확인"은 신고를 보았다는 표시이며 출동·수리 확정이 아닙니다. 차량 화면에 표시됩니다.</p>
+			<p class="muted small">고객 차량 화면에는 상태(확인·조치중·조치완료)만 표시됩니다. 출동·수리 확정이 아닙니다.</p>
 		</section>
 
 		<section class="card">
@@ -434,6 +440,33 @@
 	}
 	.ack .primary:disabled {
 		opacity: 0.6;
+	}
+	.ack.working {
+		border-color: #f0b37a;
+		background: #fff7ef;
+	}
+	.ack h2 {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+	.ack-line {
+		margin: 0 0 10px;
+	}
+	.ack .done-btn {
+		background: #00753a;
+	}
+	.ghost {
+		width: 100%;
+		margin: 0 0 10px;
+		padding: 10px;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: #fff;
+		color: var(--fg);
+	}
+	.t-RESOLVED .dot {
+		background: #00753a;
 	}
 	.ack.done {
 		border-color: #a6ddb9;

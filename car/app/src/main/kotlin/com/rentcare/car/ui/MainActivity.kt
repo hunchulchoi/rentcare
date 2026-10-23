@@ -106,7 +106,10 @@ private fun Root(vm: AppViewModel, startTab: Tab) {
     val compact = maxWidth < 1000.dp
     Row(Modifier.fillMaxSize()) {
         val report by vm.report.collectAsStateWithLifecycle()
-        val tone = ReportTone.of(pending = report.pending != null, received = report.received != null, acknowledged = report.acknowledged)
+        val tone = ReportTone.of(
+            pending = report.pending != null,
+            status = if (report.received != null) report.status ?: com.rentcare.core.IncidentStatus.RECEIVED else null,
+        )
         SideMenu(tab, compact, tone) { tab = it }
         val m = Modifier.fillMaxSize().padding(horizontal = if (compact) 20.dp else 32.dp, vertical = 28.dp)
         when (tab) {

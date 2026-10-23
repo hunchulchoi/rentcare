@@ -106,6 +106,8 @@ data class ReportUi(
     /** Stored but not yet received by the server. While set, the form is replaced by a resend panel. */
     val pending: IncidentRequest? = null,
     val acknowledged: Boolean = false,
+    /** Latest status from the server (RECEIVED → ACKNOWLEDGED → IN_PROGRESS → RESOLVED). */
+    val status: com.rentcare.core.IncidentStatus? = null,
     val attachments: Int = 0,
     val statusError: String? = null,
 )
@@ -125,7 +127,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _ret = MutableStateFlow(ReturnUi())
     val ret: StateFlow<ReturnUi> = _ret
 
-    private val _report = MutableStateFlow(ReportUi(received = deps.store.loadReceived(), pending = deps.store.loadPending()?.request))
+    private val _report = MutableStateFlow(ReportUi(received = deps.store.loadReceived(), pending = deps.store.loadPending()?.request, status = deps.store.loadReceived()?.status))
     val report: StateFlow<ReportUi> = _report
 
     private val _telltales = MutableStateFlow<List<ActiveTelltale>>(emptyList())
@@ -407,7 +409,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     deps.store.saveReceived(res.value)
                     deps.store.savePending(null)
                     _report.update {
-                        it.copy(send = SendState.Idle, received = res.value, pending = null, draft = IncidentDraft())
+                        it.copy(send = SendState.Idle, received = res.value, pending = null, draft = IncidentDraft(), status = res.value.status)
                     }
                     startStatusPolling()
                 }
@@ -484,7 +486,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         statusJob = work.launch { token ->
             while (isActive) {
                 refreshStatusOnce()
-                if (_report.value.acknowledged) break
+                // Keep polling through 조치중 until the vendor marks it done.
+                if (_report.value.status?.isFinal == true) break
                 delay(15_000)
             }
         }
@@ -496,7 +499,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             when (val res = deps.api.status(rec.id, rec.incidentToken)) {
                 is ApiResult.Ok -> _report.update {
                     it.copy(
-                        acknowledged = res.value.status == com.rentcare.core.IncidentStatus.ACKNOWLEDGED,
+                        acknowledged = res.value.status.reached(com.rentcare.core.IncidentStatus.ACKNOWLEDGED),
+                        status = res.value.status,
                         attachments = res.value.attachments,
                         statusError = null,
                     )

@@ -40,6 +40,10 @@ object DesignTokens {
         val positive: Int,
         /** Pleos informative_active (green). */
         val active: Int,
+        /** Pleos informative_autonomous_driving (purple): staff saw it. */
+        val info: Int,
+        /** Pleos regulation_orange: being handled. */
+        val progress: Int,
         val outline: Int,
     ) {
         /** (name, foreground, background) pairs that carry text or icons. */
@@ -48,7 +52,7 @@ object DesignTokens {
                 "primaryContainer" to primaryContainer)
             val texts = listOf("textPrimary" to textPrimary, "textSecondary" to textSecondary,
                 "textTertiary" to textTertiary, "error" to error, "primary" to primary,
-                "positive" to positive, "active" to active)
+                "positive" to positive, "active" to active, "info" to info, "progress" to progress)
             return grounds.flatMap { (g, bg) -> texts.map { (t, fg) -> Triple("$t on $g", fg, bg) } } +
                 Triple("onPrimary on primary", onPrimary, primary) +
                 Triple("onPrimaryContainer on primaryContainer", onPrimaryContainer, primaryContainer)
@@ -70,6 +74,8 @@ object DesignTokens {
         error = 0xC4280A, // informative_negative #FE3D16, darkened for text contrast
         positive = 0x0052CC, // informative_positive #0064FF, darkened
         active = 0x00753A, // informative_active #02C265, darkened
+        info = 0x5A46FA, // informative_autonomous_driving
+        progress = 0xA84800, // regulation_orange #FF8A00, darkened
         outline = 0xC7C9CE, // basic_300
     )
 
@@ -88,6 +94,8 @@ object DesignTokens {
         error = 0xFF8A73, // informative_negative (dark) #FF4C28, lightened for contrast
         positive = 0x7DBBFF, // informative_positive (dark) #0082FF, lightened
         active = 0x00E074, // informative_active (dark)
+        info = 0xB0A4FF, // informative_autonomous_driving (dark) #6A57FF, lightened
+        progress = 0xFFA94D, // regulation_orange (dark), lightened
         outline = 0x686A72, // basic_300 (dark)
     )
 
@@ -119,14 +127,18 @@ object DesignTokens {
 
 /** Overall state of the latest report, for the status icon and step colors. */
 enum class ReportTone {
-    NONE, NOT_SENT, RECEIVED, ACKNOWLEDGED;
+    NONE, NOT_SENT, RECEIVED, ACKNOWLEDGED, IN_PROGRESS, RESOLVED;
 
     companion object {
-        fun of(pending: Boolean, received: Boolean, acknowledged: Boolean): ReportTone = when {
+        fun of(pending: Boolean, status: IncidentStatus?): ReportTone = when {
             pending -> NOT_SENT
-            received && acknowledged -> ACKNOWLEDGED
-            received -> RECEIVED
-            else -> NONE
+            status == null -> NONE
+            else -> when (status) {
+                IncidentStatus.RECEIVED -> RECEIVED
+                IncidentStatus.ACKNOWLEDGED -> ACKNOWLEDGED
+                IncidentStatus.IN_PROGRESS -> IN_PROGRESS
+                IncidentStatus.RESOLVED -> RESOLVED
+            }
         }
     }
 }

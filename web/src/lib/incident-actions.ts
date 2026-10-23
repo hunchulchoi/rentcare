@@ -1,4 +1,6 @@
-// Vendor-side log on an incident: internal notes and actions taken. Never sent to the car or the renter.
+// Vendor-side log on an incident: internal notes and actions taken. Never sent to the car or the renter
+// (the car only sees the status: an action moves it to IN_PROGRESS).
+import type { IncidentStatus } from './i18n.ts';
 
 export const ACTION_TYPES = ['CALL', 'DISPATCH', 'TOW', 'REPLACEMENT', 'REPAIR', 'OTHER'] as const;
 export type ActionType = (typeof ACTION_TYPES)[number];
@@ -46,18 +48,26 @@ export function parseActionForm(f: FormData): { ok: true; value: ActionInput } |
 	return { ok: false, error: 'kind' };
 }
 
+/** Status after a log entry: the first action starts handling; notes never change it; done stays done. */
+export function statusAfterLog(current: IncidentStatus, kind: ActionKind): IncidentStatus {
+	if (kind === 'NOTE') return current;
+	return current === 'RECEIVED' || current === 'ACKNOWLEDGED' ? 'IN_PROGRESS' : current;
+}
+
 export type TimelineEntry =
 	| { kind: 'REPORTED'; at: Date }
 	| { kind: 'ACKNOWLEDGED'; at: Date; staff: string | null }
+	| { kind: 'RESOLVED'; at: Date; staff: string | null }
 	| ({ kind: ActionKind; at: Date } & Omit<ActionRow, 'kind' | 'created_at'>);
 
 /** One chronological history for the detail page. */
 export function timeline(
-	incident: { created_at: Date; acknowledged_at: Date | null; acknowledged_by: string | null },
+	incident: { created_at: Date; acknowledged_at: Date | null; acknowledged_by: string | null; resolved_at?: Date | null; resolved_by?: string | null },
 	rows: ActionRow[]
 ): TimelineEntry[] {
 	const out: TimelineEntry[] = [{ kind: 'REPORTED', at: new Date(incident.created_at) }];
 	if (incident.acknowledged_at) out.push({ kind: 'ACKNOWLEDGED', at: new Date(incident.acknowledged_at), staff: incident.acknowledged_by });
+	if (incident.resolved_at) out.push({ kind: 'RESOLVED', at: new Date(incident.resolved_at), staff: incident.resolved_by ?? null });
 	for (const r of rows) {
 		const { created_at, kind, ...rest } = r;
 		out.push({ kind, at: new Date(created_at), ...rest });

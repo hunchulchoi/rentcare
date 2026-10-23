@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import { parseActionForm } from '#lib/incident-actions.ts';
-import { acknowledge, addIncidentAction, getIncidentDetail } from '#lib/server/vendor.ts';
+import { acknowledge, addIncidentAction, getIncidentDetail, reopenIncident, resolveIncident } from '#lib/server/vendor.ts';
 import { isUuid } from '#lib/server/validate.ts';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -28,5 +28,17 @@ export const actions: Actions = {
 		const ok = await addIncidentAction(vendor.vendorId, params.id, parsed.value, vendor.staffLabel ?? '업체 직원');
 		if (!ok) error(404, 'Not found');
 		return { actionSaved: true };
+	},
+	resolve: async ({ locals, params }) => {
+		const vendor = locals.vendor!;
+		if (!isUuid(params.id)) error(404, 'Not found');
+		if (!(await resolveIncident(vendor.vendorId, params.id, vendor.staffLabel ?? '업체 직원'))) error(404, 'Not found');
+		return { resolved: true };
+	},
+	reopen: async ({ locals, params }) => {
+		const vendor = locals.vendor!;
+		if (!isUuid(params.id)) error(404, 'Not found');
+		if (!(await reopenIncident(vendor.vendorId, params.id))) error(404, 'Not found');
+		return { reopened: true };
 	}
 };

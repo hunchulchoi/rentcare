@@ -170,4 +170,6 @@
     <string name="navi_steps">① 내비로 경로 보내기  ② 내비에서 충전소를 골라 \"경유지로\"  ③ 여기서 불러오기</string>
     <string name="remain_km">남은 거리 %1$.1f km</string>
     <string name="reason_arrival_inconsistent">내비 도착 예상이 현재 잔량보다 높아 사용하지 않았습니다.</string>
+    <string name="step_in_progress">업체 조치 중</string>
+    <string name="step_resolved">업체 조치 완료</string>
 </resources>

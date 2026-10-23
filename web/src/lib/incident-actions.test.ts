@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ACTION_TYPES, ACTION_TYPE_LABELS_KO, parseActionForm, timeline } from './incident-actions.ts';
+import { ACTION_TYPES, ACTION_TYPE_LABELS_KO, parseActionForm, statusAfterLog, timeline } from './incident-actions.ts';
 
 const form = (o: Record<string, string>) => {
 	const f = new FormData();
@@ -33,12 +33,23 @@ describe('parseActionForm', () => {
 	});
 });
 
+describe('statusAfterLog', () => {
+	it('an action starts handling; a note never changes the status; done stays done', () => {
+		expect(statusAfterLog('RECEIVED', 'ACTION')).toBe('IN_PROGRESS');
+		expect(statusAfterLog('ACKNOWLEDGED', 'ACTION')).toBe('IN_PROGRESS');
+		expect(statusAfterLog('IN_PROGRESS', 'ACTION')).toBe('IN_PROGRESS');
+		expect(statusAfterLog('RESOLVED', 'ACTION')).toBe('RESOLVED');
+		for (const s of ['RECEIVED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'] as const) expect(statusAfterLog(s, 'NOTE')).toBe(s);
+	});
+});
+
 describe('timeline', () => {
 	it('merges report, staff check and log entries, oldest first', () => {
 		const t = timeline(
-			{ created_at: new Date('2026-10-23T01:00:00Z'), acknowledged_at: new Date('2026-10-23T01:05:00Z'), acknowledged_by: '김' },
+			{ created_at: new Date('2026-10-23T01:00:00Z'), acknowledged_at: new Date('2026-10-23T01:05:00Z'), acknowledged_by: '김',
+				resolved_at: new Date('2026-10-23T02:00:00Z'), resolved_by: '박' },
 			[{ id: 'x', kind: 'ACTION', action_type: 'CALL', body: '통화함', staff: '이', created_at: new Date('2026-10-23T01:03:00Z') }]
 		);
-		expect(t.map((e) => e.kind)).toEqual(['REPORTED', 'ACTION', 'ACKNOWLEDGED']);
+		expect(t.map((e) => e.kind)).toEqual(['REPORTED', 'ACTION', 'ACKNOWLEDGED', 'RESOLVED']);
 	});
 });

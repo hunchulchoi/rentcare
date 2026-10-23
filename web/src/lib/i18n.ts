@@ -14,7 +14,7 @@ export type UiLang = (typeof UI_LANGS)[number];
 export const LOCATION_SOURCES = ['VEHICLE', 'MANUAL', 'MOBILE'] as const;
 export type LocationSource = (typeof LOCATION_SOURCES)[number];
 
-export const STATUSES = ['RECEIVED', 'ACKNOWLEDGED'] as const;
+export const STATUSES = ['RECEIVED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'] as const;
 export type IncidentStatus = (typeof STATUSES)[number];
 
 export const INCIDENT_TYPE_LABELS: Record<UiLang, Record<IncidentType, string>> = {
@@ -44,7 +44,9 @@ export const LANGUAGE_NAMES_KO: Record<string, string> = {
 
 export const STATUS_LABELS_KO: Record<IncidentStatus, string> = {
 	RECEIVED: '접수됨',
-	ACKNOWLEDGED: '확인함'
+	ACKNOWLEDGED: '확인함',
+	IN_PROGRESS: '조치중',
+	RESOLVED: '조치완료'
 };
 
 export const LOCATION_SOURCE_LABELS_KO: Record<LocationSource, string> = {

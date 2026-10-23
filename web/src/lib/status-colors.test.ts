@@ -14,6 +14,6 @@ describe('status badge colors', () => {
 			bgs.add(c.bg);
 		}
 		expect(bgs.size).toBe(Object.keys(STATUS_COLORS).length);
-		expect(Object.keys(STATUS_COLORS).sort()).toEqual(['ACKNOWLEDGED', 'RECEIVED']);
+		expect(Object.keys(STATUS_COLORS).sort()).toEqual(['ACKNOWLEDGED', 'IN_PROGRESS', 'RECEIVED', 'RESOLVED']);
 	});
 });

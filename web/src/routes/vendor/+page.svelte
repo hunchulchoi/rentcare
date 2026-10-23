@@ -14,7 +14,7 @@
 	import { onMount } from 'svelte';
 	import StatusBadge from '#lib/StatusBadge.svelte';
 	import { fmtKst } from '#lib/format.ts';
-	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, type IncidentStatus } from '#lib/i18n.ts';
+	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUSES, STATUS_LABELS_KO, typeLabel, type IncidentStatus } from '#lib/i18n.ts';
 	import { incidentMatches, locationText, type ListRow } from '#lib/incident-list.ts';
 	import type { PageProps } from './$types';
 
@@ -43,11 +43,10 @@
 	const apply = <T,>(u: Updater<T>, prev: T): T => (typeof u === 'function' ? (u as (p: T) => T)(prev) : u);
 
 	const rows = $derived(data.incidents.filter((r) => status === 'ALL' || r.status === status));
-	const counts = $derived({
-		ALL: data.incidents.length,
-		RECEIVED: data.incidents.filter((r) => r.status === 'RECEIVED').length,
-		ACKNOWLEDGED: data.incidents.filter((r) => r.status === 'ACKNOWLEDGED').length
-	});
+	const FILTERS = ['ALL', ...STATUSES] as const;
+	const counts = $derived(
+		Object.fromEntries(FILTERS.map((f) => [f, f === 'ALL' ? data.incidents.length : data.incidents.filter((r) => r.status === f).length]))
+	);
 
 	// Rebuilt when data or state changes (≤ 200 rows): simple and fully reactive with Svelte 5 runes.
 	const table = $derived.by(() => {
@@ -99,9 +98,9 @@
 			aria-label="검색"
 		/>
 		<div class="seg" role="group" aria-label="상태">
-			{#each [['ALL', '전체'], ['RECEIVED', STATUS_LABELS_KO.RECEIVED], ['ACKNOWLEDGED', STATUS_LABELS_KO.ACKNOWLEDGED]] as [key, label] (key)}
-				<button type="button" class:on={status === key} aria-pressed={status === key} onclick={() => setStatus(key as typeof status)}>
-					{label} <span class="count">{counts[key as keyof typeof counts]}</span>
+			{#each FILTERS as key (key)}
+				<button type="button" class:on={status === key} aria-pressed={status === key} onclick={() => setStatus(key)}>
+					{key === 'ALL' ? '전체' : STATUS_LABELS_KO[key]} <span class="count">{counts[key]}</span>
 				</button>
 			{/each}
 		</div>

@@ -76,6 +76,12 @@ curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H '
 $UI tap "새로고침" || true
 wait_for "S4 car shows staff seen" "✔ 업체 담당자 확인" 20
 node scripts/browser-login-check.mjs "$B" --action-check "$id" >/dev/null && ok "S4 browser: staff logs a tow action on the incident" || bad "S4 staff action log"
+$UI tap "새로고침" || true
+wait_for "S4 car shows handling (조치중) after a staff action" "✔ 업체 조치 중" 25
+jar2=$(mktemp); curl -s -c "$jar2" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
+curl -s -b "$jar2" -o /dev/null -X POST "$B$id?/resolve" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''; rm -f "$jar2"
+$UI tap "새로고침" || true
+wait_for "S4 car shows done (조치완료) after staff resolves" "✔ 업체 조치 완료" 25
 $VC telltale TPMS Off >/dev/null; rm -f "$jar"
 
 echo "== S6a same Idempotency-Key x5 in parallel -> one incident"

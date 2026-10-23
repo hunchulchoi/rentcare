@@ -120,9 +120,9 @@ export async function carMayAccess(id: string, token: string | null): Promise<bo
 
 export async function getIncidentStatus(id: string) {
 	const rows = await db()<
-		{ id: string; receipt_no: string; status: IncidentStatus; acknowledged_at: Date | null; attachments: number }[]
+		{ id: string; receipt_no: string; status: IncidentStatus; acknowledged_at: Date | null; resolved_at: Date | null; attachments: number }[]
 	>`
-		select i.id, i.receipt_no, i.status, i.acknowledged_at,
+		select i.id, i.receipt_no, i.status, i.acknowledged_at, i.resolved_at,
 			(select count(*)::int from attachments a where a.incident_id = i.id) as attachments
 		from incidents i where i.id = ${id}`;
 	if (!rows.length) return null;
@@ -132,6 +132,7 @@ export async function getIncidentStatus(id: string) {
 		receiptNo: r.receipt_no,
 		status: r.status,
 		acknowledgedAt: r.acknowledged_at ? isoZ(r.acknowledged_at) : null,
+		resolvedAt: r.resolved_at ? isoZ(r.resolved_at) : null,
 		attachments: r.attachments
 	};
 }

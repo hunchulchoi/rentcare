@@ -27,4 +27,21 @@ class ApiDtoTest {
             keys,
         )
     }
+
+    @Test fun `decodes handling statuses and treats unknown future values as received`() {
+        fun st(v: String) = RentcareJson.decodeFromString(
+            IncidentStatusDto.serializer(), """{"id":"x","receiptNo":"RC-1","status":"$v","attachments":0}""",
+        ).status
+        assertEquals(IncidentStatus.IN_PROGRESS, st("IN_PROGRESS"))
+        assertEquals(IncidentStatus.RESOLVED, st("RESOLVED"))
+        assertEquals(IncidentStatus.RECEIVED, st("ESCALATED_LATER"))
+    }
+
+    @Test fun `status order says how far handling got`() {
+        assertEquals(true, IncidentStatus.IN_PROGRESS.reached(IncidentStatus.ACKNOWLEDGED))
+        assertEquals(false, IncidentStatus.ACKNOWLEDGED.reached(IncidentStatus.IN_PROGRESS))
+        assertEquals(true, IncidentStatus.RESOLVED.reached(IncidentStatus.IN_PROGRESS))
+        assertEquals(true, IncidentStatus.RESOLVED.isFinal)
+        assertEquals(false, IncidentStatus.IN_PROGRESS.isFinal)
+    }
 }

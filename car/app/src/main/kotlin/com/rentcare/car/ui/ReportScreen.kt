@@ -179,7 +179,10 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
             val sc = LocalStatusColors.current
             StepRow(true, stringResource(R.string.step_received), sc.positive)
             StepRow(ui.attachments > 0, stringResource(R.string.step_attach, ui.attachments), sc.positive)
-            StepRow(ui.acknowledged, stringResource(R.string.step_ack), sc.active)
+            val st = ui.status ?: com.rentcare.core.IncidentStatus.RECEIVED
+            StepRow(st.reached(com.rentcare.core.IncidentStatus.ACKNOWLEDGED), stringResource(R.string.step_ack), sc.info)
+            StepRow(st.reached(com.rentcare.core.IncidentStatus.IN_PROGRESS), stringResource(R.string.step_in_progress), sc.progress)
+            StepRow(st.reached(com.rentcare.core.IncidentStatus.RESOLVED), stringResource(R.string.step_resolved), sc.active)
             Text(stringResource(R.string.ack_not_dispatch), style = MaterialTheme.typography.bodySmall)
             ui.statusError?.let { Text(stringResource(R.string.status_error, it), color = MaterialTheme.colorScheme.error) }
             OutlinedButton(onClick = vm::refreshStatusOnce) { Text(stringResource(R.string.refresh)) }
