@@ -1,5 +1,6 @@
 import { errorId, routeForLog } from '#lib/server/log-safe.ts';
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import { securityHeaders } from '#lib/server/security-headers.ts';
 import { SESSION_COOKIE, getSession } from '#lib/server/vendor.ts';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -15,12 +16,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const response = await resolve(event);
-	response.headers.set('x-content-type-options', 'nosniff');
-	response.headers.set('referrer-policy', 'no-referrer');
-	response.headers.set('x-frame-options', 'DENY');
-	if (pathname.startsWith('/vendor') || pathname === '/m' || pathname.startsWith('/m/') || pathname.startsWith('/api/')) {
-		response.headers.set('cache-control', 'no-store');
-	}
+	for (const [k, v] of Object.entries(securityHeaders(pathname))) response.headers.set(k, v);
 	return response;
 };
 

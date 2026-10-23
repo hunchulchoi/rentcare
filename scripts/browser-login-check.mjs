@@ -1,0 +1,49 @@
+// Real-browser check of the vendor login form (catches CSRF/Origin problems curl cannot).
+//   node scripts/browser-login-check.mjs https://rentcare.devfor.link
+// Uses local Google Chrome headless over the DevTools protocol; token from web/.env DEMO_VENDOR_TOKEN.
+import { spawn } from 'node:child_process';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+const base = process.argv[2];
+const token = readFileSync('web/.env', 'utf8').match(/^DEMO_VENDOR_TOKEN=(.*)$/m)?.[1]?.trim();
+if (!base || !token) throw new Error('usage: browser-login-check.mjs <base url> (needs DEMO_VENDOR_TOKEN in web/.env)');
+const chrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const profile = mkdtempSync(join(tmpdir(), 'rc-chrome-'));
+const port = 9300 + Math.floor(Math.random() * 500);
+const proc = spawn(chrome, ['--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+try {
+	let target;
+	for (let i = 0; i < 50 && !target; i++) {
+		await sleep(200);
+		target = await fetch(`http://127.0.0.1:${port}/json`).then((r) => r.json()).then((l) => l.find((t) => t.type === 'page')).catch(() => null);
+	}
+	const ws = new WebSocket(target.webSocketDebuggerUrl);
+	await new Promise((r) => ws.addEventListener('open', r));
+	let id = 0;
+	const pending = new Map();
+	ws.addEventListener('message', (e) => {
+		const m = JSON.parse(e.data);
+		if (m.id && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
+	});
+	const send = (method, params = {}) => new Promise((r) => { const n = ++id; pending.set(n, r); ws.send(JSON.stringify({ id: n, method, params })); });
+	const evalJs = async (expr) => (await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true }))?.result?.value;
+	const waitFor = async (expr, ms = 70000) => { for (let t = 0; t < ms; t += 500) { if (await evalJs(expr)) return true; await sleep(500); } return false; };
+
+	await send('Page.enable');
+	await send('Page.navigate', { url: `${base}/vendor/login` });
+	if (!(await waitFor(`!!document.querySelector('input[name=token]')`))) throw new Error('login form not found');
+	await evalJs(`(() => { const f = document.querySelector('form'); f.querySelector('input[name=token]').value = ${JSON.stringify(token)};
+		const n = f.querySelector('input[name=name]'); if (n) n.value = 'browser-check'; f.requestSubmit(); return true })()`);
+	const ok = await waitFor(`location.pathname === '/vendor' && !document.body.innerText.includes('Cross-site')`, 20000);
+	const text = (await evalJs('document.body.innerText'))?.slice(0, 120).replace(/\s+/g, ' ');
+	console.log(ok ? `PASS browser login → ${await evalJs('location.pathname')}` : `FAIL browser login: ${await evalJs('location.pathname')} | ${text}`);
+	ws.close();
+	process.exitCode = ok ? 0 : 1;
+} finally {
+	proc.kill();
+	await sleep(300);
+	rmSync(profile, { recursive: true, force: true });
+}
