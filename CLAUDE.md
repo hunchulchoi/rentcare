@@ -67,6 +67,9 @@ scripts/e2e.sh                  # wipes app data on the emulator, 31 checks. S6 
 - Emulator crashes on macOS 27 in the host Metal driver (qemu EXC_BAD_ACCESS / MTLReportFailure,
   2026-10-22/23). AVD set to `hw.gpu.mode=swiftshader_indirect` (backup `config.ini.bak-2026-10-23`); if it still
   crashes, run it outside the Android Studio tool window or headless (`-no-window`) for E2E.
+- The car navigation position is fixed in Pangyo (수정구 시흥동) on the emulator: `adb emu geo fix` changes Android
+  GPS only, Virtual Console and navi settings have no location control (2026-10-23). Demo rental returns in Pangyo.
+  Navi waypoints come back with lat/lon 0,0 (no display coords); `NearbyChargingStations` only opens the navi.
 - **Never toggle airplane mode on the emulator** (`cmd connectivity airplane-mode`): the guest loses its
   network and does not recover; a reboot hung the emulator (2026-10-22). Simulate outages by stopping the
   local server instead.
