@@ -2,8 +2,10 @@
 	import { grid } from '#lib/map-tiles.ts';
 
 	// Static (no pan/zoom) map centered on the point, tiles from our own proxy.
-	let { lat, lon, tileBase, zoom = 16, height = 320 }: { lat: number; lon: number; tileBase: string; zoom?: number; height?: number } = $props();
-	const W = 1024; // drawn width; the frame clips it and keeps the point in the middle
+	let {
+		lat, lon, tileBase, zoom = 16, height = 320, width = 1024, attribution = true, pin = 44
+	}: { lat: number; lon: number; tileBase: string; zoom?: number; height?: number; width?: number; attribution?: boolean; pin?: number } = $props();
+	const W = $derived(width); // drawn width; the frame clips it and keeps the point in the middle
 	const tiles = $derived(grid(lat, lon, zoom, W, height));
 </script>
 
@@ -12,12 +14,14 @@
 		{#each tiles as t (`${t.x}/${t.y}`)}
 			<img src={`${tileBase}/${t.z}/${t.x}/${t.y}.png`} alt="" width="256" height="256" style:left="{t.left}px" style:top="{t.top}px" loading="lazy" />
 		{/each}
-		<svg class="pin" viewBox="0 0 24 24" width="44" height="44" aria-hidden="true">
+		<svg class="pin" viewBox="0 0 24 24" width={pin} height={pin} aria-hidden="true">
 			<path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7z" fill="#E5361B" stroke="#fff" stroke-width="1.5" />
 			<circle cx="12" cy="9" r="2.6" fill="#fff" />
 		</svg>
 	</div>
-	<figcaption>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors</figcaption>
+	{#if attribution}
+		<figcaption>© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors</figcaption>
+	{/if}
 </figure>
 
 <style>

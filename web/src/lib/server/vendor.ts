@@ -1,5 +1,6 @@
 import type { Cookies } from '@sveltejs/kit';
 import type { IncidentStatus, IncidentType, LocationSource } from '../i18n';
+import type { ListRow } from '../incident-list.ts';
 import { randomToken, sha256Hex } from './crypto';
 import { db, syncDemoVendor } from './db';
 
@@ -53,21 +54,12 @@ export function setSessionCookie(cookies: Cookies, token: string, expiresAt: Dat
 	});
 }
 
-export interface IncidentListRow {
-	id: string;
-	receipt_no: string;
-	type: IncidentType;
-	language: string;
-	demo: boolean;
-	status: IncidentStatus;
-	vehicle_plate: string;
-	created_at: Date;
-	attachments: number;
-}
+export type IncidentListRow = ListRow;
 
 export async function listIncidents(vendorId: string): Promise<IncidentListRow[]> {
 	return db()<IncidentListRow[]>`
-		select i.id, i.receipt_no, i.type, i.language, i.demo, i.status, i.vehicle_plate, i.created_at,
+		select i.id, i.receipt_no, i.type, i.language, i.demo, i.status, i.vehicle_plate, i.vehicle_model, i.created_at,
+			i.latitude::float8 as latitude, i.longitude::float8 as longitude, i.address, i.location_source,
 			(select count(*)::int from attachments a where a.incident_id = i.id) as attachments
 		from incidents i
 		where i.vendor_id = ${vendorId}

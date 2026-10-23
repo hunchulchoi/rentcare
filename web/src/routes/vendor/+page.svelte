@@ -1,9 +1,79 @@
 <script lang="ts">
+	import {
+		createTable,
+		getCoreRowModel,
+		getFilteredRowModel,
+		getPaginationRowModel,
+		getSortedRowModel,
+		type ColumnDef,
+		type PaginationState,
+		type SortingState,
+		type Updater
+	} from '@tanstack/table-core';
+	import StaticMap from '#lib/StaticMap.svelte';
 	import { fmtKst } from '#lib/format.ts';
-	import { LANGUAGE_NAMES_KO, STATUS_LABELS_KO, typeLabel } from '#lib/i18n.ts';
+	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, type IncidentStatus } from '#lib/i18n.ts';
+	import { incidentMatches, locationText, type ListRow } from '#lib/incident-list.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+
+	// Columns: ids drive sorting; cells are rendered below by id.
+	const columns: ColumnDef<ListRow>[] = [
+		{ id: 'created_at', header: '접수 시각', accessorFn: (r) => new Date(r.created_at).getTime() },
+		{ id: 'receipt_no', header: '접수 번호', accessorKey: 'receipt_no' },
+		{ id: 'type', header: '유형', accessorFn: (r) => typeLabel(r.type, 'ko') },
+		{ id: 'vehicle', header: '차량', accessorFn: (r) => `${r.vehicle_model ?? ''} ${r.vehicle_plate}` },
+		{ id: 'location', header: '위치', accessorFn: (r) => locationText(r), enableSorting: false },
+		{ id: 'language', header: '사용자 언어', accessorFn: (r) => LANGUAGE_NAMES_KO[r.language] ?? r.language },
+		{ id: 'attachments', header: '첨부', accessorKey: 'attachments' },
+		{ id: 'status', header: '상태', accessorKey: 'status' }
+	];
+
+	let sorting = $state<SortingState>([{ id: 'created_at', desc: true }]);
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
+	let search = $state('');
+	let status = $state<'ALL' | IncidentStatus>('ALL');
+
+	const apply = <T,>(u: Updater<T>, prev: T): T => (typeof u === 'function' ? (u as (p: T) => T)(prev) : u);
+
+	const rows = $derived(data.incidents.filter((r) => status === 'ALL' || r.status === status));
+	const counts = $derived({
+		ALL: data.incidents.length,
+		RECEIVED: data.incidents.filter((r) => r.status === 'RECEIVED').length,
+		ACKNOWLEDGED: data.incidents.filter((r) => r.status === 'ACKNOWLEDGED').length
+	});
+
+	// Rebuilt when data or state changes (≤ 200 rows): simple and fully reactive with Svelte 5 runes.
+	const table = $derived.by(() => {
+		const t = createTable<ListRow>({
+			data: rows,
+			columns,
+			state: {},
+			onStateChange: () => {},
+			renderFallbackValue: null,
+			onSortingChange: (u) => (sorting = apply(u, sorting)),
+			onPaginationChange: (u) => (pagination = apply(u, pagination)),
+			globalFilterFn: (row, _id, value) => incidentMatches(row.original, String(value ?? '')),
+			getCoreRowModel: getCoreRowModel(),
+			getSortedRowModel: getSortedRowModel(),
+			getFilteredRowModel: getFilteredRowModel(),
+			getPaginationRowModel: getPaginationRowModel()
+		});
+		t.setOptions((prev) => ({ ...prev, state: { ...t.initialState, sorting, pagination, globalFilter: search } }));
+		return t;
+	});
+
+	const filteredCount = $derived(table.getFilteredRowModel().rows.length);
+
+	function setSearch(v: string) {
+		search = v;
+		pagination = { ...pagination, pageIndex: 0 };
+	}
+	function setStatus(s: typeof status) {
+		status = s;
+		pagination = { ...pagination, pageIndex: 0 };
+	}
 </script>
 
 <svelte:head>
@@ -15,42 +85,139 @@
 {#if data.incidents.length === 0}
 	<p>접수된 신고가 없습니다.</p>
 {:else}
+	<div class="toolbar">
+		<input
+			type="search"
+			placeholder="접수번호·차량번호·차종·주소·유형 검색"
+			value={search}
+			oninput={(e) => setSearch(e.currentTarget.value)}
+			aria-label="검색"
+		/>
+		<div class="seg" role="group" aria-label="상태">
+			{#each [['ALL', '전체'], ['RECEIVED', STATUS_LABELS_KO.RECEIVED], ['ACKNOWLEDGED', STATUS_LABELS_KO.ACKNOWLEDGED]] as [key, label] (key)}
+				<button type="button" class:on={status === key} aria-pressed={status === key} onclick={() => setStatus(key as typeof status)}>
+					{label} <span class="count">{counts[key as keyof typeof counts]}</span>
+				</button>
+			{/each}
+		</div>
+		<span class="result">{filteredCount}건</span>
+	</div>
+
 	<div class="table-wrap">
 		<table>
 			<thead>
-				<tr>
-					<th>접수 시각</th>
-					<th>접수 번호</th>
-					<th>유형</th>
-					<th>차량</th>
-					<th>사용자 언어</th>
-					<th>첨부</th>
-					<th>상태</th>
-				</tr>
+				{#each table.getHeaderGroups() as hg (hg.id)}
+					<tr>
+						{#each hg.headers as h (h.id)}
+							<th class={h.column.id}>
+								{#if h.column.getCanSort()}
+									<button type="button" class="sort" onclick={h.column.getToggleSortingHandler()}>
+										{h.column.columnDef.header}
+										<span class="arrow" aria-hidden="true">
+											{h.column.getIsSorted() === 'asc' ? '▲' : h.column.getIsSorted() === 'desc' ? '▼' : '↕'}
+										</span>
+									</button>
+								{:else}
+									{h.column.columnDef.header}
+								{/if}
+							</th>
+						{/each}
+					</tr>
+				{/each}
 			</thead>
 			<tbody>
-				{#each data.incidents as i (i.id)}
+				{#each table.getRowModel().rows as row (row.id)}
+					{@const i = row.original}
 					<tr>
-						<td>{fmtKst(i.created_at)}</td>
-						<td>
+						<td class="nowrap">{fmtKst(i.created_at)}</td>
+						<td class="nowrap">
 							<a href={`/vendor/incidents/${i.id}`}>{i.receipt_no}</a>
-							{#if i.demo}<span class="badge demo">데모 접수</span>{/if}
+							{#if i.demo}<span class="badge demo">데모</span>{/if}
 						</td>
-						<td>{typeLabel(i.type, 'ko')}</td>
-						<td>{i.vehicle_plate}</td>
-						<td>{LANGUAGE_NAMES_KO[i.language] ?? i.language}</td>
-						<td>{i.attachments}</td>
-						<td><span class={`badge ${i.status}`}>{STATUS_LABELS_KO[i.status]}</span></td>
+						<td class="nowrap">{typeLabel(i.type, 'ko')}</td>
+						<td>
+							<div class="model">{i.vehicle_model ?? '-'}</div>
+							<div class="sub plate">{i.vehicle_plate}</div>
+						</td>
+						<td><div class="loc">
+							{#if i.latitude !== null && i.longitude !== null}
+								<a class="thumb" href={`/vendor/incidents/${i.id}`} aria-label={`${i.receipt_no} 위치`}>
+									<StaticMap lat={i.latitude} lon={i.longitude} tileBase="/vendor/map" zoom={15} height={72} width={140} attribution={false} pin={26} />
+								</a>
+							{/if}
+							<div class="loc-text">
+								<div>{locationText(i)}</div>
+								{#if i.location_source}<div class="sub">{LOCATION_SOURCE_LABELS_KO[i.location_source]}</div>{/if}
+							</div>
+						</div></td>
+						<td class="nowrap">{LANGUAGE_NAMES_KO[i.language] ?? i.language}</td>
+						<td class="num">{i.attachments}</td>
+						<td class="nowrap"><span class={`badge ${i.status}`}>{STATUS_LABELS_KO[i.status]}</span></td>
 					</tr>
+				{:else}
+					<tr><td colspan={columns.length} class="empty">조건에 맞는 신고가 없습니다.</td></tr>
 				{/each}
 			</tbody>
 		</table>
 	</div>
+
+	<div class="pager">
+		<button type="button" class="secondary" disabled={!table.getCanPreviousPage()} onclick={() => table.previousPage()}>이전</button>
+		<span>{table.getState().pagination.pageIndex + 1} / {Math.max(1, table.getPageCount())}</span>
+		<button type="button" class="secondary" disabled={!table.getCanNextPage()} onclick={() => table.nextPage()}>다음</button>
+	</div>
+	<p class="osm">지도 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors</p>
 {/if}
 
 <style>
+	.toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 12px;
+	}
+	.toolbar input {
+		flex: 1 1 260px;
+		max-width: 420px;
+		border-radius: 999px;
+		padding-left: 1rem;
+	}
+	.seg {
+		display: flex;
+		gap: 4px;
+		background: var(--panel);
+		border-radius: 999px;
+		padding: 4px;
+	}
+	.seg button {
+		width: auto;
+		margin: 0;
+		padding: 0.35rem 0.9rem;
+		border-radius: 999px;
+		border: 0;
+		background: transparent;
+		color: var(--muted);
+		font-size: 0.9rem;
+	}
+	.seg button.on {
+		background: #fff;
+		color: var(--fg);
+		font-weight: 600;
+		box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+	}
+	.count {
+		color: var(--muted);
+		font-weight: 400;
+	}
+	.result {
+		color: var(--muted);
+		font-size: 0.9rem;
+	}
 	.table-wrap {
 		overflow-x: auto;
+		border: 1px solid var(--border);
+		border-radius: 16px;
 	}
 	table {
 		width: 100%;
@@ -60,12 +227,85 @@
 	th,
 	td {
 		text-align: left;
-		padding: 0.5rem 0.6rem;
+		padding: 0.55rem 0.7rem;
 		border-bottom: 1px solid var(--border);
-		white-space: nowrap;
+		vertical-align: middle;
+	}
+	tbody tr:last-child td {
+		border-bottom: 0;
 	}
 	th {
 		background: var(--panel);
 		font-weight: 600;
+		white-space: nowrap;
+	}
+	.sort {
+		all: unset;
+		cursor: pointer;
+		display: inline-flex;
+		gap: 4px;
+		align-items: center;
+	}
+	.sort:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+	.arrow {
+		color: var(--muted);
+		font-size: 0.75rem;
+	}
+	.nowrap {
+		white-space: nowrap;
+	}
+	.num {
+		text-align: right;
+	}
+	.sub {
+		color: var(--muted);
+		font-size: 0.85rem;
+	}
+	.model,
+	.plate {
+		white-space: nowrap;
+	}
+	.loc {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		min-width: 300px;
+	}
+	.thumb {
+		flex: none;
+		width: 140px;
+		display: block;
+	}
+	.thumb :global(.map) {
+		margin: 0;
+		border-radius: 10px;
+	}
+	.loc-text {
+		min-width: 0;
+	}
+	.empty {
+		text-align: center;
+		color: var(--muted);
+		padding: 2rem;
+	}
+	.pager {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		margin: 14px 0 4px;
+	}
+	.pager button {
+		width: auto;
+		margin: 0;
+		padding: 0.35rem 1rem;
+	}
+	.osm {
+		text-align: right;
+		color: var(--muted);
+		font-size: 0.75rem;
 	}
 </style>

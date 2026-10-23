@@ -19,11 +19,14 @@
 	{/if}
 </header>
 
-<main lang="ko">
+<main lang="ko" class="vendor-main">
 	{@render children()}
 </main>
 
 <style>
+	.vendor-main {
+		max-width: 1280px;
+	}
 	.vendor-bar {
 		display: flex;
 		align-items: center;

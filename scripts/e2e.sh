@@ -60,7 +60,7 @@ $VC gear Park >/dev/null; sleep 3
 if $UI has "주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119."; then bad "S3 unlock in Park"; else ok "S3 unlock in Park"; fi
 
 echo "== S4 warning light -> report -> vendor"
-node scripts/browser-login-check.mjs "$B" >/dev/null && ok "S4 vendor login works in a real browser (Origin/CSRF)" || bad "S4 browser login (CSRF?)"
+node scripts/browser-login-check.mjs "$B" --list-check >/dev/null && ok "S4 browser: vendor login (Origin/CSRF) + list search/filter/sort" || bad "S4 browser login (CSRF?)"
 $VC telltale TPMS On >/dev/null
 restart_app; $UI tap "고장·사고 접수"; sleep 5
 wait_for "S4 warning listed" "TPMS" 8
