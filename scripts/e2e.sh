@@ -93,7 +93,8 @@ codes=$(cat "$out"/*.code | sort -u | tr '\n' ' ')
 rm -rf "$out"
 
 echo "== S6b server down -> not received -> server back -> resend once"
-vendor_count() { curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | sort -u | wc -l | tr -d ' '; }
+# Total shown by the vendor list ("N건"); the table itself is paginated.
+vendor_count() { curl -s -b "$jar" "$B/vendor" | grep -oE 'class="result[^"]*">[0-9]+' | sed 's/.*>//' | head -1; }
 jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
 before=$(vendor_count)
 $UI tap "새 접수"; sleep 2

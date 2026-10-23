@@ -1,5 +1,5 @@
 // Real-browser check of the vendor login form (catches CSRF/Origin problems curl cannot).
-//   node scripts/browser-login-check.mjs https://rentcare.devfor.link [--shot out.png] [--width 1400]
+//   node scripts/browser-login-check.mjs https://rentcare.devfor.link [--list-check] [--shot out.png] [--width 1400] [--path /vendor/…] [--hover]
 // Uses local Google Chrome headless over the DevTools protocol; token from web/.env DEMO_VENDOR_TOKEN.
 import { spawn } from 'node:child_process';
 import { readFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -10,6 +10,8 @@ const base = process.argv[2];
 const arg = (k) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : undefined; };
 const shot = arg('--shot');
 const listCheck = process.argv.includes('--list-check');
+const path = arg('--path');
+const hover = process.argv.includes('--hover');
 const width = Number(arg('--width') ?? 1400);
 const token = readFileSync('web/.env', 'utf8').match(/^DEMO_VENDOR_TOKEN=(.*)$/m)?.[1]?.trim();
 if (!base || !token) throw new Error('usage: browser-login-check.mjs <base url> (needs DEMO_VENDOR_TOKEN in web/.env)');
@@ -67,7 +69,16 @@ try {
 		if (!pass) process.exitCode = 1;
 	}
 	if (ok && shot) {
+		if (path) {
+			await send('Page.navigate', { url: `${base}${path}` });
+			await waitFor(`location.pathname === ${JSON.stringify(path)} && document.readyState === 'complete'`, 30000);
+		}
 		await sleep(2500); // let map tiles load
+		if (hover) {
+			const pt = await evalJs(`(() => { const r = document.querySelector('tbody tr:nth-child(3)')?.getBoundingClientRect(); return r ? [r.x + r.width / 2, r.y + r.height / 2] : null })()`);
+			if (pt) await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: pt[0], y: pt[1] });
+			await sleep(300);
+		}
 		const h = await evalJs('document.documentElement.scrollHeight');
 		await send('Emulation.setDeviceMetricsOverride', { width, height: Math.min(h, 4000), deviceScaleFactor: 1, mobile: width < 600 });
 		await sleep(800);

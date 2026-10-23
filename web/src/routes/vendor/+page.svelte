@@ -10,6 +10,7 @@
 		type SortingState,
 		type Updater
 	} from '@tanstack/table-core';
+	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import StatusBadge from '#lib/StatusBadge.svelte';
 	import { fmtKst } from '#lib/format.ts';
@@ -132,7 +133,8 @@
 			<tbody>
 				{#each table.getRowModel().rows as row (row.id)}
 					{@const i = row.original}
-					<tr>
+					<!-- Whole row opens the detail; the receipt link stays the keyboard/screen-reader target. -->
+					<tr class="row" onclick={(e) => { if (!(e.target as HTMLElement).closest('a')) goto(`/vendor/incidents/${i.id}`); }}>
 						<td class="nowrap">{fmtKst(i.created_at)}</td>
 						<td class="nowrap">
 							<a href={`/vendor/incidents/${i.id}`}>{i.receipt_no}</a>
@@ -231,6 +233,15 @@
 	}
 	tbody tr:last-child td {
 		border-bottom: 0;
+	}
+	tbody tr.row:nth-child(even) td {
+		background: #f8fafb;
+	}
+	tbody tr.row {
+		cursor: pointer;
+	}
+	tbody tr.row:hover td {
+		background: #e9f6f4;
 	}
 	th {
 		background: var(--panel);
