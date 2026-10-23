@@ -1,0 +1,65 @@
+# devfor.link deployment (Portainer Git stack) — https://rentcare.devfor.link
+# Path: Cloudflare Tunnel → Traefik :443 → crowdsec → ratelimit → Sablier (scale to zero) → web:3000
+# Redeploy: push a tag (Forgejo webhook → Portainer stack webhook, always builds main HEAD).
+#
+# Portainer stack environment variables (secrets live there, copied from Infisical /postgres, /minio):
+#   DATABASE_URL          postgresql://…@postgres:5432/rentcare  (TLS required by default)
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / S3_BUCKET / AWS_ENDPOINT_URL_S3 / AWS_REGION / S3_FORCE_PATH_STYLE
+#   CAR_API_KEY / DEMO_VENDOR_TOKEN
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    # Sablier starts/stops the container; Docker must not restart it on its own.
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      CAR_API_KEY: ${CAR_API_KEY:?CAR_API_KEY is required}
+      DEMO_VENDOR_TOKEN: ${DEMO_VENDOR_TOKEN:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://rentcare.devfor.link}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}
+      AWS_ENDPOINT_URL_S3: ${AWS_ENDPOINT_URL_S3:?AWS_ENDPOINT_URL_S3 is required}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      BODY_SIZE_LIMIT: 52M
+      # Client IP for rate limits: Cloudflare sets this header; Traefik is only reachable through the tunnel.
+      ADDRESS_HEADER: cf-connecting-ip
+      ORIGIN: ${PUBLIC_BASE_URL:-https://rentcare.devfor.link}
+    networks:
+      default:
+      postgres:
+      traefik:
+    labels:
+      - sablier.enable=true
+      - sablier.group=rentcare
+      - traefik.enable=true
+      - traefik.docker.allownonrunning=true
+      - traefik.docker.network=traefik_default
+      # Browser pages: wake-up page while starting.
+      - traefik.http.routers.rentcare.rule=Host(`rentcare.devfor.link`)
+      - traefik.http.routers.rentcare.entrypoints=web,websecure
+      - traefik.http.routers.rentcare.tls=true
+      - traefik.http.routers.rentcare.tls.certresolver=letsencrypt
+      - traefik.http.routers.rentcare.priority=100
+      - traefik.http.routers.rentcare.service=rentcare
+      - traefik.http.routers.rentcare.middlewares=crowdsec-bouncer@file,global-ratelimit@file,sablier-rentcare@file
+      # Car API, phone upload and map tiles: hold the request until the app is up (no HTML wake-up page).
+      - traefik.http.routers.rentcare-api.rule=Host(`rentcare.devfor.link`) && (PathPrefix(`/api/`) || Path(`/m/upload`) || PathPrefix(`/vendor/map/`) || PathPrefix(`/vendor/files/`) || Path(`/health`))
+      - traefik.http.routers.rentcare-api.entrypoints=web,websecure
+      - traefik.http.routers.rentcare-api.tls=true
+      - traefik.http.routers.rentcare-api.tls.certresolver=letsencrypt
+      - traefik.http.routers.rentcare-api.priority=200
+      - traefik.http.routers.rentcare-api.service=rentcare
+      - traefik.http.routers.rentcare-api.middlewares=crowdsec-bouncer@file,global-ratelimit@file,sablier-rentcare-blocking@file
+      - traefik.http.services.rentcare.loadbalancer.server.port=3000
+
+networks:
+  postgres:
+    external: true
+    name: postgres_default
+  traefik:
+    external: true
+    name: traefik_default
