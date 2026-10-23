@@ -102,7 +102,7 @@ private data class RentalForm(
                 plate = if (ev) "12하3456" else "34허7890",
                 model = if (ev) "IONIQ 5" else "AVANTE",
                 vendorName = "제주 데모렌터카", vendorPhone = "064-000-0000",
-                placeName = "제주국제공항 렌터카하우스", lat = "33.5066", lon = "126.4929",
+                placeName = "판교역 렌터카 반납장", lat = "37.3947", lon = "127.1112",
                 returnAt = returnAt,
             )
             return if (ev) {

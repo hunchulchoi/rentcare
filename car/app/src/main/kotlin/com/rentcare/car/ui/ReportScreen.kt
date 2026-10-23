@@ -176,9 +176,10 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
             return@Column
         }
         Section(stringResource(R.string.receipt_no, rec.receiptNo)) {
-            StepRow(true, stringResource(R.string.step_received))
-            StepRow(ui.attachments > 0, stringResource(R.string.step_attach, ui.attachments))
-            StepRow(ui.acknowledged, stringResource(R.string.step_ack))
+            val sc = LocalStatusColors.current
+            StepRow(true, stringResource(R.string.step_received), sc.positive)
+            StepRow(ui.attachments > 0, stringResource(R.string.step_attach, ui.attachments), sc.positive)
+            StepRow(ui.acknowledged, stringResource(R.string.step_ack), sc.active)
             Text(stringResource(R.string.ack_not_dispatch), style = MaterialTheme.typography.bodySmall)
             ui.statusError?.let { Text(stringResource(R.string.status_error, it), color = MaterialTheme.colorScheme.error) }
             OutlinedButton(onClick = vm::refreshStatusOnce) { Text(stringResource(R.string.refresh)) }
@@ -204,8 +205,13 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
 }
 
 @Composable
-private fun StepRow(done: Boolean, label: String) {
-    Text((if (done) "✔ " else "○ ") + label, color = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+private fun StepRow(done: Boolean, label: String, doneColor: androidx.compose.ui.graphics.Color) {
+    // Color supports the ✔/○ mark and the text; it is never the only signal.
+    Text(
+        (if (done) "✔ " else "○ ") + label,
+        color = if (done) doneColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = if (done) FontWeight.Bold else FontWeight.Normal,
+    )
 }
 
 @Composable

@@ -9,6 +9,9 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import com.rentcare.core.ReportTone
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -68,13 +71,35 @@ private val SoftShapes = Shapes(
     extraLarge = RoundedCornerShape(Radius.EXTRA_LARGE.dp),
 )
 
+/** Pleos informative colors for status (always paired with a text label). */
+data class StatusColors(val positive: Color, val active: Color, val negative: Color)
+
+val LocalStatusColors = staticCompositionLocalOf {
+    StatusColors(c(DesignTokens.Day.positive), c(DesignTokens.Day.active), c(DesignTokens.Day.error))
+}
+
+/** Icon/text color for the report state; null = default color. */
+@Composable
+fun toneColor(tone: ReportTone): Color? {
+    val s = LocalStatusColors.current
+    return when (tone) {
+        ReportTone.NONE -> null
+        ReportTone.NOT_SENT -> s.negative
+        ReportTone.RECEIVED -> s.positive
+        ReportTone.ACKNOWLEDGED -> s.active
+    }
+}
+
 /** Day/night follows the system (the car switches it with the lights). */
 @Composable
 fun RentcareTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = (if (dark) DesignTokens.Night else DesignTokens.Day).scheme(dark),
-        typography = PleosTypography,
-        shapes = SoftShapes,
-        content = content,
-    )
+    val p = if (dark) DesignTokens.Night else DesignTokens.Day
+    CompositionLocalProvider(LocalStatusColors provides StatusColors(c(p.positive), c(p.active), c(p.error))) {
+        MaterialTheme(
+            colorScheme = p.scheme(dark),
+            typography = PleosTypography,
+            shapes = SoftShapes,
+            content = content,
+        )
+    }
 }

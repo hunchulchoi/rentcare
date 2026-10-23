@@ -169,4 +169,5 @@
     <string name="navi_waypoints_imported">Got %1$d stop(s) from the navigation.</string>
     <string name="navi_steps">1) Send the route to the navigation  2) Pick a charger there and tap \"Add as waypoint\"  3) Get the stops here.</string>
     <string name="remain_km">%1$.1f km to go</string>
+    <string name="reason_arrival_inconsistent">The navigation estimate is above the current level, so it is not used.</string>
 </resources>

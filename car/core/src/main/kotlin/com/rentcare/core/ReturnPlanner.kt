@@ -56,6 +56,8 @@ enum class Verdict {
 
 enum class Reason {
     NO_READING, STALE_READING, NO_TRIP, STALE_TRIP, NO_CONSUMPTION_MODEL, ARRIVAL_SOC_UNAVAILABLE,
+    /** Navigation estimate above the current SOC (impossible without charging): not used. */
+    ARRIVAL_SOC_INCONSISTENT,
     NO_BATTERY_CAPACITY, NO_CHARGER, NO_PRICE, BELOW_TARGET_NOW, PROJECTED_BELOW_TARGET, MARGINAL,
     ARRIVAL_BELOW_RESERVE, WAIVED, RULE_MISMATCH,
 }
@@ -205,12 +207,17 @@ class ReturnPlanner(private val config: PlannerConfig = PlannerConfig()) {
 
         val trip = freshTrip(rawTrip, now)
         reasons += tripReasons(rawTrip, now)
-        val arrival = trip?.estimatedSocAtDest?.takeIf { it in 0..100 }?.let { est ->
+        val shifted = trip?.estimatedSocAtDest?.takeIf { it in 0..100 }?.let { est ->
             // Consumption to the destination is the same; only the starting SOC changed.
             val base = trip.socAtRequest ?: return@let est
             (est + (current - base)).coerceIn(0, 100)
         }
-        if (trip != null && arrival == null) reasons += Reason.ARRIVAL_SOC_UNAVAILABLE
+        // SOC cannot rise while driving: an estimate above the current reading is wrong, not optimistic.
+        val arrival = shifted?.takeIf { it <= current }
+        when {
+            shifted != null && arrival == null -> reasons += Reason.ARRIVAL_SOC_INCONSISTENT
+            trip != null && arrival == null -> reasons += Reason.ARRIVAL_SOC_UNAVAILABLE
+        }
 
         if (arrival == null) {
             if (target != null && current < target) {

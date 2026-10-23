@@ -25,22 +25,22 @@ server_start() { RENTCARE_SERVER_CMD="${E2E_SERVER_CMD:-}" scripts/server.sh sta
 
 restart_app() { "$ADB" shell am force-stop --user current com.rentcare.car; "$ADB" shell am start -n com.rentcare.car/.ui.MainActivity >/dev/null; sleep 4; }
 
-echo "== setup: Park, SOC 100, lights off, demo EV rental"
-$VC gear Park >/dev/null; $VC soc 100 >/dev/null; $VC telltale TPMS Off >/dev/null
+echo "== setup: Park, SOC 60, lights off, demo EV rental (return place: Pangyo, contract 80%)"
+$VC gear Park >/dev/null; $VC soc 60 >/dev/null; $VC telltale TPMS Off >/dev/null
 "$ADB" shell pm clear --user current com.rentcare.car >/dev/null   # deterministic start: no rental, no report
 restart_app
 $UI tap "대여 정보"; sleep 1
 $UI tap "데모 EV 계약 불러오기"; sleep 1
 $UI tap "저장"
 
-echo "== S1 EV same-SOC return: arrival below target -> charge"
+echo "== S1 EV same-SOC return: 60% now, contract 80% -> charge"
 wait_for "S1 verdict charge" "반납 전 충전 필요" 25
-check "S1 shows current SOC" "100 %"
+check "S1 shows current SOC" "60 %"
 
 echo "== S2 live SOC change from Virtual Console"
 $VC soc 55 >/dev/null
 wait_for "S2 SOC 55 without refresh" "55 %" 10
-$VC soc 100 >/dev/null
+$VC soc 60 >/dev/null
 
 echo "== S3 driving lock"
 $UI tap "고장·사고 접수"; sleep 4

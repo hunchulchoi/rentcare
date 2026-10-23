@@ -36,13 +36,19 @@ object DesignTokens {
         val primaryContainer: Int,
         val onPrimaryContainer: Int,
         val error: Int,
+        /** Pleos informative_positive (blue), darkened/lightened for 4.5:1. */
+        val positive: Int,
+        /** Pleos informative_active (green). */
+        val active: Int,
         val outline: Int,
     ) {
         /** (name, foreground, background) pairs that carry text or icons. */
         fun textPairs(): List<Triple<String, Int, Int>> {
-            val grounds = listOf("background" to background, "surface" to surface, "surfaceHigh" to surfaceHigh)
+            val grounds = listOf("background" to background, "surface" to surface, "surfaceHigh" to surfaceHigh,
+                "primaryContainer" to primaryContainer)
             val texts = listOf("textPrimary" to textPrimary, "textSecondary" to textSecondary,
-                "textTertiary" to textTertiary, "error" to error, "primary" to primary)
+                "textTertiary" to textTertiary, "error" to error, "primary" to primary,
+                "positive" to positive, "active" to active)
             return grounds.flatMap { (g, bg) -> texts.map { (t, fg) -> Triple("$t on $g", fg, bg) } } +
                 Triple("onPrimary on primary", onPrimary, primary) +
                 Triple("onPrimaryContainer on primaryContainer", onPrimaryContainer, primaryContainer)
@@ -62,6 +68,8 @@ object DesignTokens {
         primaryContainer = 0xD3F2EF,
         onPrimaryContainer = 0x00413D,
         error = 0xC4280A, // informative_negative #FE3D16, darkened for text contrast
+        positive = 0x0052CC, // informative_positive #0064FF, darkened
+        active = 0x00753A, // informative_active #02C265, darkened
         outline = 0xC7C9CE, // basic_300
     )
 
@@ -75,9 +83,11 @@ object DesignTokens {
         textTertiary = 0xC7C9CE,
         primary = 0x3CCFC3, // brand teal, lightened for dark backgrounds
         onPrimary = 0x131417,
-        primaryContainer = 0x0B4F4A,
+        primaryContainer = 0x07332F,
         onPrimaryContainer = 0xD3F2EF,
-        error = 0xFF6A4D, // informative_negative (dark) #FF4C28, lightened for contrast on surfaceHigh
+        error = 0xFF8A73, // informative_negative (dark) #FF4C28, lightened for contrast
+        positive = 0x7DBBFF, // informative_positive (dark) #0082FF, lightened
+        active = 0x00E074, // informative_active (dark)
         outline = 0x686A72, // basic_300 (dark)
     )
 
@@ -104,5 +114,19 @@ object DesignTokens {
         const val MEDIUM = 24
         const val LARGE = 32
         const val EXTRA_LARGE = 40
+    }
+}
+
+/** Overall state of the latest report, for the status icon and step colors. */
+enum class ReportTone {
+    NONE, NOT_SENT, RECEIVED, ACKNOWLEDGED;
+
+    companion object {
+        fun of(pending: Boolean, received: Boolean, acknowledged: Boolean): ReportTone = when {
+            pending -> NOT_SENT
+            received && acknowledged -> ACKNOWLEDGED
+            received -> RECEIVED
+            else -> NONE
+        }
     }
 }

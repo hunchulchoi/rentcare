@@ -145,6 +145,25 @@ class ReturnPlannerTest {
         assertEquals(Verdict.NO_ACTION, a2.verdict)
     }
 
+    @Test fun `ev - navigation arrival above current soc is impossible - ignored, judged on current`() {
+        // Seen on emulator: SOC set to 60 in Virtual Console, navigation still estimated 99 at the destination.
+        val r = rental(Powertrain.EV, ReturnRule.EvSameAsPickup(pickupSoc = 80))
+        val t = TripEstimate(3_200, 720, estimatedSocAtDest = 99, readAtMillis = now, socAtRequest = 60)
+        val a = planner.assess(r, VehicleState(soc = Reading(60, now), batteryCapacityKwh = 77.4), t, now)
+        assertEquals(null, a.projectedArrivalPercent)
+        assertTrue(Reason.ARRIVAL_SOC_INCONSISTENT in a.reasons)
+        assertTrue(Reason.BELOW_TARGET_NOW in a.reasons)
+        assertEquals(Verdict.CHARGE, a.verdict)
+    }
+
+    @Test fun `ev - arrival equal to current (very short trip) is still accepted`() {
+        val r = rental(Powertrain.EV, ReturnRule.EvSameAsPickup(pickupSoc = 50))
+        val t = TripEstimate(500, 60, estimatedSocAtDest = 60, readAtMillis = now, socAtRequest = 60)
+        val a = planner.assess(r, VehicleState(soc = Reading(60, now), batteryCapacityKwh = 77.4), t, now)
+        assertEquals(60, a.projectedArrivalPercent)
+        assertEquals(Verdict.NO_ACTION, a.verdict)
+    }
+
     // ---- Departure ----
 
     @Test fun `departure - drive plus stop plus buffer`() {

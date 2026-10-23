@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rentcare.car.BuildConfig
 import com.rentcare.car.R
+import com.rentcare.core.ReportTone
 import java.util.Locale
 
 enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
@@ -104,7 +105,9 @@ private fun Root(vm: AppViewModel, startTab: Tab) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
     val compact = maxWidth < 1000.dp
     Row(Modifier.fillMaxSize()) {
-        SideMenu(tab, compact) { tab = it }
+        val report by vm.report.collectAsStateWithLifecycle()
+        val tone = ReportTone.of(pending = report.pending != null, received = report.received != null, acknowledged = report.acknowledged)
+        SideMenu(tab, compact, tone) { tab = it }
         val m = Modifier.fillMaxSize().padding(horizontal = if (compact) 20.dp else 32.dp, vertical = 28.dp)
         when (tab) {
             Tab.RENTAL -> RentalScreen(vm, m, onSaved = { tab = Tab.RETURN })
@@ -120,7 +123,7 @@ private fun Root(vm: AppViewModel, startTab: Tab) {
 
 /** Icon + text label (Pleos: icons always carry a label). Rounded pills, large touch targets. */
 @Composable
-private fun SideMenu(current: Tab, compact: Boolean, onSelect: (Tab) -> Unit) {
+private fun SideMenu(current: Tab, compact: Boolean, statusTone: ReportTone, onSelect: (Tab) -> Unit) {
     Column(
         Modifier.fillMaxHeight().width(if (compact) 132.dp else 240.dp)
             .background(MaterialTheme.colorScheme.surfaceContainerLowest)
@@ -131,6 +134,8 @@ private fun SideMenu(current: Tab, compact: Boolean, onSelect: (Tab) -> Unit) {
         Tab.entries.filter { it != Tab.PROBE || BuildConfig.DEBUG }.forEach { t ->
             val selected = t == current
             val tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            // The status tab icon shows the latest report state (label stays the same color).
+            val iconTint = (if (t == Tab.STATUS) toneColor(statusTone) else null) ?: tint
             val item = Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(RoundedCornerShape(if (compact) 24.dp else 36.dp))
                 .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                 .selectable(selected = selected, role = Role.Tab, onClick = {
@@ -143,7 +148,7 @@ private fun SideMenu(current: Tab, compact: Boolean, onSelect: (Tab) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Icon(t.icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
+                    Icon(t.icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(32.dp))
                     Text(
                         stringResource(t.label), color = tint, style = MaterialTheme.typography.labelMedium,
                         textAlign = TextAlign.Center, maxLines = 2,
@@ -155,7 +160,7 @@ private fun SideMenu(current: Tab, compact: Boolean, onSelect: (Tab) -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Icon(t.icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
+                    Icon(t.icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(32.dp))
                     Text(stringResource(t.label), color = tint, style = MaterialTheme.typography.labelLarge, maxLines = 2)
                 }
             }
