@@ -39,7 +39,8 @@ cd car && ./gradlew :core:test :app:assembleDebug
 cd web && pnpm test && pnpm check && pnpm build
 # DB: Infisical /postgres (stage.devfor.link, PostgreSQL 18). Secrets are injected, never written to disk:
 scripts/with-secrets.sh /postgres -- sh -c 'cd web && node --env-file-if-exists=.env scripts/migrate.ts'
-pnpm build && scripts/with-secrets.sh /postgres -- pnpm --dir web start   # 127.0.0.1:3000
+pnpm build && scripts/with-secrets.sh /postgres,/minio -- pnpm --dir web start   # 127.0.0.1:3000
+scripts/attach-check.sh          # no emulator: create report, phone upload, vendor download (MinIO)
 tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLIC_BASE_URL
 # Host change (e.g. https://rentcare.devfor.link): edit PUBLIC_BASE_URL in web/.env only,
 # then rebuild the car app — it reads PUBLIC_BASE_URL and CAR_API_KEY from web/.env.
@@ -82,6 +83,10 @@ scripts/e2e.sh                  # wipes app data on the emulator, 27 checks. S6 
 - Infisical `/postgres`: DATABASE_URL, POSTGRES_* (stage.devfor.link). TLS 1.3 on (2026-10-23) with a
   **self-signed** cert: connections are encrypted but the server is not verified. Add the server CA as
   `DATABASE_SSL_CA` (PEM) in Infisical `/postgres` or switch to a Let's Encrypt cert to get verification.
+- Infisical `/minio`: S3_BUCKET (rentcare), AWS_ENDPOINT_URL_S3 (https://s3.devfor.link), S3_FORCE_PATH_STYLE,
+  AWS_REGION, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. S3_BUCKET set → attachments go to MinIO under
+  `attachments/<incident>/<hex>`; unset → web/storage. Bucket is private (anonymous 403). No server-side
+  encryption on the bucket yet (2026-10-23).
 - When restarting the web server, kill the old one by PID (check `lsof -iTCP:3000`), not by pattern.
 
 - Infisical (`.env` machine identity) path `/pleos`: Pleos CLIENT_ID / CLIENT_SECRET / CRN / PROJECT_ID.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run a command with Infisical secrets injected as env vars (never written to disk).
 #   scripts/with-secrets.sh /postgres -- pnpm --dir web start
+#   scripts/with-secrets.sh /postgres,/minio -- pnpm --dir web start   # several paths, comma-separated
 # Uses the machine identity in the repo-root .env (INFISICAL_CLIENT_ID/SECRET/PROJECT_ID/ENVIRONMENT/DOMAIN).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -9,5 +10,11 @@ set -a; . ./.env; set +a
 INFISICAL_TOKEN=$(infisical login --method=universal-auth --client-id="$INFISICAL_CLIENT_ID" \
   --client-secret="$INFISICAL_CLIENT_SECRET" --domain="$INFISICAL_DOMAIN" --plain --silent)
 export INFISICAL_TOKEN
-exec infisical run --projectId="$INFISICAL_PROJECT_ID" --env="$INFISICAL_ENVIRONMENT" \
-  --domain="$INFISICAL_DOMAIN" --path="$path" --silent -- "$@"
+# One nested `infisical run` per path; later paths win on name clashes.
+cmd=("$@")
+IFS=',' read -ra paths <<< "$path"
+for ((n=${#paths[@]}-1; n>=0; n--)); do
+  cmd=(infisical run --projectId="$INFISICAL_PROJECT_ID" --env="$INFISICAL_ENVIRONMENT" \
+    --domain="$INFISICAL_DOMAIN" --path="${paths[$n]}" --silent -- "${cmd[@]}")
+done
+exec "${cmd[@]}"

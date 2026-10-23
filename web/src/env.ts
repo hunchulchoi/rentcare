@@ -21,6 +21,13 @@ export const variables = defineEnvVars({
 		schema: optional,
 		description: 'Public origin used to build attachUrl, e.g. https://rentcare.example.com'
 	},
+	S3_BUCKET: {
+		schema: optional,
+		description: 'Bucket for attachments (MinIO/S3). Set → object storage, unset → STORAGE_DIR'
+	},
+	AWS_ENDPOINT_URL_S3: { schema: optional, description: 'S3-compatible endpoint, e.g. https://s3.example (https only)' },
+	S3_FORCE_PATH_STYLE: { schema: optional, description: 'true for MinIO path-style URLs' },
+	AWS_REGION: { schema: optional, description: 'S3 region (MinIO: us-east-1)' },
 	STORAGE_DIR: {
 		schema: (value) => optional(value) ?? './storage',
 		description: 'Private directory for uploaded files (outside static/)'

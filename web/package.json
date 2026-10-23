@@ -30,6 +30,7 @@
 		"#lib/*": "./src/lib/*"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.1156.0",
 		"postgres": "^3.4.9"
 	}
 }

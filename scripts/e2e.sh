@@ -14,7 +14,7 @@ check(){ if $UI has "$2"; then ok "$1"; else bad "$1 (missing: $2)"; fi; }
 wait_for(){ for _ in $(seq 1 "${3:-15}"); do $UI has "$2" && { ok "$1"; return; }; sleep 1; done; bad "$1 (missing: $2)"; }
 
 # Outage simulation: stop/start the local production server (never airplane mode on the emulator).
-SERVER_CMD=${E2E_SERVER_CMD:-"scripts/with-secrets.sh /postgres -- pnpm --dir web start"}
+SERVER_CMD=${E2E_SERVER_CMD:-"scripts/with-secrets.sh /postgres,/minio -- pnpm --dir web start"}
 SERVER_LOG=${TMPDIR:-/tmp}/rentcare-e2e-server.log
 server_pid() { lsof -nP -iTCP@127.0.0.1:3000 -sTCP:LISTEN -t 2>/dev/null | head -1; }
 server_stop() { local p; p=$(server_pid); [[ -n "$p" ]] && kill "$p"; for _ in $(seq 1 10); do [[ -z "$(server_pid)" ]] && return 0; sleep 1; done; return 1; }
@@ -132,14 +132,26 @@ code=$($UI texts | grep -oE '^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$' | head -1)
 [[ "$(curl -s "$B/m?lang=en")" == *"Add photos &amp; videos"* ]] && ok "S7 phone page in English before code" || bad "S7 phone page language"
 m=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H "Accept: text/html" --data-urlencode "code=$code")
 [[ "$m" == *"$receipt"* && "$m" == *"Car won't start"* && "$m" == *'lang="en"'* ]] && ok "S7 phone shows same report in English ($receipt)" || bad "S7 phone verify (code=${code:-none})"
+png=$(mktemp -d)/e2e.png
+python3 -c 'import struct,zlib,sys;r=lambda t,d:struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d));open(sys.argv[1],"wb").write(b"\x89PNG\r\n\x1a\n"+r(b"IHDR",struct.pack(">IIBBBBB",1,1,8,2,0,0,0))+r(b"IDAT",zlib.compress(b"\x00\xff\x00\x00"))+r(b"IEND",b""))' "$png"
+local_before=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
+up=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/m/upload" -H "Origin: $B" -F "code=$code" -F "file=@$png;type=image/png")
+[[ "$up" == 201 ]] && ok "S8 phone upload accepted" || bad "S8 phone upload (http $up)"
+local_after=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
+[[ "$local_before" == "$local_after" ]] && ok "S8 file went to object storage, not local disk" || bad "S8 file written locally ($local_before -> $local_after)"
 jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
 id=$(curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | head -1)
 page=$(curl -s -b "$jar" "$B$id")
 [[ "$page" == *"$receipt"* && "$page" == *"시동 불가"* && "$page" == *"영어"* && "$page" == *"Engine dead after stop"* ]] \
   && ok "S7 vendor sees Korean type, language 영어, original note" || bad "S7 vendor detail"
+fid=$(echo "$page" | grep -oE "/vendor/files/[0-9a-f-]{36}" | head -1)
+dlf=$(mktemp); curl -s -b "$jar" -o "$dlf" "$B$fid"
+cmp -s "$dlf" "$png" && ok "S8 vendor downloads the same bytes" || bad "S8 vendor download (${fid:-no link})"
+rm -f "$dlf"; rm -rf "$(dirname "$png")"
 curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''
 $UI tap "Refresh" || true
 wait_for "S7 car shows staff seen in English" "✔ Seen by rental company staff" 20
+check "S8 car shows 1 attachment" "✔ Photos/videos: 1"
 rm -f "$jar"
 $UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
 

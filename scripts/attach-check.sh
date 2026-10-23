@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Attachment round trip without the emulator: car API creates a report, phone uploads a PNG with the
+# attach code, vendor downloads it. Checks the bytes and that nothing was written under web/storage.
+set -uo pipefail
+cd "$(dirname "$0")/.."
+B=$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)
+car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
+pass=0; fail=0; ok(){ echo "  PASS $1"; pass=$((pass+1)); }; bad(){ echo "  FAIL $1"; fail=$((fail+1)); }
+d=$(mktemp -d); now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+body='{"vendorId":"demo-jeju","type":"OTHER","language":"en","note":"attach-check","occurredAt":"'$now'","demo":true,
+"rental":{"rentalId":"E2E-ATT","vehiclePlate":"00하0000","vehicleModel":"IONIQ 5","powertrain":"EV","returnPlace":"e2e","returnAt":"'$now'"},
+"vehicle":null,"location":null}'
+r=$(curl -s -X POST "$B/api/incidents" -H "Authorization: Bearer $car" -H "Idempotency-Key: $(uuidgen | tr A-Z a-z)" \
+  -H 'Content-Type: application/json' -d "$body")
+code=$(echo "$r" | grep -oE '"attachCode":"[A-Z0-9]+"' | cut -d'"' -f4)
+receipt=$(echo "$r" | grep -oE 'RC-[0-9]{8}-[0-9]{4}')
+[[ -n "$code" ]] && ok "report $receipt created" || bad "create: $r"
+python3 -c 'import struct,zlib,sys,os;r=lambda t,d:struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d));open(sys.argv[1],"wb").write(b"\x89PNG\r\n\x1a\n"+r(b"IHDR",struct.pack(">IIBBBBB",1,1,8,2,0,0,0))+r(b"IDAT",zlib.compress(b"\x00"+os.urandom(3)))+r(b"IEND",b""))' "$d/a.png"
+before=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
+up=$(curl -s -o "$d/up" -w '%{http_code}' -X POST "$B/m/upload" -H "Origin: $B" -F "code=$code" -F "file=@$d/a.png;type=image/png")
+[[ "$up" == 201 ]] && ok "phone upload" || bad "phone upload http $up $(cat "$d/up")"
+after=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
+if [[ "${EXPECT_S3:-1}" == 1 ]]; then
+  [[ "$before" == "$after" ]] && ok "not written to local disk" || bad "written locally ($before -> $after)"
+fi
+jar="$d/jar"; curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
+id=$(curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | head -1)
+fid=$(curl -s -b "$jar" "$B$id" | grep -oE "/vendor/files/[0-9a-f-]{36}" | head -1)
+curl -s -b "$jar" -o "$d/dl" "$B$fid"
+cmp -s "$d/dl" "$d/a.png" && ok "vendor downloads same bytes" || bad "vendor download (${fid:-no link})"
+anon=$(curl -s -o /dev/null -w '%{http_code}' "$B$fid")
+[[ "$anon" != 200 ]] && ok "download without login refused ($anon)" || bad "anonymous download allowed"
+rm -rf "$d"
+echo "== result: $pass passed, $fail failed"; [[ $fail -eq 0 ]]
