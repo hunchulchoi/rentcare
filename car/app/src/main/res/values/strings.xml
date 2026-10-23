@@ -172,4 +172,10 @@
     <string name="reason_arrival_inconsistent">The navigation estimate is above the current level, so it is not used.</string>
     <string name="step_in_progress">Rental company is handling it</string>
     <string name="step_resolved">Marked done by the rental company</string>
+    <string name="eta_upcoming">Rental company expects it around %1$s (about %2$d min) · told at %3$s</string>
+    <string name="eta_note">An estimate from the rental company, not a guarantee.</string>
+    <string name="eta_passed">The time the rental company gave (%1$s) has passed. Please check with them.</string>
+    <string name="state_done">Done</string>
+    <string name="state_current">In progress</string>
+    <string name="state_todo">Waiting</string>
 </resources>

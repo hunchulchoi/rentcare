@@ -68,6 +68,9 @@ data class IncidentStatusDto(
     val status: IncidentStatus = IncidentStatus.RECEIVED,
     val acknowledgedAt: String? = null,
     val resolvedAt: String? = null,
+    /** Vendor's estimate (v7), e.g. tow arrival. */
+    val expectedAt: String? = null,
+    val expectedSetAt: String? = null,
     val attachments: Int = 0,
 )
 

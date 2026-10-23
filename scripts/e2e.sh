@@ -25,6 +25,8 @@ trap restore EXIT
 ok()   { echo "  PASS $1"; pass=$((pass+1)); }
 bad()  { echo "  FAIL $1"; fail=$((fail+1)); echo "       screen: $($UI texts | head -40 | tr '\n' '|')"; }
 check(){ if $UI has "$2"; then ok "$1"; else bad "$1 (missing: $2)"; fi; }
+# Stepper rows expose "label · state" (state: 완료/진행 중/대기, Done/In progress/Waiting).
+wait_step(){ for _ in $(seq 1 "${3:-15}"); do $UI hasdescre "$2" && { ok "$1"; return; }; sleep 1; done; bad "$1 (no step: $2)"; }
 wait_for(){ for _ in $(seq 1 "${3:-15}"); do $UI has "$2" && { ok "$1"; return; }; sleep 1; done; bad "$1 (missing: $2)"; }
 
 # Outage simulation: stop/start the local production server (never airplane mode on the emulator).
@@ -65,7 +67,7 @@ $VC telltale TPMS On >/dev/null
 restart_app; $UI tap "고장·사고 접수"; sleep 5
 wait_for "S4 warning listed" "TPMS" 8
 $UI tap "제주 데모렌터카에 보내기에 동의"; sleep 1; $UI tap "접수 보내기"
-wait_for "S4 received" "✔ 기본 접수 완료" 15
+wait_step "S4 received" "^기본 접수 완료 · (완료|진행 중)$" 15
 receipt=$($UI texts | grep -oE 'RC-[0-9]{8}-[0-9]{4}' | head -1)
 tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2); jar=$(mktemp)
 curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
@@ -74,14 +76,19 @@ page=$(curl -s -b "$jar" "$B$id")
 [[ "$page" == *"$receipt"* && "$page" == *"타이어 공기압 경고"* && "$page" == *"타이어 이상"* ]] && ok "S4 vendor sees $receipt, TIRE, TPMS" || bad "S4 vendor detail"
 curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''
 $UI tap "새로고침" || true
-wait_for "S4 car shows staff seen" "✔ 업체 담당자 확인" 20
+wait_step "S4 car shows staff seen" "^업체 담당자 확인 · (완료|진행 중)$" 20
 node scripts/browser-login-check.mjs "$B" --action-check "$id" >/dev/null && ok "S4 browser: staff logs a tow action on the incident" || bad "S4 staff action log"
 $UI tap "새로고침" || true
-wait_for "S4 car shows handling (조치중) after a staff action" "✔ 업체 조치 중" 25
+wait_step "S4 car shows handling (조치중) after a staff action" "^업체 조치 중 · 진행 중$" 25
 jar2=$(mktemp); curl -s -c "$jar2" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
+curl -s -b "$jar2" -o /dev/null -X POST "$B$id?/addAction" -H "Origin: $B" --data "kind=ACTION&actionType=TOW&expectedIn=45&body=e2e+eta"
+$UI tap "새로고침" || true
+eta_ok=0; for _ in $(seq 1 25); do $UI texts | grep -qE "^업체 안내 예상 [0-9]{2}:[0-9]{2}경 \(약 4[45]분 후\)" && { eta_ok=1; break; }; sleep 1; done
+[[ $eta_ok == 1 ]] && ok "S4 car shows the vendor's expected time (about 45 min)" || bad "S4 vendor ETA on car"
 curl -s -b "$jar2" -o /dev/null -X POST "$B$id?/resolve" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''; rm -f "$jar2"
 $UI tap "새로고침" || true
-wait_for "S4 car shows done (조치완료) after staff resolves" "✔ 업체 조치 완료" 25
+wait_step "S4 car shows done (조치완료) after staff resolves" "^업체 조치 완료 · 완료$" 25
+$UI texts | grep -q "^업체 안내 예상" && bad "S4 ETA still shown after 조치완료" || ok "S4 ETA hidden after 조치완료"
 $VC telltale TPMS Off >/dev/null; rm -f "$jar"
 
 echo "== S6a same Idempotency-Key x5 in parallel -> one incident"
@@ -113,7 +120,7 @@ wait_for "S6b not received, retry offered while server is down" "미전송 접�
 check "S6b says resend is safe" "아직 업체에 전달되지 않았습니다. 다시 보내도 중복 접수되지 않습니다."
 server_start || bad "S6b server restart"
 $UI tap "다시 보내기"
-wait_for "S6b received after server is back" "✔ 기본 접수 완료" 20
+wait_step "S6b received after server is back" "^기본 접수 완료 · (완료|진행 중)$" 20
 after=$(vendor_count)
 [[ $((after - before)) -eq 1 ]] && ok "S6b vendor list grew by exactly 1 ($before -> $after)" || bad "S6b vendor count $before -> $after"
 
@@ -126,7 +133,7 @@ server_start || bad "S6c server restart"
 restart_app; $UI tap "고장·사고 접수"; sleep 3
 wait_for "S6c unsent report shown after app restart" "보내지 못한 접수가 있습니다." 8
 $UI tap "다시 보내기"
-wait_for "S6c received after resend" "✔ 기본 접수 완료" 20
+wait_step "S6c received after resend" "^기본 접수 완료 · (완료|진행 중)$" 20
 after=$(vendor_count)
 [[ $((after - before)) -eq 1 ]] && ok "S6c vendor list grew by exactly 1 ($before -> $after)" || bad "S6c vendor count $before -> $after"
 rm -f "$jar"
@@ -140,7 +147,7 @@ $UI tap "Car won't start"; sleep 1
 $UI tap "Describe in your language"; sleep 1; "$ADB" shell input text "Engine%sdead%safter%sstop"; sleep 1
 "$ADB" shell input keyevent 4; sleep 1
 $UI tap "Send to 제주 데모렌터카"; sleep 1; $UI tap "Send report"
-wait_for "S7 received in English" "✔ Report received" 15
+wait_step "S7 received in English" "^Report received · (Done|In progress)$" 15
 receipt=$($UI texts | grep -oE 'RC-[0-9]{8}-[0-9]{4}' | head -1)
 if $UI hasdesc "$B/m?lang=en"; then ok "S7 QR opens phone page in English"; else bad "S7 QR url ($B/m?lang=en)"; fi
 $UI texts | grep -qE '^Code valid until [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$' && ok "S7 code expiry in local time" || bad "S7 code expiry format"
@@ -166,8 +173,8 @@ cmp -s "$dlf" "$png" && ok "S8 vendor downloads the same bytes" || bad "S8 vendo
 rm -f "$dlf"; rm -rf "$(dirname "$png")"
 curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''
 $UI tap "Refresh" || true
-wait_for "S7 car shows staff seen in English" "✔ Seen by rental company staff" 20
-check "S8 car shows 1 attachment" "✔ Photos/videos: 1"
+wait_step "S7 car shows staff seen in English" "^Seen by rental company staff · (Done|In progress)$" 20
+check "S8 car shows 1 attachment" "Photos/videos: 1"
 rm -f "$jar"
 $UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
 

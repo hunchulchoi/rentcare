@@ -108,6 +108,11 @@ data class ReportUi(
     val acknowledged: Boolean = false,
     /** Latest status from the server (RECEIVED → ACKNOWLEDGED → IN_PROGRESS → RESOLVED). */
     val status: com.rentcare.core.IncidentStatus? = null,
+    /** Vendor's estimate while handling (ISO), shown as their estimate only. */
+    val expectedAt: String? = null,
+    val expectedSetAt: String? = null,
+    val acknowledgedAt: String? = null,
+    val resolvedAt: String? = null,
     val attachments: Int = 0,
     val statusError: String? = null,
 )
@@ -501,6 +506,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(
                         acknowledged = res.value.status.reached(com.rentcare.core.IncidentStatus.ACKNOWLEDGED),
                         status = res.value.status,
+                        expectedAt = res.value.expectedAt,
+                        acknowledgedAt = res.value.acknowledgedAt,
+                        resolvedAt = res.value.resolvedAt,
+                        expectedSetAt = res.value.expectedSetAt,
                         attachments = res.value.attachments,
                         statusError = null,
                     )

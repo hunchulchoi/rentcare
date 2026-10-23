@@ -172,4 +172,10 @@
     <string name="reason_arrival_inconsistent">내비 도착 예상이 현재 잔량보다 높아 사용하지 않았습니다.</string>
     <string name="step_in_progress">업체 조치 중</string>
     <string name="step_resolved">업체 조치 완료</string>
+    <string name="eta_upcoming">업체 안내 예상 %1$s경 (약 %2$d분 후) · %3$s 안내</string>
+    <string name="eta_note">업체가 알려준 예상이며 보장이 아닙니다.</string>
+    <string name="eta_passed">업체가 안내한 예상 시각(%1$s)이 지났습니다. 업체에 확인하세요.</string>
+    <string name="state_done">완료</string>
+    <string name="state_current">진행 중</string>
+    <string name="state_todo">대기</string>
 </resources>

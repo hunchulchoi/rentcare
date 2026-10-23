@@ -16,6 +16,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.selection.toggleable
@@ -177,12 +179,29 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
         }
         Section(stringResource(R.string.receipt_no, rec.receiptNo)) {
             val sc = LocalStatusColors.current
-            StepRow(true, stringResource(R.string.step_received), sc.positive)
-            StepRow(ui.attachments > 0, stringResource(R.string.step_attach, ui.attachments), sc.positive)
             val st = ui.status ?: com.rentcare.core.IncidentStatus.RECEIVED
-            StepRow(st.reached(com.rentcare.core.IncidentStatus.ACKNOWLEDGED), stringResource(R.string.step_ack), sc.info)
-            StepRow(st.reached(com.rentcare.core.IncidentStatus.IN_PROGRESS), stringResource(R.string.step_in_progress), sc.progress)
-            StepRow(st.reached(com.rentcare.core.IncidentStatus.RESOLVED), stringResource(R.string.step_resolved), sc.active)
+            val now by produceState(System.currentTimeMillis()) { while (true) { delay(30_000); value = System.currentTimeMillis() } }
+            ReportStepper(com.rentcare.core.ReportProgress.of(st, ui.acknowledgedAt, ui.resolvedAt)) { step ->
+                if (step == com.rentcare.core.ReportProgress.Step.IN_PROGRESS) {
+                    when (val eta = com.rentcare.core.VendorEta.of(ui.status, ui.expectedAt, ui.expectedSetAt, now)) {
+                        is com.rentcare.core.VendorEta.Upcoming -> {
+                            Text(
+                                stringResource(R.string.eta_upcoming, fmtHm(eta.atMillis), eta.minutesLeft, fmtHm(eta.setAtMillis)),
+                                color = sc.progress, fontWeight = FontWeight.Bold,
+                            )
+                            Text(stringResource(R.string.eta_note), style = MaterialTheme.typography.bodySmall)
+                        }
+                        is com.rentcare.core.VendorEta.Passed ->
+                            Text(stringResource(R.string.eta_passed, fmtHm(eta.atMillis)), color = MaterialTheme.colorScheme.error)
+                        com.rentcare.core.VendorEta.Hidden -> Unit
+                    }
+                }
+            }
+            Text(
+                stringResource(R.string.step_attach, ui.attachments),
+                color = if (ui.attachments > 0) sc.positive else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (ui.attachments > 0) FontWeight.Bold else FontWeight.Normal,
+            )
             Text(stringResource(R.string.ack_not_dispatch), style = MaterialTheme.typography.bodySmall)
             ui.statusError?.let { Text(stringResource(R.string.status_error, it), color = MaterialTheme.colorScheme.error) }
             OutlinedButton(onClick = vm::refreshStatusOnce) { Text(stringResource(R.string.refresh)) }
@@ -205,16 +224,6 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
         rental?.let { Text(stringResource(R.string.emergency_contact, it.vendorName, it.vendorPhone), fontWeight = FontWeight.Bold) }
         OutlinedButton(onClick = { vm.newReport(); onNew() }) { Text(stringResource(R.string.new_report)) }
     }
-}
-
-@Composable
-private fun StepRow(done: Boolean, label: String, doneColor: androidx.compose.ui.graphics.Color) {
-    // Color supports the ✔/○ mark and the text; it is never the only signal.
-    Text(
-        (if (done) "✔ " else "○ ") + label,
-        color = if (done) doneColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = if (done) FontWeight.Bold else FontWeight.Normal,
-    )
 }
 
 @Composable

@@ -37,6 +37,8 @@ import java.time.format.DateTimeFormatter
 private val timeFmt = DateTimeFormatter.ofPattern("MM-dd HH:mm:ss").withZone(ZoneId.systemDefault())
 private val dateTimeFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault())
 
+private val hmFmt = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
+fun fmtHm(ms: Long?): String = ms?.let { hmFmt.format(Instant.ofEpochMilli(it)) } ?: "-"
 fun fmtTime(ms: Long?): String = ms?.let { timeFmt.format(Instant.ofEpochMilli(it)) } ?: "-"
 fun fmtDateTime(ms: Long?): String = ms?.let { dateTimeFmt.format(Instant.ofEpochMilli(it)) } ?: "-"
 fun parseDateTime(s: String): Long? = runCatching {
