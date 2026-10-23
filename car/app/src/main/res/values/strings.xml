@@ -33,7 +33,7 @@
     <string name="buffer_minutes">Spare time (min)</string>
     <string name="vendor_name">Rental company</string>
     <string name="vendor_phone">Company phone</string>
-    <string name="rental_invalid">Check the fields. Rental no., plate, return place, time and target % are required.</string>
+    <string name="rental_invalid">Required: rental no., plate, return place, return time and target %.</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="end_rental">End rental</string>
@@ -60,7 +60,7 @@
     <string name="trip_unavailable">Route estimate unavailable: %1$s</string>
     <string name="read_failed">Vehicle value unavailable: %1$s</string>
     <string name="telltales_title">Warning lights on now</string>
-    <string name="telltales_note">Follow the car\'s own warnings first. You can report them to the rental company in Report.</string>
+    <string name="telltales_note">Follow the car\'s own warnings first. Report them to the company in Report.</string>
     <string name="charger_title">Charger you plan to use</string>
     <string name="charger_kw">Charger power (kW)</string>
     <string name="charger_price">Price (KRW/kWh)</string>
@@ -103,7 +103,7 @@
     <string name="no_coordinates">Return place has no coordinates.</string>
     <string name="route_refresh_note">Sending the route is not arrival. Re-check the level after each stop.</string>
     <string name="report_title">Breakdown / accident report</string>
-    <string name="parked_notice">Stop in a safe place before filling this in. In an emergency call 112 / 119 first.</string>
+    <string name="parked_notice">Stop in a safe place first. In an emergency, call 112 / 119.</string>
     <string name="emergency_contact">Contact %1$s: %2$s</string>
     <string name="type_title">What happened?</string>
     <string name="type_no_start">Car won\'t start</string>
@@ -123,7 +123,7 @@
     <string name="note_hint">Describe in your language</string>
     <string name="note_original">Sent as written. Not translated automatically.</string>
     <string name="recipient_title">Who receives this</string>
-    <string name="purpose_notice">Rental info, vehicle values, location and your note go to %1$s to handle this report.</string>
+    <string name="purpose_notice">Rental, vehicle, location and your note go to %1$s for this report.</string>
     <string name="recipient_confirm">Send to %1$s</string>
     <string name="send">Send report</string>
     <string name="sending">Sending…</string>
@@ -145,7 +145,7 @@
     <string name="attach_expires">Code valid until %1$s</string>
     <string name="new_report">New report</string>
     <string name="probe_title">Pleos SDK check (RENTCARE-1)</string>
-    <string name="probe_note">Reads each API once and records value, error and time. API presence ≠ support on a real car.</string>
+    <string name="probe_note">Reads each API once: value, error, time. API present ≠ works on a real car.</string>
     <string name="probe_run">Run all checks</string>
     <string name="attach_url_rejected">Server sent an unexpected address. QR hidden; ask the rental company.</string>
     <string name="blocked_driving">Driving: details are locked. Stop safely first. In an emergency call 112 / 119.</string>
@@ -153,7 +153,7 @@
     <string name="report_warnings_title">Warning lights on now (sent with the report)</string>
     <string name="report_warnings_note">Shown as on the dashboard. Follow the car\'s own instructions first.</string>
     <string name="pending_title">There is an unsent report.</string>
-    <string name="pending_note">Not delivered to the rental company yet. Sending again will not create a duplicate.</string>
+    <string name="pending_note">Not delivered yet. Sending again will not create a duplicate.</string>
     <string name="resend">Send again</string>
     <string name="pending_written_at">Written at</string>
 </resources>

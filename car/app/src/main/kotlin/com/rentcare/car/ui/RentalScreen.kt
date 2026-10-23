@@ -126,7 +126,7 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.rental_title), style = MaterialTheme.typography.headlineSmall)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        WrapRow {
             Text(stringResource(R.string.lang_label))
             listOf("ko" to "한국어", "en" to "English").forEach { (code, label) ->
                 FilterChip(
@@ -140,7 +140,7 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        WrapRow {
             OutlinedButton(onClick = { form = RentalForm.demo(ev = true).copy(language = form.language) }) {
                 Text(stringResource(R.string.demo_ev))
             }
@@ -150,12 +150,12 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
         }
 
         Section(stringResource(R.string.section_vehicle)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 Field(stringResource(R.string.rental_id), form.rentalId, { form = form.copy(rentalId = it) }, Modifier.weight(1f))
                 Field(stringResource(R.string.plate), form.plate, { form = form.copy(plate = it) }, Modifier.weight(1f))
                 Field(stringResource(R.string.model), form.model, { form = form.copy(model = it) }, Modifier.weight(1f))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 FilterChip(form.powertrain == Powertrain.EV, {
                     form = form.copy(powertrain = Powertrain.EV, rule = RuleKind.EV_SAME)
                 }, { Text(stringResource(R.string.powertrain_ev)) })
@@ -171,13 +171,13 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
             } else {
                 listOf(RuleKind.FUEL_TARGET to R.string.rule_fuel_target)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 kinds.forEach { (k, label) ->
                     FilterChip(form.rule == k, { form = form.copy(rule = k) }, { Text(stringResource(label)) })
                 }
             }
             if (form.rule != RuleKind.EV_WAIVED) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WrapRow {
                     Field(stringResource(R.string.target_percent), form.percent, { form = form.copy(percent = it) }, Modifier.weight(1f), number = true)
                     Field(stringResource(R.string.settlement_rate), form.settlement, { form = form.copy(settlement = it) }, Modifier.weight(1f), number = true)
                 }
@@ -186,16 +186,16 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
         }
 
         Section(stringResource(R.string.section_return)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 Field(stringResource(R.string.return_place), form.placeName, { form = form.copy(placeName = it) }, Modifier.weight(2f))
                 Field(stringResource(R.string.return_lat), form.lat, { form = form.copy(lat = it) }, Modifier.weight(1f), number = true)
                 Field(stringResource(R.string.return_lon), form.lon, { form = form.copy(lon = it) }, Modifier.weight(1f), number = true)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 Field(stringResource(R.string.return_at), form.returnAt, { form = form.copy(returnAt = it) }, Modifier.weight(1f))
                 Field(stringResource(R.string.buffer_minutes), form.buffer, { form = form.copy(buffer = it) }, Modifier.weight(1f), number = true)
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 Field(stringResource(R.string.vendor_name), form.vendorName, { form = form.copy(vendorName = it) }, Modifier.weight(1f))
                 Field(stringResource(R.string.vendor_phone), form.vendorPhone, { form = form.copy(vendorPhone = it) }, Modifier.weight(1f))
             }

@@ -80,7 +80,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
         }
 
         Section(stringResource(R.string.type_title)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WrapRow {
                 IncidentType.entries.forEach { t ->
                     FilterChip(d.type == t, { vm.updateDraft { it.copy(type = t) } }, { Text(stringResource(incidentLabel(t))) }, enabled = allowed)
                 }
@@ -108,7 +108,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
             }
             var lat by remember(loc) { mutableStateOf(loc?.latitude?.toString().orEmpty()) }
             var lon by remember(loc) { mutableStateOf(loc?.longitude?.toString().orEmpty()) }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            WrapRow {
                 OutlinedButton(onClick = vm::loadVehicleLocation, enabled = allowed) { Text(stringResource(R.string.load_location)) }
                 Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true, enabled = allowed)
                 Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true, enabled = allowed)

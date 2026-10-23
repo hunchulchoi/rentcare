@@ -99,7 +99,7 @@ private fun ChargerInputs(current: ChargeOption?, onApply: (ChargeOption?) -> Un
     var kw by remember { mutableStateOf(current?.chargerKw?.toString().orEmpty()) }
     var price by remember { mutableStateOf(current?.wonPerKwh?.toString().orEmpty()) }
     Section(stringResource(R.string.charger_title)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        WrapRow {
             Field(stringResource(R.string.charger_kw), kw, { kw = it }, number = true)
             Field(stringResource(R.string.charger_price), price, { price = it }, number = true)
             Button(onClick = { onApply(kw.toDoubleOrNull()?.let { ChargeOption(it, price.toIntOrNull()) }) }) {
@@ -116,7 +116,7 @@ private fun GasolineInputs(model: GasolineModel?, price: Int?, onApply: (Gasolin
     var won by remember { mutableStateOf(price?.toString().orEmpty()) }
     Section(stringResource(R.string.model_title)) {
         Text(stringResource(R.string.model_note), style = MaterialTheme.typography.bodySmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        WrapRow {
             Field(stringResource(R.string.tank_liters), tank, { tank = it }, number = true)
             Field(stringResource(R.string.km_per_liter), kmpl, { kmpl = it }, number = true)
             Field(stringResource(R.string.fuel_price), won, { won = it }, number = true)
@@ -147,7 +147,7 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
         Section(stringResource(R.string.stations_title)) {
             Text(stringResource(R.string.stations_note), style = MaterialTheme.typography.bodySmall)
             inputs.stations.forEachIndexed { i, s ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WrapRow {
                     Text("${i + 1}. ${s.name} (${s.latitude}, ${s.longitude})")
                     OutlinedButton(onClick = { vm.updateInputs { it.copy(stations = it.stations - s) } }) {
                         Text(stringResource(R.string.remove))
@@ -155,7 +155,7 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
                 }
             }
             if (inputs.stations.size < 2) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WrapRow {
                     Field(stringResource(R.string.station_name), name, { name = it })
                     Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true)
                     Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true)

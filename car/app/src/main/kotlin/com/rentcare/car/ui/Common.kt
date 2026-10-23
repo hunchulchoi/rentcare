@@ -5,12 +5,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -45,8 +48,12 @@ fun won(n: Int) = "%,d".format(n)
 
 @Composable
 fun Section(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Card(
+        modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+    ) {
+        Column(Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             content()
         }
@@ -55,9 +62,10 @@ fun Section(title: String, modifier: Modifier = Modifier, content: @Composable C
 
 @Composable
 fun KeyValue(key: String, value: String) {
-    Row(Modifier.fillMaxWidth()) {
-        Text(key, Modifier.width(220.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value)
+    // Proportional columns so the pair also fits a portrait window (840 dp).
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(key, Modifier.weight(0.4f), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, Modifier.weight(0.6f), fontWeight = FontWeight.Medium)
     }
 }
 
@@ -75,8 +83,9 @@ fun Field(
         value = value,
         onValueChange = onChange,
         label = { Text(label) },
-        modifier = modifier,
+        modifier = modifier.widthIn(min = 200.dp, max = 520.dp),
         singleLine = singleLine,
+        shape = MaterialTheme.shapes.small,
         enabled = enabled,
         keyboardOptions = if (number) KeyboardOptions(keyboardType = KeyboardType.Decimal) else KeyboardOptions.Default,
     )
@@ -100,4 +109,14 @@ fun QrCode(text: String, size: Dp = 220.dp) {
         }
     }
     Image(bmp.asImageBitmap(), contentDescription = text, modifier = Modifier.size(size))
+}
+
+/** Inputs and buttons that wrap onto the next line when the window is narrow (portrait 840 dp). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun WrapRow(content: @Composable () -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) { content() }
 }
