@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { fmtBytes, fmtKst } from '#lib/format.ts';
 	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, warningLabelKo } from '#lib/i18n.ts';
+	import StaticMap from '#lib/StaticMap.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -105,6 +106,7 @@
 
 <h2>위치</h2>
 {#if hasCoords}
+	<StaticMap lat={Number(i.latitude)} lon={Number(i.longitude)} tileBase="/vendor/map" />
 	<dl class="kv">
 		<dt>주소</dt>
 		<dd>{i.address ?? '-'}</dd>

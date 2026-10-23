@@ -97,6 +97,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
             when {
                 d.locationLoading -> Text(stringResource(R.string.loading))
                 loc != null -> {
+                    LocationMap(vm, loc.latitude, loc.longitude)
                     KeyValue(stringResource(R.string.coordinates), "%.5f, %.5f".format(loc.latitude, loc.longitude))
                     loc.address?.let { KeyValue(stringResource(R.string.address), it) }
                     KeyValue(stringResource(R.string.read_at), fmtTime(loc.readAtMillis))

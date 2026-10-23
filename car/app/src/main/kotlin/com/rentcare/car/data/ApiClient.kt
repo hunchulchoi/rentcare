@@ -55,6 +55,23 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
         return execute(request, IncidentStatusDto.serializer())
     }
 
+    /** Map tile PNG from our tile proxy (docs/api.md). Null when unavailable; the map just stays blank. */
+    suspend fun mapTile(z: Int, x: Int, y: Int): ByteArray? = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$baseUrl/api/map/tiles/$z/$x/$y.png")
+            .header("Authorization", "Bearer $apiKey")
+            .get()
+            .build()
+        try {
+            http.newCall(request).execute().use { res ->
+                val type = res.header("content-type").orEmpty()
+                if (res.isSuccessful && type.startsWith("image/png")) res.body?.bytes() else null
+            }
+        } catch (e: IOException) {
+            null
+        }
+    }
+
     private suspend fun <T> execute(request: Request, serializer: KSerializer<T>): ApiResult<T> =
         withContext(Dispatchers.IO) {
             try {

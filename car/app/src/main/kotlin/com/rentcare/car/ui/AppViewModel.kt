@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rentcare.car.BuildConfig
 import com.rentcare.car.RentcareApp
+import androidx.compose.ui.graphics.asImageBitmap
 import com.rentcare.car.data.ApiResult
 import com.rentcare.car.data.PendingReport
 import com.rentcare.car.pleos.ActiveTelltale
@@ -391,6 +392,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    private val tileCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(48)
+
+    /** Decoded map tile for the location map, cached in memory. */
+    suspend fun mapTile(z: Int, x: Int, y: Int): androidx.compose.ui.graphics.ImageBitmap? {
+        val key = "$z/$x/$y"
+        tileCache.get(key)?.let { return it }
+        val bytes = deps.api.mapTile(z, x, y) ?: return null
+        val img = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() ?: return null
+        tileCache.put(key, img)
+        return img
     }
 
     /** User discards an unsent report (e.g. to change it). */

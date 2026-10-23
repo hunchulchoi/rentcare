@@ -139,6 +139,17 @@ Car direct attach (only for files the car can legally access). Headers: `Authori
 
 Response `201`: `{ "attachmentId": "…", "attachments": 3 }`
 
+## GET /api/map/tiles/{z}/{x}/{y}.png (v5, 2026-10-23)
+
+Map tile for the car's static location map. `Authorization: Bearer CAR_API_KEY`.
+
+- Web Mercator 256 px PNG. `z` 12..18 only (street level), `x`,`y` inside the world, plain integers. Otherwise 404.
+- The server fetches from `MAP_TILE_URL` (default OpenStreetMap, demo use) with an identifying User-Agent and
+  caches tiles in memory for 7 days. Upstream failure → 502; the car leaves that tile blank.
+- The car never talks to the tile provider directly. Attribution "© OpenStreetMap contributors" is shown on the map.
+- Vendor pages use the same proxy at `/vendor/map/{z}/{x}/{y}.png` (staff session).
+- Production needs a tile provider that allows this use (OSM tile policy forbids heavy use).
+
 ## Mobile attach (web page)
 
 - `GET /m?lang=en` — page asks for the attach code, then lets the user add photos/videos.

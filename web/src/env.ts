@@ -28,6 +28,10 @@ export const variables = defineEnvVars({
 	AWS_ENDPOINT_URL_S3: { schema: optional, description: 'S3-compatible endpoint, e.g. https://s3.example (https only)' },
 	S3_FORCE_PATH_STYLE: { schema: optional, description: 'true for MinIO path-style URLs' },
 	AWS_REGION: { schema: optional, description: 'S3 region (MinIO: us-east-1)' },
+	MAP_TILE_URL: {
+		schema: optional,
+		description: 'Raster tile source for the proxy, {z}/{x}/{y}. Default OpenStreetMap (demo use only)'
+	},
 	STORAGE_DIR: {
 		schema: (value) => optional(value) ?? './storage',
 		description: 'Private directory for uploaded files (outside static/)'
