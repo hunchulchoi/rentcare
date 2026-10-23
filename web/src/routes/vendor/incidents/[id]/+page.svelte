@@ -28,6 +28,9 @@
 	let kind = $state<ActionKind>('ACTION');
 	let actionType = $state<ActionType>('CALL');
 	let body = $state('');
+	let expectedIn = $state('');
+	let expectedAt = $state('');
+	const passed = $derived(i.expected_at ? new Date(i.expected_at).getTime() < Date.now() : false);
 	let saving = $state(false);
 	let ready = $state(false);
 	onMount(() => (ready = true));
@@ -35,6 +38,8 @@
 		empty: '메모 내용을 입력하세요.',
 		too_long: `${ACTION_BODY_MAX}자 이하로 입력하세요.`,
 		action_type: '조치 유형을 고르세요.',
+		expected: '예상 시각은 지금 이후 7일 이내로 입력하세요.',
+		expected_on_note: '예상 시각은 조치에만 넣을 수 있습니다.',
 		kind: '다시 시도하세요.'
 	};
 </script>
@@ -93,7 +98,11 @@
 					saving = true;
 					return async ({ result, update }) => {
 						await update({ reset: false });
-						if (result.type === 'success') body = '';
+						if (result.type === 'success') {
+							body = '';
+							expectedIn = '';
+							expectedAt = '';
+						}
 						saving = false;
 					};
 				}}
@@ -107,6 +116,17 @@
 						{#each ACTION_TYPES as t (t)}
 							<label class:on={actionType === t}><input type="radio" name="actionType" value={t} bind:group={actionType} />{ACTION_TYPE_LABELS_KO[t]}</label>
 						{/each}
+					</div>
+				{/if}
+				{#if kind === 'ACTION'}
+					<div class="eta">
+						<span class="eta-label">예상 시각 <small>(선택, 고객 차량에 '업체 안내 예상'으로 표시)</small></span>
+						<div class="types" role="radiogroup" aria-label="예상 소요">
+							{#each [['', '없음'], ['30', '30분 후'], ['60', '1시간 후'], ['120', '2시간 후']] as [v, label] (v)}
+								<label class:on={expectedIn === v && !expectedAt}><input type="radio" name="expectedIn" value={v} bind:group={expectedIn} onchange={() => (expectedAt = '')} />{label}</label>
+							{/each}
+							<input class="eta-at" type="datetime-local" name="expectedAt" bind:value={expectedAt} oninput={() => (expectedIn = '')} aria-label="예상 시각 직접 입력" />
+						</div>
 					</div>
 				{/if}
 				<textarea
@@ -135,6 +155,7 @@
 									{fmtKst(e.at)}{#if e.kind !== 'REPORTED' && e.staff}{` · ${e.staff}`}{/if}
 								</span>
 							</div>
+							{#if e.kind === 'ACTION' && e.expected_at}<span class="eta-chip">예상 {fmtKst(e.expected_at)}</span>{/if}
 							{#if (e.kind === 'NOTE' || e.kind === 'ACTION') && e.body}<p class="t-text">{e.body}</p>{/if}
 						</div>
 					</li>
@@ -197,6 +218,11 @@
 				<p class="muted small">조치를 기록하면 자동으로 '조치중'이 됩니다.</p>
 			{:else if i.status === 'ACKNOWLEDGED' || i.status === 'IN_PROGRESS'}
 				<p class="ack-line">확인 {fmtKst(i.acknowledged_at)} · {i.acknowledged_by ?? '-'}</p>
+				{#if i.status === 'IN_PROGRESS' && i.expected_at}
+					<p class="eta-now" class:late={passed}>
+						예상 {fmtKst(i.expected_at)}{#if passed} · 지남{/if}<br /><span class="muted small">{fmtKst(i.expected_set_at)} 입력 · 차량에 표시 중</span>
+					</p>
+				{/if}
 				<form method="POST" action="?/resolve" use:enhance={busy}>
 					<button type="submit" class="primary done-btn" disabled={submitting}>{submitting ? '처리 중…' : '조치 완료'}</button>
 				</form>
@@ -567,6 +593,46 @@
 	.err {
 		color: var(--err);
 		font-size: 0.9rem;
+	}
+	.eta {
+		display: grid;
+		gap: 6px;
+	}
+	.eta-label {
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
+	.eta-label small {
+		font-weight: 400;
+		color: var(--muted);
+	}
+	.eta-at {
+		width: auto !important;
+		padding: 5px 10px !important;
+		border-radius: 999px !important;
+		font-size: 0.9rem !important;
+	}
+	.eta-chip {
+		display: inline-block;
+		margin-top: 4px;
+		padding: 2px 10px;
+		border-radius: 999px;
+		background: #fff1e5;
+		color: #8a3b00;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+	.eta-now {
+		margin: 0 0 12px;
+		padding: 10px 14px;
+		border-radius: 14px;
+		background: #fff1e5;
+		color: #8a3b00;
+		font-weight: 700;
+	}
+	.eta-now.late {
+		background: #fdecea;
+		color: #b3261e;
 	}
 	.timeline {
 		list-style: none;

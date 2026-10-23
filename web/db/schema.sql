@@ -115,3 +115,8 @@ alter table incidents add constraint incidents_status_check
 	check (status in ('RECEIVED', 'ACKNOWLEDGED', 'IN_PROGRESS', 'RESOLVED'));
 alter table incidents add column if not exists resolved_at timestamptz;
 alter table incidents add column if not exists resolved_by text;
+
+-- v7: vendor's expected time (e.g. tow arrival). Latest one on the incident, each one on its log entry.
+alter table incidents add column if not exists expected_at timestamptz;
+alter table incidents add column if not exists expected_set_at timestamptz;
+alter table incident_actions add column if not exists expected_at timestamptz;

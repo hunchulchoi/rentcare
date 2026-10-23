@@ -120,6 +120,8 @@ Missing or wrong token → `404 not_found` (same as an unknown id, so existence 
   "status": "RECEIVED",
   "acknowledgedAt": null,
   "resolvedAt": null,
+  "expectedAt": "2026-10-23T06:30:00Z",
+  "expectedSetAt": "2026-10-23T05:50:00Z",
   "attachments": 2
 }
 ```
@@ -132,6 +134,10 @@ Missing or wrong token → `404 not_found` (same as an unknown id, so existence 
 | `ACKNOWLEDGED` | vendor staff confirmed seeing it | "확인" button |
 | `IN_PROGRESS` | vendor is handling it (조치중) | first staff **action** in the log (also marks it acknowledged) |
 | `RESOLVED` | vendor marked handling finished (조치완료) | "조치 완료" button; "다시 조치중" goes back to `IN_PROGRESS` |
+
+`expectedAt` (v7): time the vendor **told** us to expect (e.g. tow arrival), entered with a staff action;
+`expectedSetAt` is when they entered it. Both null when not given. The car shows it only while `IN_PROGRESS`,
+labeled as the vendor's estimate, and says so when it has passed. The app never computes an estimate itself.
 
 None of these is a dispatch or repair guarantee. Action details (tow, call, …) stay internal to the vendor;
 the car only sees the status. Cars must treat an unknown future value as "received" (do not crash).

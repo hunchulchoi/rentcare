@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { ACTION_TYPES, ACTION_TYPE_LABELS_KO, parseActionForm, statusAfterLog, timeline } from './incident-actions.ts';
 
-const form = (o: Record<string, string>) => {
+const form = (o: Record<string, string | undefined>) => {
 	const f = new FormData();
-	for (const [k, v] of Object.entries(o)) f.set(k, v);
+	for (const [k, v] of Object.entries(o)) if (v !== undefined) f.set(k, v);
 	return f;
 };
 
 describe('parseActionForm', () => {
 	it('accepts an internal note', () => {
 		expect(parseActionForm(form({ kind: 'NOTE', body: '  고객이 내일 반납 희망  ' }))).toEqual({
-			ok: true, value: { kind: 'NOTE', actionType: null, body: '고객이 내일 반납 희망' }
+			ok: true, value: { kind: 'NOTE', actionType: null, body: '고객이 내일 반납 희망', expectedAt: null }
 		});
 	});
 
 	it('accepts an action with a type; body is optional for actions', () => {
 		expect(parseActionForm(form({ kind: 'ACTION', actionType: 'TOW', body: '' }))).toEqual({
-			ok: true, value: { kind: 'ACTION', actionType: 'TOW', body: null }
+			ok: true, value: { kind: 'ACTION', actionType: 'TOW', body: null, expectedAt: null }
 		});
 	});
 
@@ -30,6 +30,27 @@ describe('parseActionForm', () => {
 
 	it('has a Korean label for every action type', () => {
 		for (const t of ACTION_TYPES) expect(ACTION_TYPE_LABELS_KO[t]).toBeTruthy();
+	});
+});
+
+describe('expected time (vendor estimate)', () => {
+	const now = new Date('2026-10-23T05:00:00Z'); // 14:00 KST
+	it('takes datetime-local in KST, or minutes from now', () => {
+		const a = parseActionForm(form({ kind: 'ACTION', actionType: 'TOW', expectedAt: '2026-10-23T15:30' }), now);
+		expect(a.ok && a.value.expectedAt?.toISOString()).toBe('2026-10-23T06:30:00.000Z');
+		const b = parseActionForm(form({ kind: 'ACTION', actionType: 'TOW', expectedIn: '45' }), now);
+		expect(b.ok && b.value.expectedAt?.toISOString()).toBe('2026-10-23T05:45:00.000Z');
+		const c = parseActionForm(form({ kind: 'ACTION', actionType: 'CALL' }), now);
+		expect(c.ok && c.value.expectedAt).toBe(null);
+	});
+	it('rejects past, more than 7 days ahead, garbage, and on notes', () => {
+		for (const f of [
+			{ kind: 'ACTION', actionType: 'TOW', expectedAt: '2026-10-23T13:00' },
+			{ kind: 'ACTION', actionType: 'TOW', expectedAt: '2026-11-05T10:00' },
+			{ kind: 'ACTION', actionType: 'TOW', expectedAt: 'soon' },
+			{ kind: 'ACTION', actionType: 'TOW', expectedIn: '-5' },
+			{ kind: 'NOTE', body: 'x', expectedIn: '30' }
+		]) expect(parseActionForm(form(f), now).ok, JSON.stringify(f)).toBe(false);
 	});
 });
 

@@ -17,7 +17,32 @@ export const ACTION_TYPE_LABELS_KO: Record<ActionType, string> = {
 
 export const ACTION_BODY_MAX = 2000;
 
-export type ActionInput = { kind: ActionKind; actionType: ActionType | null; body: string | null };
+export type ActionInput = { kind: ActionKind; actionType: ActionType | null; body: string | null; expectedAt: Date | null };
+
+const MAX_AHEAD_MS = 7 * 24 * 3600 * 1000;
+const KST_LOCAL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
+/**
+ * Vendor's expected time for an action: `expectedAt` (datetime-local, read as KST) or `expectedIn` (minutes).
+ * Must be in the future and within 7 days. undefined = not given, null = invalid.
+ */
+function parseExpected(f: FormData, now: Date): Date | null | undefined {
+	const at = f.get('expectedAt');
+	const inMin = f.get('expectedIn');
+	let d: Date | undefined;
+	if (typeof inMin === 'string' && inMin.trim()) {
+		if (!/^\d{1,5}$/.test(inMin.trim())) return null;
+		d = new Date(now.getTime() + Number(inMin.trim()) * 60_000);
+	} else if (typeof at === 'string' && at.trim()) {
+		const m = KST_LOCAL.exec(at.trim());
+		if (!m) return null;
+		d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 9, +m[5]));
+	} else {
+		return undefined;
+	}
+	const ahead = d.getTime() - now.getTime();
+	return ahead > 0 && ahead <= MAX_AHEAD_MS ? d : null;
+}
 
 export type ActionRow = {
 	id: string;
@@ -25,25 +50,29 @@ export type ActionRow = {
 	action_type: ActionType | null;
 	body: string | null;
 	staff: string | null;
+	expected_at?: Date | null;
 	created_at: Date;
 };
 
 const isActionType = (v: unknown): v is ActionType => typeof v === 'string' && (ACTION_TYPES as readonly string[]).includes(v);
 
 /** Notes need text; actions need a type (text optional). */
-export function parseActionForm(f: FormData): { ok: true; value: ActionInput } | { ok: false; error: string } {
+export function parseActionForm(f: FormData, now = new Date()): { ok: true; value: ActionInput } | { ok: false; error: string } {
 	const kind = f.get('kind');
 	const raw = f.get('body');
 	const body = typeof raw === 'string' ? raw.trim() : '';
 	if (body.length > ACTION_BODY_MAX) return { ok: false, error: 'too_long' };
+	const expected = parseExpected(f, now);
 	if (kind === 'NOTE') {
 		if (!body) return { ok: false, error: 'empty' };
-		return { ok: true, value: { kind, actionType: null, body } };
+		if (expected !== undefined) return { ok: false, error: 'expected_on_note' };
+		return { ok: true, value: { kind, actionType: null, body, expectedAt: null } };
 	}
 	if (kind === 'ACTION') {
 		const t = f.get('actionType');
 		if (!isActionType(t)) return { ok: false, error: 'action_type' };
-		return { ok: true, value: { kind, actionType: t, body: body || null } };
+		if (expected === null) return { ok: false, error: 'expected' };
+		return { ok: true, value: { kind, actionType: t, body: body || null, expectedAt: expected ?? null } };
 	}
 	return { ok: false, error: 'kind' };
 }

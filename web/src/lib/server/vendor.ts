@@ -98,6 +98,8 @@ export interface IncidentDetailRow {
 	acknowledged_by: string | null;
 	resolved_at: Date | null;
 	resolved_by: string | null;
+	expected_at: Date | null;
+	expected_set_at: Date | null;
 	created_at: Date;
 }
 
@@ -118,14 +120,14 @@ export async function getIncidentDetail(vendorId: string, id: string) {
 			rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 			vehicle_read, fuel_percent, soc, vehicle_read_at,
 			latitude, longitude, address, location_read_at, location_source, location_edited, warnings,
-			status, acknowledged_at, acknowledged_by, resolved_at, resolved_by, created_at
+			status, acknowledged_at, acknowledged_by, resolved_at, resolved_by, expected_at, expected_set_at, created_at
 		from incidents where id = ${id} and vendor_id = ${vendorId}`;
 	if (!rows.length) return null;
 	const attachments = await sql<AttachmentRow[]>`
 		select id, original_name, mime_type, size_bytes::float8 as size_bytes, source, created_at
 		from attachments where incident_id = ${id} order by created_at`;
 	const actions = await sql<ActionRow[]>`
-		select id, kind, action_type, body, staff, created_at
+		select id, kind, action_type, body, staff, expected_at, created_at
 		from incident_actions where incident_id = ${id} order by created_at`;
 	return { incident: rows[0], attachments, actions };
 }
@@ -137,8 +139,11 @@ export async function addIncidentAction(vendorId: string, id: string, a: ActionI
 			select status from incidents where id = ${id} and vendor_id = ${vendorId} for update`;
 		if (!cur.length) return false;
 		await sql`
-			insert into incident_actions (incident_id, kind, action_type, body, staff)
-			values (${id}, ${a.kind}, ${a.actionType}, ${a.body}, ${staff})`;
+			insert into incident_actions (incident_id, kind, action_type, body, staff, expected_at)
+			values (${id}, ${a.kind}, ${a.actionType}, ${a.body}, ${staff}, ${a.expectedAt})`;
+		if (a.expectedAt) {
+			await sql`update incidents set expected_at = ${a.expectedAt}, expected_set_at = now() where id = ${id}`;
+		}
 		const next = statusAfterLog(cur[0].status, a.kind);
 		if (next !== cur[0].status) {
 			// Handling implies the report was seen: fill the staff check if it was skipped.
