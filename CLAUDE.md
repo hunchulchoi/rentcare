@@ -39,7 +39,7 @@ cd car && ./gradlew :core:test :app:assembleDebug
 cd web && pnpm test && pnpm check && pnpm build
 # DB: Infisical /postgres (stage.devfor.link, PostgreSQL 18). Secrets are injected, never written to disk:
 scripts/with-secrets.sh /postgres -- sh -c 'cd web && node --env-file-if-exists=.env scripts/migrate.ts'
-pnpm build && scripts/with-secrets.sh /postgres,/minio -- pnpm --dir web start   # 127.0.0.1:3000
+pnpm build && scripts/server.sh restart          # 127.0.0.1:3000, /postgres+/minio secrets, detached (own session)
 scripts/attach-check.sh          # no emulator: create report, phone upload, vendor download (MinIO)
 tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLIC_BASE_URL
 # Host change (e.g. https://rentcare.devfor.link): edit PUBLIC_BASE_URL in web/.env only,
@@ -50,8 +50,8 @@ tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLI
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
 
 # End-to-end scenarios (emulator + production server on 127.0.0.1:3000 + Funnel). Run before every demo/release.
-scripts/e2e.sh                  # wipes app data on the emulator, 27 checks. S6 stops and restarts the
-                                # server (E2E_SERVER_CMD) to simulate an outage; it keeps running after.
+scripts/e2e.sh                  # wipes app data on the emulator, 31 checks. S6 stops and restarts the
+                                # server via scripts/server.sh to simulate an outage; it keeps running after.
 ```
 
 ## Pleos facts (verified 2026-10-22, emulator 2.1.0)
@@ -64,6 +64,9 @@ scripts/e2e.sh                  # wipes app data on the emulator, 27 checks. S6 
 - The emulator does **not** block a non-DO app while driving (Requires DO = true, app stays resumed).
   Detailed input is gated by `InputGate` (CarUxRestrictions + gear). Test with `scripts/vconsole.sh gear Drive`.
 
+- Emulator crashes on macOS 27 in the host Metal driver (qemu EXC_BAD_ACCESS / MTLReportFailure,
+  2026-10-22/23). AVD set to `hw.gpu.mode=swiftshader_indirect` (backup `config.ini.bak-2026-10-23`); if it still
+  crashes, run it outside the Android Studio tool window or headless (`-no-window`) for E2E.
 - **Never toggle airplane mode on the emulator** (`cmd connectivity airplane-mode`): the guest loses its
   network and does not recover; a reboot hung the emulator (2026-10-22). Simulate outages by stopping the
   local server instead.
@@ -87,7 +90,7 @@ scripts/e2e.sh                  # wipes app data on the emulator, 27 checks. S6 
   AWS_REGION, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. S3_BUCKET set → attachments go to MinIO under
   `attachments/<incident>/<hex>`; unset → web/storage. Bucket is private (anonymous 403). No server-side
   encryption on the bucket yet (2026-10-23).
-- When restarting the web server, kill the old one by PID (check `lsof -iTCP:3000`), not by pattern.
+- Restart the web server with `scripts/server.sh restart` (stops by PID on 127.0.0.1:3000, never by pattern).
 
 - Infisical (`.env` machine identity) path `/pleos`: Pleos CLIENT_ID / CLIENT_SECRET / CRN / PROJECT_ID.
 - Plane API key: `~/.config/plane/env`. Plane project id: `.env` `PLANE_PROJECT`.

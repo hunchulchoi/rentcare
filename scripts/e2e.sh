@@ -20,14 +20,8 @@ check(){ if $UI has "$2"; then ok "$1"; else bad "$1 (missing: $2)"; fi; }
 wait_for(){ for _ in $(seq 1 "${3:-15}"); do $UI has "$2" && { ok "$1"; return; }; sleep 1; done; bad "$1 (missing: $2)"; }
 
 # Outage simulation: stop/start the local production server (never airplane mode on the emulator).
-SERVER_CMD=${E2E_SERVER_CMD:-"scripts/with-secrets.sh /postgres,/minio -- pnpm --dir web start"}
-SERVER_LOG=${TMPDIR:-/tmp}/rentcare-e2e-server.log
-server_pid() { lsof -nP -iTCP@127.0.0.1:3000 -sTCP:LISTEN -t 2>/dev/null | head -1; }
-server_stop() { local p; p=$(server_pid); [[ -n "$p" ]] && kill "$p"; for _ in $(seq 1 10); do [[ -z "$(server_pid)" ]] && return 0; sleep 1; done; return 1; }
-server_start() {
-  nohup sh -c "$SERVER_CMD" >"$SERVER_LOG" 2>&1 &
-  for _ in $(seq 1 40); do [[ "$(curl -s -o /dev/null -w '%{http_code}' -m 3 "$B/")" == 200 ]] && return 0; sleep 1; done; return 1
-}
+server_stop() { scripts/server.sh stop >/dev/null; }
+server_start() { RENTCARE_SERVER_CMD="${E2E_SERVER_CMD:-}" scripts/server.sh start >/dev/null; }
 
 restart_app() { "$ADB" shell am force-stop --user current com.rentcare.car; "$ADB" shell am start -n com.rentcare.car/.ui.MainActivity >/dev/null; sleep 4; }
 
