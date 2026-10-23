@@ -44,8 +44,7 @@ try {
 	await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 600 });
 	if (codeCheck) {
 		await send('Page.navigate', { url: `${base}/m?lang=ko` });
-		if (!(await waitFor(`!!document.querySelector('.boxes input') && !!document.querySelector('form')?.isConnected`, 30000))) throw new Error('code input not found');
-		await sleep(800); // hydration
+		if (!(await waitFor(`!!document.querySelector('.boxes[data-ready]')`, 60000))) throw new Error('code input never became interactive');
 		// Type like a person: lower case, a hyphen and a space mixed in, one key at a time.
 		const typed = codeCheck.slice(0, 3).toLowerCase() + '- ' + codeCheck.slice(3).toLowerCase();
 		let boxes = '';

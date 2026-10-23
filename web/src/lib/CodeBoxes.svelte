@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { ATTACH_CODE_LENGTH, cleanCodeInput } from '#lib/attach-code.ts';
 
 	// One real input (paste, autofill, IME and screen readers work) drawn as 6 boxes.
@@ -12,6 +13,9 @@
 	}: { value?: string; name?: string; label: string; disabled?: boolean; invalid?: boolean; oncomplete?: () => void } = $props();
 
 	let focused = $state(false);
+	// Interactive marker for scripts/browser-login-check.mjs.
+	let ready = $state(false);
+	onMount(() => (ready = true));
 	let input: HTMLInputElement;
 	const active = $derived(Math.min(value.length, ATTACH_CODE_LENGTH - 1));
 
@@ -24,7 +28,7 @@
 	}
 </script>
 
-<div class="boxes" class:focused class:invalid class:disabled>
+<div class="boxes" class:focused class:invalid class:disabled data-ready={ready ? '1' : undefined}>
 	<input
 		bind:this={input}
 		{name}
