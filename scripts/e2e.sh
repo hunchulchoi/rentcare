@@ -2,12 +2,18 @@
 # End-to-end scenarios on the Pleos emulator + local web server (RENTCARE-18).
 # Needs: emulator running with the debug app installed, web server reachable at web/.env PUBLIC_BASE_URL, migrated DB,
 # web/.env with DEMO_VENDOR_TOKEN. Uses Korean UI (demo rental language ko).
+[ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"   # written for bash; `zsh e2e.sh` re-runs under bash
 set -uo pipefail
 cd "$(dirname "$0")/.."
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
 UI=scripts/ui.sh; VC=scripts/vconsole.sh
 B=$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-); B=${B:-http://127.0.0.1:5173}
 pass=0; fail=0
+if [[ "$("$ADB" get-state 2>/dev/null)" != device ]]; then
+  echo "No emulator connected. Start AVD Pleos_Connect_2_1_0_API_34 from Android Studio (Device Manager), then rerun." >&2
+  exit 2
+fi
+[[ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 "$B/")" == 200 ]] || { echo "Server not reachable at $B. Start it (see CLAUDE.md)." >&2; exit 2; }
 ok()   { echo "  PASS $1"; pass=$((pass+1)); }
 bad()  { echo "  FAIL $1"; fail=$((fail+1)); echo "       screen: $($UI texts | head -40 | tr '\n' '|')"; }
 check(){ if $UI has "$2"; then ok "$1"; else bad "$1 (missing: $2)"; fi; }
