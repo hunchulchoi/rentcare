@@ -127,6 +127,7 @@ $UI tap "Send to 제주 데모렌터카"; sleep 1; $UI tap "Send report"
 wait_for "S7 received in English" "✔ Report received" 15
 receipt=$($UI texts | grep -oE 'RC-[0-9]{8}-[0-9]{4}' | head -1)
 if $UI hasdesc "$B/m?lang=en"; then ok "S7 QR opens phone page in English"; else bad "S7 QR url ($B/m?lang=en)"; fi
+$UI texts | grep -qE '^Code valid until [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$' && ok "S7 code expiry in local time" || bad "S7 code expiry format"
 code=$($UI texts | grep -oE '^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$' | head -1)
 [[ "$(curl -s "$B/m?lang=en")" == *"Add photos &amp; videos"* ]] && ok "S7 phone page in English before code" || bad "S7 phone page language"
 m=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H "Accept: text/html" --data-urlencode "code=$code")

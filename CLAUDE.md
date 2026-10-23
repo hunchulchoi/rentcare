@@ -49,7 +49,7 @@ tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLI
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
 
 # End-to-end scenarios (emulator + production server on 127.0.0.1:3000 + Funnel). Run before every demo/release.
-scripts/e2e.sh                  # wipes app data on the emulator, 26 checks. S6 stops and restarts the
+scripts/e2e.sh                  # wipes app data on the emulator, 27 checks. S6 stops and restarts the
                                 # server (E2E_SERVER_CMD) to simulate an outage; it keeps running after.
 ```
 

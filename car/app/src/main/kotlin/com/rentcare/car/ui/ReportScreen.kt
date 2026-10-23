@@ -33,6 +33,7 @@ import com.rentcare.car.BuildConfig
 import com.rentcare.core.IncidentRequest
 import com.rentcare.core.IncidentType
 import com.rentcare.core.InputGate
+import com.rentcare.core.IsoTime
 import com.rentcare.core.UrlPolicy
 import com.rentcare.core.Warnings
 import com.rentcare.core.NOTE_MAX_LENGTH
@@ -194,7 +195,7 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
                     Text(stringResource(R.string.attach_step1, rec.attachUrl))
                     Text(stringResource(R.string.attach_step2))
                     Text(rec.attachCode, fontFamily = FontFamily.Monospace, fontSize = 40.sp, fontWeight = FontWeight.Bold)
-                    Text(stringResource(R.string.attach_expires, rec.attachCodeExpiresAt), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.attach_expires, fmtDateTime(IsoTime.millis(rec.attachCodeExpiresAt))), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -238,7 +239,7 @@ private fun PendingPanel(p: IncidentRequest, send: SendState, vm: AppViewModel) 
         KeyValue(stringResource(R.string.type_title), stringResource(incidentLabel(p.type)))
         KeyValue(
             stringResource(R.string.pending_written_at),
-            fmtTime(runCatching { java.time.Instant.parse(p.occurredAt).toEpochMilli() }.getOrNull()),
+            fmtTime(IsoTime.millis(p.occurredAt)),
         )
         p.note?.let { KeyValue(stringResource(R.string.note_title), it.take(80)) }
         (send as? SendState.Failed)?.let {
