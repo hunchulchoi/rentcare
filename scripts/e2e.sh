@@ -94,12 +94,25 @@ $UI tap "제주 데모렌터카에 보내기에 동의"; sleep 1
 server_stop
 $UI tap "접수 보내기"
 wait_for "S6b not received, retry offered while server is down" "미전송 접수 버리기" 40
-check "S6b says resend is safe" "다시 보내기를 누르세요. 같은 접수가 중복되지 않습니다."
+check "S6b says resend is safe" "아직 업체에 전달되지 않았습니다. 다시 보내도 중복 접수되지 않습니다."
 server_start || bad "S6b server restart"
-$UI tap "접수 보내기"
+$UI tap "다시 보내기"
 wait_for "S6b received after server is back" "✔ 기본 접수 완료" 20
 after=$(vendor_count)
 [[ $((after - before)) -eq 1 ]] && ok "S6b vendor list grew by exactly 1 ($before -> $after)" || bad "S6b vendor count $before -> $after"
+
+echo "== S6c unsent report survives app restart; resend sends the stored one"
+before=$(vendor_count)
+$UI tap "새 접수"; sleep 2; $UI tap "기타"; sleep 1; $UI tap "제주 데모렌터카에 보내기에 동의"; sleep 1
+server_stop; $UI tap "접수 보내기"
+wait_for "S6c not received while server is down" "미전송 접수 버리기" 40
+server_start || bad "S6c server restart"
+restart_app; $UI tap "고장·사고 접수"; sleep 3
+wait_for "S6c unsent report shown after app restart" "보내지 못한 접수가 있습니다." 8
+$UI tap "다시 보내기"
+wait_for "S6c received after resend" "✔ 기본 접수 완료" 20
+after=$(vendor_count)
+[[ $((after - before)) -eq 1 ]] && ok "S6c vendor list grew by exactly 1 ($before -> $after)" || bad "S6c vendor count $before -> $after"
 rm -f "$jar"
 
 echo "== S5 end rental wipes local data"

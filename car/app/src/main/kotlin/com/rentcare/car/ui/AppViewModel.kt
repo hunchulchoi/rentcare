@@ -95,6 +95,8 @@ data class ReportUi(
     val draft: IncidentDraft = IncidentDraft(),
     val send: SendState = SendState.Idle,
     val received: IncidentCreated? = null,
+    /** Stored but not yet received by the server. While set, the form is replaced by a resend panel. */
+    val pending: IncidentRequest? = null,
     val acknowledged: Boolean = false,
     val attachments: Int = 0,
     val statusError: String? = null,
@@ -115,7 +117,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _ret = MutableStateFlow(ReturnUi())
     val ret: StateFlow<ReturnUi> = _ret
 
-    private val _report = MutableStateFlow(ReportUi(received = deps.store.loadReceived()))
+    private val _report = MutableStateFlow(ReportUi(received = deps.store.loadReceived(), pending = deps.store.loadPending()?.request))
     val report: StateFlow<ReportUi> = _report
 
     private val _telltales = MutableStateFlow<List<ActiveTelltale>>(emptyList())
@@ -334,27 +336,43 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    /** Send a new report from the draft. An unsent report must be resent or discarded first. */
     fun send() {
         val r = _rental.value ?: return
+        if (_report.value.pending != null) return
         val draft = _report.value.draft
         val type = draft.type ?: return
         if (!draft.confirmedRecipient || _report.value.send == SendState.Sending) return
         if (inputGate.value != InputGate.Decision.ALLOWED) return
 
-        // Reuse the stored request on retry so the server sees the same key and body.
-        val pending = deps.store.loadPending() ?: PendingReport(
-            idempotencyKey = UUID.randomUUID().toString(),
-            request = buildRequest(r, type, draft),
-        ).also { deps.store.savePending(it) }
+        val pending = PendingReport(UUID.randomUUID().toString(), buildRequest(r, type, draft))
+        deps.store.savePending(pending)
+        _report.update { it.copy(pending = pending.request) }
+        transmit(pending)
+    }
 
+    /**
+     * Resend the stored report unchanged (same key and body), also after an app restart.
+     * One tap, no typing, so it is not gated by [inputGate].
+     */
+    fun resend() {
+        if (_report.value.send == SendState.Sending) return
+        val pending = deps.store.loadPending() ?: return _report.update { it.copy(pending = null) }
+        transmit(pending)
+    }
+
+    private fun transmit(pending: PendingReport) {
         work.launch { token ->
             _report.update { it.copy(send = SendState.Sending) }
-            when (val res = deps.api.createIncident(pending.request, pending.idempotencyKey)) {
+            val res = deps.api.createIncident(pending.request, pending.idempotencyKey)
+            if (!work.isCurrent(token)) return@launch
+            when (res) {
                 is ApiResult.Ok -> {
-                    if (!work.isCurrent(token)) return@launch
                     deps.store.saveReceived(res.value)
                     deps.store.savePending(null)
-                    _report.update { it.copy(send = SendState.Idle, received = res.value, draft = IncidentDraft()) }
+                    _report.update {
+                        it.copy(send = SendState.Idle, received = res.value, pending = null, draft = IncidentDraft())
+                    }
                     startStatusPolling()
                 }
                 is ApiResult.Network -> _report.update {
@@ -362,9 +380,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 is ApiResult.Http -> {
                     val retryable = res.code >= 500 || res.code == 429
-                    if (!retryable) deps.store.savePending(null) // bad request: let the user fix and resend
+                    // Bad request: drop it so the user can fix the draft (kept in memory) and send a new one.
+                    if (!retryable) deps.store.savePending(null)
                     _report.update {
-                        it.copy(send = SendState.Failed("${res.code} ${res.error?.error ?: ""}".trim(), retryable))
+                        it.copy(
+                            send = SendState.Failed("${res.code} ${res.error?.error ?: ""}".trim(), retryable),
+                            pending = if (retryable) it.pending else null,
+                        )
                     }
                 }
             }
@@ -374,7 +396,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** User discards an unsent report (e.g. to change it). */
     fun discardPending() {
         deps.store.savePending(null)
-        _report.update { it.copy(send = SendState.Idle) }
+        _report.update { it.copy(send = SendState.Idle, pending = null) }
     }
 
     fun newReport() {

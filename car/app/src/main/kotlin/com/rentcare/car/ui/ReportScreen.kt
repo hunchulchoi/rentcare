@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rentcare.car.R
 import com.rentcare.car.BuildConfig
+import com.rentcare.core.IncidentRequest
 import com.rentcare.core.IncidentType
 import com.rentcare.core.InputGate
 import com.rentcare.core.UrlPolicy
@@ -70,6 +71,11 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
                 stringResource(if (gate == InputGate.Decision.BLOCKED_DRIVING) R.string.blocked_driving else R.string.blocked_not_parked),
                 color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold,
             )
+        }
+
+        ui.pending?.let { p ->
+            PendingPanel(p, ui.send, vm)
+            return@Column
         }
 
         Section(stringResource(R.string.type_title)) {
@@ -219,6 +225,30 @@ fun ProbeScreen(vm: AppViewModel, modifier: Modifier) {
                     Text(row.value, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
                 }
             }
+        }
+    }
+}
+
+/** A report that was stored but not received: resend it unchanged or discard it. */
+@Composable
+private fun PendingPanel(p: IncidentRequest, send: SendState, vm: AppViewModel) {
+    val sending = send == SendState.Sending
+    Section(stringResource(R.string.pending_title)) {
+        Text(stringResource(R.string.pending_note), style = MaterialTheme.typography.bodySmall)
+        KeyValue(stringResource(R.string.type_title), stringResource(incidentLabel(p.type)))
+        KeyValue(
+            stringResource(R.string.pending_written_at),
+            fmtTime(runCatching { java.time.Instant.parse(p.occurredAt).toEpochMilli() }.getOrNull()),
+        )
+        p.note?.let { KeyValue(stringResource(R.string.note_title), it.take(80)) }
+        (send as? SendState.Failed)?.let {
+            Text(stringResource(R.string.send_failed, it.message), color = MaterialTheme.colorScheme.error)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = vm::resend, enabled = !sending) {
+                Text(stringResource(if (sending) R.string.sending else R.string.resend))
+            }
+            OutlinedButton(onClick = vm::discardPending, enabled = !sending) { Text(stringResource(R.string.discard)) }
         }
     }
 }

@@ -152,4 +152,8 @@
     <string name="blocked_not_parked">P단 정차 상태를 확인하는 중입니다. 안전하게 정차한 뒤 작성하세요.</string>
     <string name="report_warnings_title">현재 켜진 경고등 (접수에 함께 전달)</string>
     <string name="report_warnings_note">계기판 표시 그대로 전달합니다. 차량 자체 안내를 먼저 따르세요.</string>
+    <string name="pending_title">보내지 못한 접수가 있습니다.</string>
+    <string name="pending_note">아직 업체에 전달되지 않았습니다. 다시 보내도 중복 접수되지 않습니다.</string>
+    <string name="resend">다시 보내기</string>
+    <string name="pending_written_at">작성 시각</string>
 </resources>

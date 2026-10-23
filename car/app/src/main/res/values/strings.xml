@@ -152,4 +152,8 @@
     <string name="blocked_not_parked">Waiting for the car to be in Park. Stop safely to fill in the report.</string>
     <string name="report_warnings_title">Warning lights on now (sent with the report)</string>
     <string name="report_warnings_note">Shown as on the dashboard. Follow the car\'s own instructions first.</string>
+    <string name="pending_title">There is an unsent report.</string>
+    <string name="pending_note">Not delivered to the rental company yet. Sending again will not create a duplicate.</string>
+    <string name="resend">Send again</string>
+    <string name="pending_written_at">Written at</string>
 </resources>
