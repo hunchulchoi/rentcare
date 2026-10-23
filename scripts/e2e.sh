@@ -31,7 +31,6 @@ $VC gear Park >/dev/null; $VC soc 100 >/dev/null; $VC telltale TPMS Off >/dev/nu
 restart_app
 $UI tap "대여 정보"; sleep 1
 $UI tap "데모 EV 계약 불러오기"; sleep 1
-"$ADB" shell input swipe 1500 900 1500 300 300; sleep 1
 $UI tap "저장"
 
 echo "== S1 EV same-SOC return: arrival below target -> charge"

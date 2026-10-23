@@ -8,6 +8,8 @@ import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -98,9 +100,12 @@ private fun Localized(lang: String, content: @Composable () -> Unit) {
 @Composable
 private fun Root(vm: AppViewModel, startTab: Tab) {
     var tab by rememberSaveable { mutableStateOf(startTab) }
+    // Pleos windows: landscape 1700 dp, portrait 840 dp (Connect-S-17) down to 628 dp. Narrow → compact menu.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val compact = maxWidth < 1000.dp
     Row(Modifier.fillMaxSize()) {
-        SideMenu(tab) { tab = it }
-        val m = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 28.dp)
+        SideMenu(tab, compact) { tab = it }
+        val m = Modifier.fillMaxSize().padding(horizontal = if (compact) 20.dp else 32.dp, vertical = 28.dp)
         when (tab) {
             Tab.RENTAL -> RentalScreen(vm, m, onSaved = { tab = Tab.RETURN })
             Tab.RETURN -> ReturnScreen(vm, m)
@@ -110,33 +115,49 @@ private fun Root(vm: AppViewModel, startTab: Tab) {
             Tab.PROBE -> if (BuildConfig.DEBUG) ProbeScreen(vm, m)
         }
     }
+    }
 }
 
 /** Icon + text label (Pleos: icons always carry a label). Rounded pills, large touch targets. */
 @Composable
-private fun SideMenu(current: Tab, onSelect: (Tab) -> Unit) {
+private fun SideMenu(current: Tab, compact: Boolean, onSelect: (Tab) -> Unit) {
     Column(
-        Modifier.fillMaxHeight().width(240.dp).background(MaterialTheme.colorScheme.surfaceContainerLowest)
-            .padding(horizontal = 16.dp, vertical = 24.dp),
+        Modifier.fillMaxHeight().width(if (compact) 132.dp else 240.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            .padding(horizontal = if (compact) 10.dp else 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         val haptic = LocalHapticFeedback.current
         Tab.entries.filter { it != Tab.PROBE || BuildConfig.DEBUG }.forEach { t ->
             val selected = t == current
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(RoundedCornerShape(36.dp))
-                    .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                    .selectable(selected = selected, role = Role.Tab, onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSelect(t)
-                    })
-                    .padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                val tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                Icon(t.icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
-                Text(stringResource(t.label), color = tint, style = MaterialTheme.typography.labelLarge, maxLines = 2)
+            val tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            val item = Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(RoundedCornerShape(if (compact) 24.dp else 36.dp))
+                .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                .selectable(selected = selected, role = Role.Tab, onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onSelect(t)
+                })
+            if (compact) {
+                Column(
+                    item.padding(vertical = 12.dp, horizontal = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(t.icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
+                    Text(
+                        stringResource(t.label), color = tint, style = MaterialTheme.typography.labelMedium,
+                        textAlign = TextAlign.Center, maxLines = 2,
+                    )
+                }
+            } else {
+                Row(
+                    item.padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Icon(t.icon, contentDescription = null, tint = tint, modifier = Modifier.size(32.dp))
+                    Text(stringResource(t.label), color = tint, style = MaterialTheme.typography.labelLarge, maxLines = 2)
+                }
             }
         }
     }
