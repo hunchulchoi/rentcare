@@ -10,6 +10,7 @@
 		type SortingState,
 		type Updater
 	} from '@tanstack/table-core';
+	import { onMount } from 'svelte';
 	import StaticMap from '#lib/StaticMap.svelte';
 	import { fmtKst } from '#lib/format.ts';
 	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, STATUS_LABELS_KO, typeLabel, type IncidentStatus } from '#lib/i18n.ts';
@@ -17,6 +18,9 @@
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
+	// Set once the page is interactive (used by scripts/browser-login-check.mjs).
+	let ready = $state(false);
+	onMount(() => (ready = true));
 
 	// Columns: ids drive sorting; cells are rendered below by id.
 	const columns: ColumnDef<ListRow>[] = [
@@ -103,7 +107,7 @@
 		<span class="result">{filteredCount}건</span>
 	</div>
 
-	<div class="table-wrap">
+	<div class="table-wrap" data-ready={ready ? '1' : undefined}>
 		<table>
 			<thead>
 				{#each table.getHeaderGroups() as hg (hg.id)}

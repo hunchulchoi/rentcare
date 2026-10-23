@@ -47,6 +47,7 @@ try {
 	console.log(ok ? `PASS browser login → ${await evalJs('location.pathname')}` : `FAIL browser login: ${await evalJs('location.pathname')} | ${text}`);
 	if (ok && listCheck) {
 		// Vendor list (TanStack): search, status filter, sorting work in the browser.
+		if (!(await waitFor(`!!document.querySelector('[data-ready]')`, 30000))) throw new Error('vendor list never became interactive');
 		const rows = () => evalJs(`document.querySelectorAll('tbody tr').length`);
 		const typed = async (q) => evalJs(`(() => { const i = document.querySelector('input[type=search]'); i.value = ${JSON.stringify('__Q__')}.replace('__Q__', ${JSON.stringify(q)}); i.dispatchEvent(new Event('input', { bubbles: true })); return true })()`);
 		const before = await rows();
