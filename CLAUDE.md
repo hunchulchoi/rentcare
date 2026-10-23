@@ -26,6 +26,7 @@ Pleos Connect rental-car app for the Hyundai Motor Group in-car app contest.
 | `car/app` | Android Automotive app (Compose). Pleos wrappers in `pleos/`, screens in `ui/` |
 | `web/` | SvelteKit: car API, phone attach `/m`, vendor `/vendor`. `pnpm test`, `pnpm check`, `pnpm build` |
 | `docs/api.md` | Car ↔ server contract. Change it first, then both sides |
+| `docs/deploy.md` | rentcare.devfor.link: Portainer stack, tag push → rebuild, Sablier, tunnel |
 
 ## Commands
 
@@ -45,6 +46,8 @@ tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLI
 # Host change (e.g. https://rentcare.devfor.link): edit PUBLIC_BASE_URL in web/.env only,
 # then rebuild the car app — it reads PUBLIC_BASE_URL and CAR_API_KEY from web/.env.
 # Never expose `pnpm dev` publicly (it serves source files).
+
+# Deploy: push main, then `git tag vX.Y.Z && git push origin vX.Y.Z` → Portainer rebuilds (docs/deploy.md)
 
 # Virtual Console (change SOC / telltales / tire pressure / gear)
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
