@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
 # End-to-end scenarios on the Pleos emulator + local web server (RENTCARE-18).
-# Needs: emulator running with the debug app installed, web server reachable at web/.env PUBLIC_BASE_URL, migrated DB,
+# Runs against the LOCAL server (web/.env LOCAL_BASE_URL): S6 stops and starts it, which the deployed
+# server cannot do (Sablier wakes it). The debug app is built for that URL first and rebuilt for
+# PUBLIC_BASE_URL (deployed) at the end unless E2E_RESTORE=0.
+# Needs: emulator running, local server (scripts/server.sh start), migrated DB,
 # web/.env with DEMO_VENDOR_TOKEN. Uses Korean UI (demo rental language ko).
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"   # written for bash; `zsh e2e.sh` re-runs under bash
 set -uo pipefail
 cd "$(dirname "$0")/.."
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
 UI=scripts/ui.sh; VC=scripts/vconsole.sh
-B=$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-); B=${B:-http://127.0.0.1:5173}
+B=$(grep -E "^LOCAL_BASE_URL=" web/.env | cut -d= -f2-); B=${B:-http://127.0.0.1:5173}
 pass=0; fail=0
 if [[ "$("$ADB" get-state 2>/dev/null)" != device ]]; then
   echo "No emulator connected. Start AVD Pleos_Connect_2_1_0_API_34 from Android Studio (Device Manager), then rerun." >&2
   exit 2
 fi
 [[ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 "$B/")" == 200 ]] || { echo "Server not reachable at $B. Start it (see CLAUDE.md)." >&2; exit 2; }
+install_app() { (cd car && JAVA_HOME="$(/usr/libexec/java_home -v 21 2>/dev/null || echo "$JAVA_HOME")" ./gradlew -q :app:installDebug "$@" 2>&1 | grep -vE "^Warning: SDK|^$" | tail -2); }
+echo "== install debug app for $B"
+install_app -Prentcare.apiBaseUrl="$B"
+restore() { [[ "${E2E_RESTORE:-1}" == 1 ]] && { echo "== reinstall debug app for the deployed server"; install_app; }; }
+trap restore EXIT
 ok()   { echo "  PASS $1"; pass=$((pass+1)); }
 bad()  { echo "  FAIL $1"; fail=$((fail+1)); echo "       screen: $($UI texts | head -40 | tr '\n' '|')"; }
 check(){ if $UI has "$2"; then ok "$1"; else bad "$1 (missing: $2)"; fi; }

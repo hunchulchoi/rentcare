@@ -56,8 +56,10 @@ curl -s https://rentcare.devfor.link/health            # {"ok":true}
 ssh stage.devfor.link 'docker ps | grep rentcare; docker logs rentcare-web-1 --tail 20'
 ```
 
-## 차량 앱이 이 서버를 쓰게 하려면
+## 차량 앱과 서버 주소
 
-`web/.env`의 `PUBLIC_BASE_URL`을 `https://rentcare.devfor.link`로 바꾸고 차량 앱을 다시 빌드한다
-(또는 `./gradlew -Prentcare.apiBaseUrl=…`). E2E(`scripts/e2e.sh`)는 장애 시나리오(S6)가 로컬 서버를
-멈췄다 켜므로 로컬 서버(Funnel) 주소로 돌린다.
+- `web/.env` `PUBLIC_BASE_URL=https://rentcare.devfor.link` — 차량 앱 기본 빌드가 이 주소를 쓴다(2026-10-23부터).
+- `web/.env` `LOCAL_BASE_URL` — 로컬 서버(Tailscale Funnel). `scripts/server.sh`가 이 주소로 띄우고,
+  `scripts/e2e.sh`는 앱을 이 주소로 빌드해 시험한 뒤 배포 주소로 다시 설치한다.
+  배포 서버는 Sablier가 바로 깨우므로 장애 시나리오(S6)를 재현할 수 없어서다.
+- 로컬과 배포 서버는 같은 DB·MinIO를 쓴다(접수번호가 공유됨).

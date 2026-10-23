@@ -40,11 +40,11 @@ cd car && ./gradlew :core:test :app:assembleDebug
 cd web && pnpm test && pnpm check && pnpm build
 # DB: Infisical /postgres (stage.devfor.link, PostgreSQL 18). Secrets are injected, never written to disk:
 scripts/with-secrets.sh /postgres -- sh -c 'cd web && node --env-file-if-exists=.env scripts/migrate.ts'
-pnpm build && scripts/server.sh restart          # 127.0.0.1:3000, /postgres+/minio secrets, detached (own session)
+pnpm build && scripts/server.sh restart          # LOCAL server 127.0.0.1:3000 → Funnel (web/.env LOCAL_BASE_URL)
 scripts/attach-check.sh          # no emulator: create report, phone upload, vendor download (MinIO)
-tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLIC_BASE_URL
-# Host change (e.g. https://rentcare.devfor.link): edit PUBLIC_BASE_URL in web/.env only,
-# then rebuild the car app — it reads PUBLIC_BASE_URL and CAR_API_KEY from web/.env.
+tailscale funnel --bg 3000                       # public HTTPS for the local server = LOCAL_BASE_URL
+# web/.env PUBLIC_BASE_URL = deployed server (https://rentcare.devfor.link). The car app build reads it
+# (and CAR_API_KEY); override with ./gradlew -Prentcare.apiBaseUrl=… .
 # Never expose `pnpm dev` publicly (it serves source files).
 
 # Deploy: push main, then `git tag vX.Y.Z && git push origin vX.Y.Z` → Portainer rebuilds (docs/deploy.md)
@@ -53,8 +53,9 @@ tailscale funnel --bg 3000                       # public HTTPS = web/.env PUBLI
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
 
 # End-to-end scenarios (emulator + production server on 127.0.0.1:3000 + Funnel). Run before every demo/release.
-scripts/e2e.sh                  # wipes app data on the emulator, 31 checks. S6 stops and restarts the
-                                # server via scripts/server.sh to simulate an outage; it keeps running after.
+scripts/e2e.sh                  # wipes app data on the emulator, 31 checks, against the LOCAL server: builds the
+                                # app for LOCAL_BASE_URL, S6 stops/starts the local server, then reinstalls the
+                                # app for the deployed server (E2E_RESTORE=0 to skip).
 ```
 
 ## Pleos facts (verified 2026-10-22, emulator 2.1.0)
