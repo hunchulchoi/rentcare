@@ -11,6 +11,9 @@ import ai.pleos.playground.navi.data.TripInfo
 import ai.pleos.playground.navi.data.TripRequest
 import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.navi.helper.listener.NaviHelperEventListener
+import ai.pleos.playground.navi.data.NavigationScreenRequest
+import ai.pleos.playground.navi.data.WaypointChangedInfo
+import ai.pleos.playground.navi.data.WaypointInfo
 import android.content.Context
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +32,8 @@ sealed interface NaviEvent {
     data class Error(val code: NaviErrorCode) : NaviEvent
     data object RoutingCompleted : NaviEvent
     data object RouteCancelled : NaviEvent
+    data class Waypoints(val list: List<WaypointInfo>) : NaviEvent
+    data object WaypointsChanged : NaviEvent
 }
 
 data class GeoPoint(val latitude: Double, val longitude: Double, val name: String, val address: String? = null)
@@ -76,6 +81,14 @@ class NaviGateway(context: Context) {
         override fun onRouteCancelled() {
             _events.tryEmit(NaviEvent.RouteCancelled)
         }
+
+        override fun onWayPointInfo(waypointInfos: List<WaypointInfo>) {
+            _events.tryEmit(NaviEvent.Waypoints(waypointInfos))
+        }
+
+        override fun onWaypointChanged(waypointChangedInfo: WaypointChangedInfo) {
+            _events.tryEmit(NaviEvent.WaypointsChanged)
+        }
     }
 
     fun start() {
@@ -113,6 +126,30 @@ class NaviGateway(context: Context) {
         withTimeoutOrNull(timeoutMs) {
             events.onSubscription { navi.getCurrentLocationInfo() }
                 .mapNotNull { it as? NaviEvent.Location }.first()
+        }
+    }
+
+    /**
+     * Open a screen of the car navigation (e.g. nearby chargers, place search) so the user picks a stop there
+     * instead of typing coordinates. Fire-and-forget; the navigation app comes to the front.
+     */
+    suspend fun openScreen(request: NavigationScreenRequest): Boolean {
+        if (!awaitConnected(5_000)) return false
+        navi.requestNavigationScreen(request)
+        return true
+    }
+
+    /** Waypoints currently set in the car navigation (what the user added there). */
+    suspend fun waypoints(timeoutMs: Long = 5_000): Result<List<WaypointInfo>> = lane.withLock {
+        if (!awaitConnected(timeoutMs)) return@withLock Result.failure(IllegalStateException(connectError ?: "navi not connected"))
+        val ev = withTimeoutOrNull(timeoutMs) {
+            events.onSubscription { navi.getWaypointInfo() }
+                .mapNotNull { it as? NaviEvent.Waypoints ?: (it as? NaviEvent.Error) }.first()
+        } ?: return@withLock Result.failure(IllegalStateException("waypoint timeout"))
+        when (ev) {
+            is NaviEvent.Waypoints -> Result.success(ev.list)
+            is NaviEvent.Error -> Result.failure(IllegalStateException("navi error ${ev.code}"))
+            else -> Result.failure(IllegalStateException("unexpected"))
         }
     }
 

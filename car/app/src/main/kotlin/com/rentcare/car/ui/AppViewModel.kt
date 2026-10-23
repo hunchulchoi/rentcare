@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.rentcare.car.BuildConfig
 import com.rentcare.car.RentcareApp
 import androidx.compose.ui.graphics.asImageBitmap
+import ai.pleos.playground.navi.data.NavigationScreenRequest
 import com.rentcare.car.data.ApiResult
 import com.rentcare.car.data.PendingReport
 import com.rentcare.car.pleos.ActiveTelltale
@@ -23,6 +24,7 @@ import com.rentcare.core.LocationDto
 import com.rentcare.core.LocationSource
 import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
+import com.rentcare.core.WaypointCoords
 import com.rentcare.core.Reading
 import com.rentcare.core.Gear
 import com.rentcare.core.InputGate
@@ -65,7 +67,12 @@ data class ReturnUi(
     val departure: DeparturePlan? = null,
     val loading: Boolean = false,
     val routeMessage: String? = null,
+    /** Stops the user set in the car navigation (read back, not sent by us). */
+    val naviStops: List<NaviStop> = emptyList(),
 )
+
+/** A waypoint from the car navigation. Coordinates may be missing (emulator 2.1.0 reports 0,0). */
+data class NaviStop(val name: String, val address: String?, val remainMeters: Int, val latitude: Double?, val longitude: Double?)
 
 data class LocationDraft(
     val latitude: Double,
@@ -292,6 +299,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Let the user pick stops in the car navigation (no typing): chargers for EV, a place search otherwise. */
+    fun openStationSearch(gasolineKeyword: String) {
+        val ev = _rental.value?.powertrain == Powertrain.EV
+        work.launch { token ->
+            val ok = deps.navi.openScreen(
+                if (ev) NavigationScreenRequest.NearbyChargingStations else NavigationScreenRequest.SearchPlace(gasolineKeyword),
+            )
+            if (work.isCurrent(token) && !ok) _ret.update { it.copy(routeMessage = "NAVI_UNAVAILABLE") }
+        }
+    }
+
+    /** Read the waypoints the user set in the car navigation (they are already in its route). */
+    fun importNaviWaypoints() {
+        work.launch { token ->
+            val res = deps.navi.waypoints()
+            if (!work.isCurrent(token)) return@launch
+            res.onSuccess { list ->
+                val stops = list.map { w ->
+                    val c = WaypointCoords.pick(w.latitude, w.longitude, w.displayLatitude, w.displayLongitude)
+                    NaviStop(w.name, w.address?.ifBlank { null }, w.remainDistance, c?.first, c?.second)
+                }
+                _ret.update {
+                    it.copy(naviStops = stops, routeMessage = if (stops.isEmpty()) "NO_WAYPOINTS" else "IMPORTED ${stops.size}")
+                }
+            }.onFailure { e -> _ret.update { it.copy(routeMessage = "ROUTE_FAIL: ${e.message}") } }
+        }
+    }
+
     // ---- Incident report ----
 
     fun updateDraft(f: (IncidentDraft) -> IncidentDraft) = _report.update { it.copy(draft = f(it.draft)) }
@@ -505,6 +540,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             probe("NaviHelper.getCurrentLocationInfo") {
                 val l = n.currentLocation() ?: throw IllegalStateException("no event in 5s")
                 "lat=${l.info.latitude}, lon=${l.info.longitude}, addr=${l.info.address}"
+            }
+            probe("NaviHelper.getWaypointInfo → onWayPointInfo") {
+                n.waypoints().getOrThrow().joinToString(" | ") {
+                    "${it.name}: lat=${it.latitude}, lon=${it.longitude}, disp=${it.displayLatitude},${it.displayLongitude}, " +
+                        "poi=${it.poiProvider}/${it.poiId.isNotBlank()}, remain=${it.remainDistance}m"
+                }.ifEmpty { "(no waypoints)" }
             }
             probe("NaviHelper.requestTrip → onTripInfo (Jeju airport)") {
                 val t = n.trip(GeoPoint(33.5066, 126.4929, "제주국제공항")).getOrThrow().info

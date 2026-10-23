@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.rentcare.car.BuildConfig
 import com.rentcare.car.R
 import com.rentcare.car.pleos.GeoPoint
 import com.rentcare.core.ChargeOption
@@ -146,6 +147,9 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
         val now = report.draft.location?.let { MapMarker(it.latitude, it.longitude, nowLabel, PinBlue) }
         val markers = buildList {
             inputs.stations.forEachIndexed { i, st -> add(MapMarker(st.latitude, st.longitude, "${i + 1}", PinTeal)) }
+            ui.naviStops.forEachIndexed { i, st ->
+                if (st.latitude != null && st.longitude != null) add(MapMarker(st.latitude, st.longitude, "${i + 1}", PinTeal))
+            }
             val rl = r.returnPlace.latitude
             val ro = r.returnPlace.longitude
             if (rl != null && ro != null) add(MapMarker(rl, ro, returnLabel, PinRed))
@@ -164,12 +168,28 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
                     }
                 }
             }
-            if (inputs.stations.size < 2) {
+            val keyword = stringResource(R.string.gas_station_keyword)
+            Text(stringResource(R.string.navi_steps), style = MaterialTheme.typography.bodyMedium)
+            WrapRow {
+                Button(onClick = vm::startGuidance) { Text(stringResource(R.string.start_guidance)) }
+                OutlinedButton(onClick = { vm.openStationSearch(keyword) }) {
+                    Text(stringResource(if (r.powertrain == Powertrain.EV) R.string.find_chargers_in_navi else R.string.find_gas_in_navi))
+                }
+                OutlinedButton(onClick = vm::importNaviWaypoints) { Text(stringResource(R.string.import_navi_waypoints)) }
+            }
+            ui.naviStops.forEachIndexed { i, st ->
+                KeyValue(
+                    "${i + 1}. ${st.name}",
+                    listOfNotNull(st.address, stringResource(R.string.remain_km, st.remainMeters / 1000.0)).joinToString(" · "),
+                )
+            }
+            // Typing coordinates is for development only; renters pick stops in the car navigation.
+            if (BuildConfig.DEBUG && inputs.stations.size < 2) {
                 WrapRow {
                     Field(stringResource(R.string.station_name), name, { name = it })
                     Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true)
                     Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true)
-                    Button(onClick = {
+                    OutlinedButton(onClick = {
                         val la = lat.toDoubleOrNull()
                         val lo = lon.toDoubleOrNull()
                         if (name.isNotBlank() && la != null && lo != null) {
@@ -180,11 +200,13 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
                 }
             }
         }
-        Button(onClick = vm::startGuidance) { Text(stringResource(R.string.start_guidance)) }
         ui.routeMessage?.let {
             val text = when {
                 it == "ROUTE_OK" -> stringResource(R.string.route_ok)
                 it == "NO_COORDINATES" -> stringResource(R.string.no_coordinates)
+                it == "NO_WAYPOINTS" -> stringResource(R.string.no_navi_waypoints)
+                it == "NAVI_UNAVAILABLE" -> stringResource(R.string.navi_unavailable)
+                it.startsWith("IMPORTED ") -> stringResource(R.string.navi_waypoints_imported, it.removePrefix("IMPORTED ").toInt())
                 else -> stringResource(R.string.route_fail, it.removePrefix("ROUTE_FAIL: "))
             }
             Text(text)

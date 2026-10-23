@@ -92,7 +92,7 @@
     <string name="reason_waived">Contract waives extra charging. Only reaching the return place matters.</string>
     <string name="reason_rule_mismatch">Contract rule does not match the vehicle type.</string>
     <string name="route_title">Stations and schedule</string>
-    <string name="stations_title">Stations (max 2)</string>
+    <string name="stations_title">Stops on the way</string>
     <string name="stations_note">Pick stations yourself. Prices and waiting times are not provided.</string>
     <string name="station_name">Station name</string>
     <string name="add_station">Add</string>
@@ -159,4 +159,14 @@
     <string name="map_now">Now</string>
     <string name="map_return">Return</string>
     <string name="map_now_far">Your car is about %1$d km away, so it is not on this map.</string>
+    <string name="find_chargers_in_navi">Find chargers in navigation</string>
+    <string name="find_gas_in_navi">Find gas stations in navigation</string>
+    <string name="import_navi_waypoints">Get stops from navigation</string>
+    <string name="gas_station_keyword">gas station</string>
+    <string name="navi_pick_note">Add up to 2 waypoints in the car navigation, then get them here.</string>
+    <string name="no_navi_waypoints">No waypoints set in the navigation yet.</string>
+    <string name="navi_unavailable">Car navigation is not available.</string>
+    <string name="navi_waypoints_imported">Got %1$d stop(s) from the navigation.</string>
+    <string name="navi_steps">1) Send the route to the navigation  2) Pick a charger there and tap \"Add as waypoint\"  3) Get the stops here.</string>
+    <string name="remain_km">%1$.1f km to go</string>
 </resources>
