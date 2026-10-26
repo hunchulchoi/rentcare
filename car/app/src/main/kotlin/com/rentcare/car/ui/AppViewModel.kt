@@ -61,10 +61,14 @@ data class ReturnInputs(
     val fuelWonPerLiter: Int? = null,
     val charger: ChargeOption? = null,
     val stations: List<GeoPoint> = emptyList(),
+    /** Debug build only: simulated fuel % for the demo (the emulator has no fuel API). Always labelled. */
+    val demoFuelPercent: Int? = null,
 )
 
 data class ReturnUi(
     val state: VehicleState = VehicleState(),
+    /** The level is the simulated demo value, not read from the car. Shown as such, never sent to the vendor. */
+    val simulatedLevel: Boolean = false,
     val trip: TripEstimate? = null,
     val tripError: String? = null,
     val readError: String? = null,
@@ -288,6 +292,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         recompute()
     }
 
+    /** Debug only: set or clear the simulated demo fuel level, then re-read. */
+    fun setDemoFuel(percent: Int?) {
+        if (!BuildConfig.DEBUG) return
+        _inputs.update { it.copy(demoFuelPercent = percent?.coerceIn(0, 100)) }
+        refreshReturn()
+    }
+
     fun refreshReturn() {
         val r = _rental.value ?: return
         work.launch { token ->
@@ -299,8 +310,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (r.powertrain == Powertrain.GASOLINE) deps.vehicle.fuelPercentAccess() else deps.vehicle.evSocAccess()
             }.fold({ LevelSupport.of(it, null) }, { LevelSupport.of(null, it.message ?: it.javaClass.simpleName) })
             val readable = support == LevelSupport.SUPPORTED || support == LevelSupport.UNKNOWN
+            val demoFuel = _inputs.value.demoFuelPercent?.takeIf { BuildConfig.DEBUG && r.powertrain == Powertrain.GASOLINE }
             val state = when (r.powertrain) {
-                Powertrain.GASOLINE -> {
+                Powertrain.GASOLINE -> if (demoFuel != null) {
+                    VehicleState(fuelPercent = Reading(demoFuel, now), levelSupport = LevelSupport.SUPPORTED)
+                } else {
                     val fuel = if (!readable) null else runCatching { deps.vehicle.fuelPercent() }
                         .onFailure { readError = it.message }.getOrNull()
                     VehicleState(fuelPercent = fuel?.let { Reading(it, now) }, levelSupport = support)
@@ -317,7 +331,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val (rawTrip, tripError) = readTrip(r)
             val trip = rawTrip?.copy(socAtRequest = state.soc?.value)
             _telltales.value = runCatching { deps.vehicle.activeTelltales() }.getOrDefault(emptyList())
-            _ret.update { it.copy(state = state, trip = trip, tripError = tripError, readError = readError, loading = false) }
+            _ret.update {
+                it.copy(state = state, simulatedLevel = demoFuel != null, trip = trip, tripError = tripError,
+                    readError = if (demoFuel != null) null else readError, loading = false)
+            }
             recompute()
         }
     }
@@ -626,7 +643,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 r.rentalId, r.vehiclePlate, r.vehicleModel, r.powertrain, r.returnPlace.name,
                 Instant.ofEpochMilli(r.returnAtMillis).toString(),
             ),
-            vehicle = if (readAt == null) null else VehicleDto(st.fuelPercent?.value, st.soc?.value, readAt),
+            // A simulated demo level is not a car reading: never sent as one.
+            vehicle = if (readAt == null || _ret.value.simulatedLevel) null else VehicleDto(st.fuelPercent?.value, st.soc?.value, readAt),
             warnings = Warnings.forRequest(_telltales.value.map { it.type.name }, extra = _tire.value?.warningCodes().orEmpty()),
             location = d.location?.let {
                 LocationDto(

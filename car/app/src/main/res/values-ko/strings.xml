@@ -245,4 +245,10 @@
     <string name="phone_link_registering">코드 받는 중…</string>
     <string name="phone_link_failed">코드를 받지 못했습니다 (%1$s). 차량 신고는 코드 없이도 됩니다.</string>
     <string name="phone_link_retry">다시 시도</string>
+    <!-- 디버그 전용 휘발유 시연 (에뮬레이터 연료 API 없음) -->
+    <string name="simulated_level">시연용 모의 값 (차량에서 읽은 값 아님)</string>
+    <string name="demo_fuel_title">시연용 모의 연료 잔량 (디버그 빌드)</string>
+    <string name="demo_fuel_note">이 에뮬레이터는 연료 잔량 API를 지원하지 않습니다. 아래 값은 모의 값으로 표시되며 업체에 차량 값으로 보내지 않습니다.</string>
+    <string name="demo_fuel_value">모의 %1$d%%</string>
+    <string name="demo_fuel_clear">차량 값 다시 사용</string>
 </resources>

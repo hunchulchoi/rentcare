@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +46,9 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
         val a = ui.assessment
         if (a != null) {
             Section(stringResource(verdictLabel(a.verdict))) {
+                if (ui.simulatedLevel) {
+                    Text(stringResource(R.string.simulated_level), color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.titleSmall)
+                }
                 KeyValue(stringResource(R.string.current_level), a.currentPercent?.let { "$it %" } ?: "-")
                 KeyValue(stringResource(R.string.target_level), a.targetPercent?.let { "$it %" } ?: stringResource(R.string.rule_ev_waived))
                 KeyValue(stringResource(R.string.arrival_level), a.projectedArrivalPercent?.let { "$it %" } ?: "-")
@@ -99,6 +103,21 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
 
         if (r.powertrain == Powertrain.EV) ChargerInputs(inputs.charger) { c -> vm.updateInputs { it.copy(charger = c) } }
         else GasolineInputs(inputs.gasolineModel, inputs.fuelWonPerLiter) { m, p -> vm.updateInputs { it.copy(gasolineModel = m, fuelWonPerLiter = p) } }
+        if (BuildConfig.DEBUG && r.powertrain == Powertrain.GASOLINE) DemoFuelInputs(inputs.demoFuelPercent, vm::setDemoFuel)
+    }
+}
+
+/** Debug build only: the emulator has no fuel API, so the gasoline demo uses a labelled simulated value. */
+@Composable
+private fun DemoFuelInputs(current: Int?, onApply: (Int?) -> Unit) {
+    Section(stringResource(R.string.demo_fuel_title)) {
+        Text(stringResource(R.string.demo_fuel_note), style = MaterialTheme.typography.bodySmall)
+        WrapRow {
+            listOf(30, 60, 95).forEach { p ->
+                FilterChip(current == p, { onApply(p) }, { Text(stringResource(R.string.demo_fuel_value, p)) })
+            }
+            FilterChip(current == null, { onApply(null) }, { Text(stringResource(R.string.demo_fuel_clear)) })
+        }
     }
 }
 
