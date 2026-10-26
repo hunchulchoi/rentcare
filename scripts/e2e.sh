@@ -115,7 +115,7 @@ rm -rf "$out"
 
 echo "== S6b server down -> not received -> server back -> resend once"
 # Total shown by the vendor list ("N건"); the table itself is paginated.
-vendor_count() { curl -s -b "$jar" "$B/vendor" | grep -oE 'class="result[^"]*">[0-9]+' | sed 's/.*>//' | head -1; }
+vendor_count() { curl -s -b "$jar" "$B/vendor" | grep -oE 'data-total="[0-9]+"' | grep -oE '[0-9]+' | head -1; }
 jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
 before=$(vendor_count)
 $UI tap "새 접수"; sleep 2
@@ -208,6 +208,9 @@ echo "== S5 end rental wipes local data"
 $UI tap "대여 정보"; sleep 1; $UI tap "반납 완료"; sleep 1; $UI tap "반납 완료" 2; sleep 2
 $UI tap "접수 상태"; sleep 1
 check "S5 no report after rental end" "보낸 접수가 없습니다."
+sleep 3
+v=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=$code")
+[[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the last attach code on the server" || bad "S5 attach code still valid after rental end"
 
 echo "== result: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

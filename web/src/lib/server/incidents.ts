@@ -111,6 +111,17 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 	});
 }
 
+/**
+ * Rental ended: revoke the attach code(s) and the car token (docs/api.md v9). The incident and files stay
+ * for the vendor. Idempotent.
+ */
+export async function releaseIncident(id: string): Promise<void> {
+	await db().begin(async (sql) => {
+		await sql`update attach_codes set revoked_at = now() where incident_id = ${id} and revoked_at is null`;
+		await sql`update incidents set car_token_hash = null where id = ${id}`;
+	});
+}
+
 /** True only for the car holding this incident's current token. */
 export async function carMayAccess(id: string, token: string | null): Promise<boolean> {
 	if (!token) return false;

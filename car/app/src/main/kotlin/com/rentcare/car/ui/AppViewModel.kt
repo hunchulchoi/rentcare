@@ -225,6 +225,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Rental ended: wipe rental data, reports, codes. Vehicle state is not ours to reset. */
     fun endRental() {
+        // Tell the server first (best effort, 5 s): the attach code and car token stop working.
+        // Offline is fine: local data is wiped anyway and the code expires on its own (24 h).
+        _report.value.received?.let { rec ->
+            viewModelScope.launch { withTimeoutOrNull(5_000) { deps.api.release(rec.id, rec.incidentToken) } }
+        }
         work.reset() // cancel sends, polls, reads; invalidate late callbacks first
         _uploads.value = emptyList()
         statusJob?.cancel()

@@ -56,6 +56,18 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
         return execute(request, IncidentStatusDto.serializer())
     }
 
+    /** Rental ended (docs/api.md v9): revoke this car's token and the attach code on the server. */
+    suspend fun release(id: String, incidentToken: String): Boolean = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$baseUrl/api/incidents/$id/release")
+            .header("Authorization", "Bearer $apiKey")
+            .header("X-Incident-Token", incidentToken)
+            .header("Origin", baseUrl)
+            .post(ByteArray(0).toRequestBody(null))
+            .build()
+        runCatching { http.newCall(request).execute().use { it.code == 204 } }.getOrDefault(false)
+    }
+
     /**
      * Car direct attach (docs/api.md): streams the file (no full copy in memory) and reports progress.
      * Multipart POST needs Origin = our base URL (SvelteKit CSRF check).

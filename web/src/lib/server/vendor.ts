@@ -57,15 +57,23 @@ export function setSessionCookie(cookies: Cookies, token: string, expiresAt: Dat
 
 export type IncidentListRow = ListRow;
 
-export async function listIncidents(vendorId: string): Promise<IncidentListRow[]> {
-	return db()<IncidentListRow[]>`
-		select i.id, i.receipt_no, i.type, i.language, i.demo, i.status, i.vehicle_plate, i.vehicle_model, i.created_at,
-			i.latitude::float8 as latitude, i.longitude::float8 as longitude, i.address, i.location_source,
-			(select count(*)::int from attachments a where a.incident_id = i.id) as attachments
-		from incidents i
-		where i.vendor_id = ${vendorId}
-		order by i.created_at desc
-		limit 200`;
+export const LIST_LIMIT = 500;
+
+/** Newest reports (up to LIST_LIMIT) plus the real total, so the page can say when it is cut. */
+export async function listIncidents(vendorId: string): Promise<{ rows: IncidentListRow[]; total: number }> {
+	const sql = db();
+	const [rows, [{ total }]] = await Promise.all([
+		sql<IncidentListRow[]>`
+			select i.id, i.receipt_no, i.type, i.language, i.demo, i.status, i.vehicle_plate, i.vehicle_model, i.created_at,
+				i.latitude::float8 as latitude, i.longitude::float8 as longitude, i.address, i.location_source,
+				(select count(*)::int from attachments a where a.incident_id = i.id) as attachments
+			from incidents i
+			where i.vendor_id = ${vendorId}
+			order by i.created_at desc
+			limit ${LIST_LIMIT}`,
+		sql<{ total: number }[]>`select count(*)::int as total from incidents where vendor_id = ${vendorId}`
+	]);
+	return { rows, total };
 }
 
 export interface IncidentDetailRow {

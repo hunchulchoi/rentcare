@@ -104,7 +104,8 @@
 				</button>
 			{/each}
 		</div>
-		<span class="result">{filteredCount}건</span>
+		<span class="result" data-total={data.total}>{filteredCount}건</span>
+		{#if data.total > data.incidents.length}<span class="result">전체 {data.total}건 중 최근 {data.limit}건 표시</span>{/if}
 	</div>
 
 	<div class="table-wrap" data-ready={ready ? '1' : undefined}>

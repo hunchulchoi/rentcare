@@ -30,5 +30,13 @@ curl -s -b "$jar" -o "$d/dl" "$B$fid"
 cmp -s "$d/dl" "$d/a.png" && ok "vendor downloads same bytes" || bad "vendor download (${fid:-no link})"
 anon=$(curl -s -o /dev/null -w '%{http_code}' "$B$fid")
 [[ "$anon" != 200 ]] && ok "download without login refused ($anon)" || bad "anonymous download allowed"
+# Rental end: the car releases the report -> its token and the attach code stop working.
+iid=$(echo "$r" | grep -oE '"id":"[0-9a-f-]{36}"' | cut -d'"' -f4); itok=$(echo "$r" | grep -oE '"incidentToken":"[^"]+"' | cut -d'"' -f4)
+st=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/incidents/$iid/release" -H "Origin: $B" -H "Authorization: Bearer $car" -H "X-Incident-Token: $itok")
+[[ "$st" == 204 ]] && ok "release on rental end" || bad "release http $st"
+st=$(curl -s -o /dev/null -w '%{http_code}' "$B/api/incidents/$iid" -H "Authorization: Bearer $car" -H "X-Incident-Token: $itok")
+[[ "$st" == 404 ]] && ok "car token revoked (status 404)" || bad "car token still works ($st)"
+v=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=$code")
+[[ "$v" == *code_invalid* || "$v" == *code_expired* ]] && ok "attach code revoked" || bad "attach code still works"
 rm -rf "$d"
 echo "== result: $pass passed, $fail failed"; [[ $fail -eq 0 ]]

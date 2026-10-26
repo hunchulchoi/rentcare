@@ -144,6 +144,16 @@ labeled as the vendor's estimate, and says so when it has passed. The app never 
 None of these is a dispatch or repair guarantee. Action details (tow, call, …) stay internal to the vendor;
 the car only sees the status. Cars must treat an unknown future value as "received" (do not crash).
 
+## POST /api/incidents/{id}/release (v9, 2026-10-26)
+
+Car calls this when the rental ends ("반납 완료"). Headers: `Authorization`, `X-Incident-Token`, `Origin` (CSRF check).
+No body. Response `204`. Unknown id or wrong token → `404` (same as status).
+
+- Revokes the attach code (the phone page rejects it as invalid) and the car token (status and car attach
+  stop working for that car). The incident itself and its files stay for the vendor (retention applies).
+- Idempotent. If the car is offline at return, it still wipes its own data; the attach code then expires
+  on its own (24 h).
+
 ## POST /api/incidents/{id}/attachments
 
 Car direct attach (only for files the car can legally access). Headers: `Authorization`, `X-Incident-Token`.
