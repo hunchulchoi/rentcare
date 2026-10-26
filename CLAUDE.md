@@ -96,8 +96,8 @@ scripts/e2e.sh                  # wipes app data on the emulator, 38 checks, aga
   `DATABASE_SSL_CA` (PEM) in Infisical `/postgres` or switch to a Let's Encrypt cert to get verification.
 - Infisical `/minio`: S3_BUCKET (rentcare), AWS_ENDPOINT_URL_S3 (https://s3.devfor.link), S3_FORCE_PATH_STYLE,
   AWS_REGION, AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY. S3_BUCKET set → attachments go to MinIO under
-  `attachments/<incident>/<hex>`; unset → web/storage. Bucket is private (anonymous 403). No server-side
-  encryption on the bucket yet (2026-10-23).
+  `attachments/<incident>/<hex>`; unset → web/storage. Bucket is private (anonymous 403). Server-side
+  encryption on (AES256, 2026-10-26); audit with `web/scripts/s3-sse-audit.ts`.
 - Restart the web server with `scripts/server.sh restart` (stops by PID on 127.0.0.1:3000, never by pattern).
 
 - Infisical (`.env` machine identity) path `/pleos`: Pleos CLIENT_ID / CLIENT_SECRET / CRN / PROJECT_ID.

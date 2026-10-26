@@ -34,6 +34,12 @@
 - 대여 종료("반납 완료") 시 차량에 저장된 대여 정보·접수 기록·첨부 코드를 모두 지운다 (RENTCARE-17, E2E S5).
 - 차량 저장값은 Android Keystore AES-GCM으로 암호화.
 
+## 저장 암호화
+
+- MinIO 버킷 기본 암호화(SSE, AES256) 켜짐 (2026-10-26). 새 객체 `sse=AES256` 확인(`web/scripts/s3-check.ts`),
+  기존 첨부 20개 모두 암호화 확인(`web/scripts/s3-sse-audit.ts`, 평문 0). 평문이 있으면 `--fix`로 다시 씀.
+- 전송 구간은 HTTPS(TLS), DB 연결은 TLS 1.3.
+
 ## 확인 방법
 
 ```bash
@@ -45,4 +51,3 @@ scripts/retention-check.sh   # 데모 접수 + 사진 → 100일 전으로 이�
 ## 남은 것
 
 - 고객의 개별 삭제 요청 처리(기간 전 삭제) — 업체 화면에 "접수 삭제" 기능은 아직 없음.
-- MinIO 버킷 서버 측 암호화 미적용.
