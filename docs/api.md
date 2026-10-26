@@ -144,6 +144,12 @@ labeled as the vendor's estimate, and says so when it has passed. The app never 
 None of these is a dispatch or repair guarantee. Action details (tow, call, …) stay internal to the vendor;
 the car only sees the status. Cars must treat an unknown future value as "received" (do not crash).
 
+## GET /api/health (v12, 2026-10-26)
+
+Readiness for the demo preflight: `200 {"ok":true,"database":{"ok":true}}` or `503` with
+`database.error` = `failed` | `timeout` (no details). No auth, no data. Under `/api/` so Sablier holds the
+request while the container wakes. `/health` stays the plain liveness check.
+
 ## POST /api/rentals (v11, 2026-10-26)
 
 Car registers the rental when it is saved, so the renter can still report from a phone if the car screen

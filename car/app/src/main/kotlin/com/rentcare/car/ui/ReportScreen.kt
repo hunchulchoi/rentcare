@@ -66,6 +66,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
 
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.report_title), style = MaterialTheme.typography.headlineSmall)
+        DemoBanner()
         Text(stringResource(R.string.parked_notice), style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.emergency_contact, r.vendorName, r.vendorPhone), fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.not_insurance), style = MaterialTheme.typography.bodySmall)
@@ -206,6 +207,7 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
     val rec = ui.received
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.status_title), style = MaterialTheme.typography.headlineSmall)
+        DemoBanner()
         if (rec == null) {
             Text(stringResource(R.string.no_report))
             return@Column
@@ -408,4 +410,15 @@ private fun CarAttachSection(vm: AppViewModel) {
             }
         }
     }
+}
+
+/** Contest builds report to the demo vendor (RENTCARE-21): say so, so nobody waits for a real dispatch. */
+@Composable
+private fun DemoBanner() {
+    if (!com.rentcare.car.BuildConfig.DEMO_MODE) return
+    Text(
+        stringResource(R.string.demo_banner),
+        color = MaterialTheme.colorScheme.tertiary,
+        style = MaterialTheme.typography.titleSmall,
+    )
 }

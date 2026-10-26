@@ -251,4 +251,5 @@
     <string name="demo_fuel_note">This emulator does not support the fuel API. The value below is shown as simulated and is never sent to the rental company as a car reading.</string>
     <string name="demo_fuel_value">Simulated %1$d %%</string>
     <string name="demo_fuel_clear">Use the car again</string>
+    <string name="demo_banner">Demo: reports go to a test rental company. No real dispatch.</string>
 </resources>

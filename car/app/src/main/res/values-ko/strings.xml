@@ -251,4 +251,5 @@
     <string name="demo_fuel_note">이 에뮬레이터는 연료 잔량 API를 지원하지 않습니다. 아래 값은 모의 값으로 표시되며 업체에 차량 값으로 보내지 않습니다.</string>
     <string name="demo_fuel_value">모의 %1$d%%</string>
     <string name="demo_fuel_clear">차량 값 다시 사용</string>
+    <string name="demo_banner">시연용: 테스트 업체로 접수됩니다. 실제 출동은 없습니다.</string>
 </resources>

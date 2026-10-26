@@ -31,6 +31,8 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "VENDOR_ID", "\"${prop("rentcare.vendorId", "demo-jeju")}\"")
+        // Contest builds talk to the demo vendor: reports are marked demo and the car says so on screen.
+        buildConfigField("boolean", "DEMO_MODE", prop("rentcare.demo", "true"))
     }
 
     // Release signing: keystore lives outside the repo; secrets come from Gradle properties or env.

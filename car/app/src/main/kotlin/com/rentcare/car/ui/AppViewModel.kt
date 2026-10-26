@@ -235,7 +235,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!plan.register) return
         work.launch { token ->
             _phoneLink.update { it.copy(registering = true, error = null) }
-            val res = deps.api.registerRental(PhoneReportLink.request(r), plan.link.idempotencyKey)
+            val res = deps.api.registerRental(PhoneReportLink.request(r, BuildConfig.DEMO_MODE), plan.link.idempotencyKey)
             work.ifCurrent(token) {
                 when (res) {
                     is ApiResult.Ok -> {
@@ -638,7 +638,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             language = r.language,
             note = d.note.trim().take(NOTE_MAX_LENGTH).ifBlank { null },
             occurredAt = Instant.now().toString(),
-            demo = true,
+            demo = BuildConfig.DEMO_MODE,
             rental = RentalDto(
                 r.rentalId, r.vehiclePlate, r.vehicleModel, r.powertrain, r.returnPlace.name,
                 Instant.ofEpochMilli(r.returnAtMillis).toString(),

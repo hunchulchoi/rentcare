@@ -72,6 +72,7 @@ node scripts/browser-login-check.mjs "$B" --list-check >/dev/null && ok "S4 brow
 $VC telltale TPMS On >/dev/null
 restart_app; $UI tap "고장·사고 접수"; sleep 5
 wait_for "S4 warning listed (readable name)" "타이어 공기압 경고" 8
+check "S4 demo banner: test rental company, no real dispatch" "시연용: 테스트 업체로 접수됩니다. 실제 출동은 없습니다."
 check "S4 tire section: TPMS on, wheel unknown (no diagnosis)" "타이어 공기압 경고(TPMS)가 켜져 있습니다. 바퀴 위치는 확인할 수 없습니다."
 # Location edit (RENTCARE-10): pick a point on the map → marked as edited for the vendor.
 $UI tap "지도에서 위치 고르기"; sleep 3; "$ADB" shell input swipe 1800 1100 1800 600 400; sleep 2; $UI tapdescre "map-picker"; sleep 1

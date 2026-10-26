@@ -30,10 +30,10 @@ data class PhoneReportLink(
     data class Plan(val link: PhoneReportLink, val register: Boolean, val releaseToken: String?)
 
     companion object {
-        fun request(r: Rental) = RentalRegistration(
+        fun request(r: Rental, demo: Boolean = true) = RentalRegistration(
             vendorId = r.vendorId,
             language = r.language,
-            demo = true,
+            demo = demo,
             rental = RentalDto(
                 r.rentalId, r.vehiclePlate, r.vehicleModel, r.powertrain, r.returnPlace.name,
                 Instant.ofEpochMilli(r.returnAtMillis).toString(),
