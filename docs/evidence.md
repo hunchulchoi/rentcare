@@ -41,6 +41,7 @@
 | 휘발유 주유 불필요 | 모의 | `gasoline - enough fuel even in worst case - no action` |
 | 휘발유 정보 부족 (모델 없음 / 오래된 값 / 값 없음 / 미지원·권한 없음) | 모의 | `gasoline - above target but no model …`, `gasoline - stale reading …`, `gasoline - no reading …`, `unsupported or denied level is named …` |
 | 휘발유 연료 잔량 읽기 | **SDK: 미지원** | 에뮬레이터는 EV 프로필, capability `ERROR_NOT_SUPPORTED_PROPERTY` (SDK 검증 화면). 실차 필요 (RENTCARE-7) |
+| 휘발유 시연 (모의 연료 값) | **모의** (debug 빌드, 화면에 "시연용 모의 값" 표시) | `demo-record.sh gas`: 모의 60 % → 주유 필요, 모의 95 % + 연비 입력 → 반납 기준 충족. 모의 값은 업체 접수에 차량 값으로 보내지 않음 |
 | 계약·차종 불일치 → 정보 부족 | 모의 | `rule and powertrain mismatch - info missing` |
 | 출발 시각 (주행 + 정차 + 여유) | 모의 | `departure - drive plus stop plus buffer` |
 | 주행 중 입력 잠금 / 정차 시 해제 | **VC + SDK** | e2e S3 (기어 Drive + 속도 40 → 잠금, Park → 해제) |
@@ -58,7 +59,7 @@
 | 사진 추가 (휴대폰) | 서버 + 브라우저 | e2e S8 "phone upload accepted", "vendor downloads the same bytes" |
 | 영상 추가 (휴대폰) | 서버 | `attach-check.sh` "phone video upload (mp4)", "vendor downloads same bytes (video)" |
 | 사진 추가 (차량, 시스템 사진 선택기) | **에뮬레이터** | e2e S8b "car upload finished", "car shows 1 attachment" |
-| 영상 추가 (차량) | 미검증 | S8b는 PNG만. 선택기는 영상도 허용(`PickMultipleVisualMedia`) |
+| 영상 추가 (차량, 시스템 사진 선택기) | **에뮬레이터** + 서버 | `scripts/demo-record.sh attach` (2026-10-26): 사진 1 + MP4 1 선택 → 차량 "사진·영상: 2개", 업체 상세에 `video/mp4` (RC-20261026-0137). e2e에는 아직 없음 |
 | 첨부 실패 후 접수 유지 | 서버 + 에뮬레이터 | e2e "S8 bad file refused (415)", "S8 report still received after the failed upload" |
 | 미수신 표시 → 재시도 1회만 접수 | 에뮬레이터 + 서버 | e2e S6b (서버 정지 → 미접수·재시도 → 복구 후 1건만 증가) |
 | 앱 재시작 후 미전송 접수 유지·재전송 | 에뮬레이터 + 서버 | e2e S6c |
@@ -93,4 +94,4 @@
 
 - **실차**: 모든 항목. 특히 휘발유 잔량, 바퀴별 공기압, 실제 위치 이동, 주행 중 앱 차단(에뮬레이터는 막지 않음).
 - **앱 심사 허용 여부**: 경고등·capability 권한(`PRIVATE_CAR_SAFETY`/`PRIVATE_CAR_INFO`) — RENTCARE-26.
-- 차량에서 영상 첨부, 일본어·중국어.
+- 일본어·중국어.
