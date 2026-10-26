@@ -76,6 +76,14 @@ class ReturnPlannerTest {
         assertNull(a.refuelLiters)
     }
 
+    @Test fun `unsupported or denied level is named, not a generic no-reading`() {
+        val a = planner.assess(gas, VehicleState(levelSupport = LevelSupport.UNSUPPORTED), null, now)
+        assertEquals(Verdict.INFO_MISSING, a.verdict)
+        assertTrue(Reason.LEVEL_UNSUPPORTED in a.reasons)
+        val d = planner.assess(rental(Powertrain.EV, ReturnRule.EvSameAsPickup(80)), VehicleState(levelSupport = LevelSupport.DENIED), null, now)
+        assertTrue(Reason.LEVEL_PERMISSION_DENIED in d.reasons)
+    }
+
     @Test fun `gasoline - stale reading - info missing`() {
         val old = now - 11 * 60_000L
         val a = planner.assess(gas, VehicleState(fuelPercent = Reading(90, old)), trip(10, 10), now, avante)

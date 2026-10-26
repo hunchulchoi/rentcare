@@ -241,6 +241,8 @@ private fun reasonLabel(r: Reason) = when (r) {
     Reason.NO_CONSUMPTION_MODEL -> R.string.reason_no_model
     Reason.ARRIVAL_SOC_UNAVAILABLE -> R.string.reason_no_arrival_soc
     Reason.ARRIVAL_SOC_INCONSISTENT -> R.string.reason_arrival_inconsistent
+    Reason.LEVEL_UNSUPPORTED -> R.string.reason_level_unsupported
+    Reason.LEVEL_PERMISSION_DENIED -> R.string.reason_level_denied
     Reason.NO_BATTERY_CAPACITY -> R.string.reason_no_capacity
     Reason.NO_CHARGER -> R.string.reason_no_charger
     Reason.NO_PRICE -> R.string.reason_no_price

@@ -11,7 +11,16 @@ data class VehicleState(
     val soc: Reading<Int>? = null,
     /** From EvBattery.getEvBatteryCapacity when supported. Unit assumed kWh (verify on target car). */
     val batteryCapacityKwh: Double? = null,
-)
+    /** Capability check before reading the level (fuel or SOC, by powertrain). */
+    val levelSupport: LevelSupport = LevelSupport.SUPPORTED,
+) {
+    /** Why there is no level reading. */
+    fun missingReason(): Reason = when (levelSupport) {
+        LevelSupport.UNSUPPORTED -> Reason.LEVEL_UNSUPPORTED
+        LevelSupport.DENIED -> Reason.LEVEL_PERMISSION_DENIED
+        else -> Reason.NO_READING
+    }
+}
 
 /**
  * Route estimate to the return place (NaviHelper TripInfo).
@@ -58,6 +67,10 @@ enum class Reason {
     NO_READING, STALE_READING, NO_TRIP, STALE_TRIP, NO_CONSUMPTION_MODEL, ARRIVAL_SOC_UNAVAILABLE,
     /** Navigation estimate above the current SOC (impossible without charging): not used. */
     ARRIVAL_SOC_INCONSISTENT,
+    /** The car does not offer this level (capability check). */
+    LEVEL_UNSUPPORTED,
+    /** The app lacks permission to read the level. */
+    LEVEL_PERMISSION_DENIED,
     NO_BATTERY_CAPACITY, NO_CHARGER, NO_PRICE, BELOW_TARGET_NOW, PROJECTED_BELOW_TARGET, MARGINAL,
     ARRIVAL_BELOW_RESERVE, WAIVED, RULE_MISMATCH,
 }
@@ -127,7 +140,7 @@ class ReturnPlanner(private val config: PlannerConfig = PlannerConfig()) {
         wonPerLiter: Int?,
     ): Assessment {
         val reading = state.fuelPercent ?: return Assessment(
-            Verdict.INFO_MISSING, setOf(Reason.NO_READING), targetPercent = rule.targetPercent,
+            Verdict.INFO_MISSING, setOf(state.missingReason()), targetPercent = rule.targetPercent,
         )
         val target = rule.targetPercent
         val current = reading.value
@@ -205,7 +218,7 @@ class ReturnPlanner(private val config: PlannerConfig = PlannerConfig()) {
         if (target == null) reasons += Reason.WAIVED
 
         val reading = state.soc ?: return Assessment(
-            Verdict.INFO_MISSING, reasons + Reason.NO_READING, targetPercent = target,
+            Verdict.INFO_MISSING, reasons + state.missingReason(), targetPercent = target,
         )
         val current = reading.value
         if (isStale(reading.readAtMillis, now)) {

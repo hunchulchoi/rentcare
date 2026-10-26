@@ -232,4 +232,6 @@
     <string name="up_too_large">Not sent: larger than 50 MB</string>
     <string name="up_unknown">Not sent: file size unknown</string>
     <string name="up_too_many">Not sent: 10 files already</string>
+    <string name="reason_level_unsupported">This car does not provide the fuel/battery level to apps. Check the dashboard.</string>
+    <string name="reason_level_denied">No permission to read the fuel/battery level. Check the dashboard.</string>
 </resources>

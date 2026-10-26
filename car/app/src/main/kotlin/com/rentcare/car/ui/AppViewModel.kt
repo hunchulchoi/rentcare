@@ -26,6 +26,7 @@ import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
 import com.rentcare.core.WaypointCoords
 import com.rentcare.core.TireCheck
+import com.rentcare.core.LevelSupport
 import com.rentcare.core.AttachPolicy
 import com.rentcare.core.LampSignal
 import com.rentcare.core.Reading
@@ -254,16 +255,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _ret.update { it.copy(loading = true, readError = null, tripError = null) }
             val now = System.currentTimeMillis()
             var readError: String? = null
+            // RENTCARE-6: check the capability first; unsupported / denied levels are not read.
+            val support = runCatching {
+                if (r.powertrain == Powertrain.GASOLINE) deps.vehicle.fuelPercentAccess() else deps.vehicle.evSocAccess()
+            }.fold({ LevelSupport.of(it, null) }, { LevelSupport.of(null, it.message ?: it.javaClass.simpleName) })
+            val readable = support == LevelSupport.SUPPORTED || support == LevelSupport.UNKNOWN
             val state = when (r.powertrain) {
                 Powertrain.GASOLINE -> {
-                    val fuel = runCatching { deps.vehicle.fuelPercent() }
+                    val fuel = if (!readable) null else runCatching { deps.vehicle.fuelPercent() }
                         .onFailure { readError = it.message }.getOrNull()
-                    VehicleState(fuelPercent = fuel?.let { Reading(it, now) })
+                    VehicleState(fuelPercent = fuel?.let { Reading(it, now) }, levelSupport = support)
                 }
                 Powertrain.EV -> {
-                    val soc = runCatching { deps.vehicle.evSoc() }.onFailure { readError = it.message }.getOrNull()
+                    val soc = if (!readable) null else runCatching { deps.vehicle.evSoc() }.onFailure { readError = it.message }.getOrNull()
                     val cap = runCatching { deps.vehicle.evBatteryCapacity() }.getOrNull()
-                    VehicleState(soc = soc?.let { Reading(it, now) }, batteryCapacityKwh = cap?.let { it / 1000.0 }?.takeIf { it > 0 })
+                    VehicleState(
+                        soc = soc?.let { Reading(it, now) }, batteryCapacityKwh = cap?.let { it / 1000.0 }?.takeIf { it > 0 },
+                        levelSupport = support,
+                    )
                 }
             }
             val (rawTrip, tripError) = readTrip(r)
