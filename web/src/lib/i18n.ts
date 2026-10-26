@@ -3,13 +3,27 @@
 export const INCIDENT_TYPES = ['NO_START', 'TIRE', 'WARNING_LIGHT', 'ACCIDENT', 'OTHER'] as const;
 export type IncidentType = (typeof INCIDENT_TYPES)[number];
 
-/** Languages a report can be filed in (contract v0). `ja`/`zh` come later. */
-export const LANGUAGES = ['ko', 'en'] as const;
+/** Languages a report can be filed in. `ja`/`zh` are unreviewed drafts (RENTCARE-31). */
+export const LANGUAGES = ['ko', 'en', 'ja', 'zh'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 /** Languages the web UI itself is translated to. */
-export const UI_LANGS = ['ko', 'en'] as const;
+export const UI_LANGS = ['ko', 'en', 'ja', 'zh'] as const;
 export type UiLang = (typeof UI_LANGS)[number];
+
+/** Translations checked by a native speaker. Others are drafts: shown only when asked for, with a notice. */
+export const REVIEWED_LANGS: readonly UiLang[] = ['ko', 'en'];
+export function isReviewedLang(lang: UiLang): boolean {
+	return REVIEWED_LANGS.includes(lang);
+}
+
+/** Shown on phone pages in an unreviewed language. */
+export const UNREVIEWED_NOTICE: Record<UiLang, string | null> = {
+	ko: null,
+	en: null,
+	ja: 'この日本語訳はまだ確認中です。分かりにくい場合は English を選んでください。',
+	zh: '此中文翻译尚未审核。如有不清楚之处，请选择 English。'
+};
 
 export const LOCATION_SOURCES = ['VEHICLE', 'MANUAL', 'MOBILE'] as const;
 export type LocationSource = (typeof LOCATION_SOURCES)[number];
@@ -31,6 +45,20 @@ export const INCIDENT_TYPE_LABELS: Record<UiLang, Record<IncidentType, string>> 
 		WARNING_LIGHT: 'Warning light',
 		ACCIDENT: 'Accident',
 		OTHER: 'Other'
+	},
+	ja: {
+		NO_START: 'エンジンがかからない',
+		TIRE: 'タイヤの異常',
+		WARNING_LIGHT: '警告灯',
+		ACCIDENT: '事故',
+		OTHER: 'その他'
+	},
+	zh: {
+		NO_START: '无法启动',
+		TIRE: '轮胎异常',
+		WARNING_LIGHT: '警告灯',
+		ACCIDENT: '事故',
+		OTHER: '其他'
 	}
 };
 
@@ -66,9 +94,10 @@ export function typeLabel(type: string, lang: UiLang = 'ko'): string {
 /** Pick a UI language from an explicit value, then Accept-Language, defaulting to English. */
 export function pickUiLang(explicit: string | null | undefined, acceptLanguage?: string | null): UiLang {
 	if (isUiLang(explicit)) return explicit;
+	// Browser language picks only reviewed translations; drafts need an explicit ?lang= (the car's QR).
 	for (const part of (acceptLanguage ?? '').split(',')) {
 		const tag = part.split(';')[0].trim().toLowerCase().split('-')[0];
-		if (isUiLang(tag)) return tag;
+		if (isUiLang(tag) && isReviewedLang(tag)) return tag;
 	}
 	return 'en';
 }
@@ -158,6 +187,89 @@ const mobile = {
 		err_too_many_files: 'No more files can be added to this report (max 10).',
 		err_network: 'Network error. Please try again.',
 		err_unknown: 'Could not upload. Please try again.'
+	},
+	ja: {
+		title: '写真・動画の追加',
+		intro: '車の画面に表示された6文字の添付コードを入力してください。',
+		retention: '送った写真・動画はこの受付の対応にのみ使われ、受付日から90日後に削除されます。',
+		locationTitle: '現在地を送る',
+		locationNote: '車が位置を送れなかった場合にのみ使います。車の位置がある場合は変わりません。',
+		locationButton: 'このスマートフォンの現在地を送る',
+		locationSaving: '位置を確認中…',
+		locationSaved: '位置を送りました。レンタカー会社には「スマートフォン」の位置として表示されます。',
+		locationKept: '車の位置がすでにあるため、そのままにしました。',
+		locationDenied: '位置を取得できませんでした。ブラウザの位置情報の許可を確認してください。',
+		locationFailed: '位置を送れませんでした。もう一度お試しください。',
+		codeLabel: '添付コード',
+		codePlaceholder: '例: K7Q2M9',
+		verify: '確認',
+		verifying: '確認中…',
+		receivedNotice:
+			'基本の受付はすでに完了しています。写真・動画の追加は任意で、アップロードに失敗しても受付には影響しません。',
+		receiptNo: '受付番号',
+		type: '受付の種類',
+		chooseFiles: '写真・動画を選ぶ',
+		limits: '写真(JPEG, PNG, HEIC)、動画(MP4, MOV) · 1ファイル最大50MB · 1件につき最大10個',
+		upload: 'アップロード',
+		uploading: 'アップロード中…',
+		retry: '再試行',
+		alreadyAttached: '添付済みのファイル',
+		statusWaiting: '待機',
+		statusUploading: 'アップロード中',
+		statusDone: '完了',
+		statusFailed: '失敗',
+		allDone: 'アップロードが終わりました。このページを閉じてもかまいません。',
+		noscript: 'ファイルのアップロードには JavaScript が必要です。',
+		otherCode: '別のコードを入力',
+		err_code_invalid: 'コードが正しくありません。車の画面のコードをもう一度確認してください。',
+		err_code_expired: 'コードの有効期限が切れました。車の画面で新しいコードを受け取ってください。',
+		err_rate_limited: '試行回数が多すぎます。しばらくしてからもう一度お試しください。',
+		err_too_large: 'ファイルが大きすぎます(最大50MB)。',
+		err_unsupported_type: '対応していないファイル形式です。',
+		err_too_many_files: 'この受付にはこれ以上ファイルを追加できません(最大10個)。',
+		err_network: 'ネットワークエラーです。もう一度お試しください。',
+		err_unknown: 'アップロードできませんでした。もう一度お試しください。'
+	},
+	zh: {
+		title: '添加照片和视频',
+		intro: '请输入车辆屏幕上显示的6位附件码。',
+		retention: '发送的照片和视频仅用于处理此次报修，将在报修之日起90天后删除。',
+		locationTitle: '发送当前位置',
+		locationNote: '仅在车辆未能发送位置时使用。如已有车辆位置，则不会更改。',
+		locationButton: '发送此手机的当前位置',
+		locationSaving: '正在获取位置…',
+		locationSaved: '位置已发送。租车公司将看到“手机”位置。',
+		locationKept: '已有车辆位置，因此保持不变。',
+		locationDenied: '无法获取位置。请检查浏览器的位置权限。',
+		locationFailed: '位置发送失败。请重试。',
+		codeLabel: '附件码',
+		codePlaceholder: '例：K7Q2M9',
+		verify: '确认',
+		verifying: '正在确认…',
+		receivedNotice: '基本报修已受理。添加照片或视频为可选项，即使上传失败也不影响报修。',
+		receiptNo: '受理编号',
+		type: '报修类型',
+		chooseFiles: '选择照片/视频',
+		limits: '照片(JPEG, PNG, HEIC)、视频(MP4, MOV) · 每个文件最大50MB · 每次报修最多10个',
+		upload: '上传',
+		uploading: '正在上传…',
+		retry: '重试',
+		alreadyAttached: '已附加的文件',
+		statusWaiting: '等待',
+		statusUploading: '上传中',
+		statusDone: '完成',
+		statusFailed: '失败',
+		allDone: '上传完成。可以关闭此页面。',
+		noscript: '上传文件需要 JavaScript。',
+		otherCode: '输入其他代码',
+		err_code_invalid: '代码不正确。请再次确认车辆屏幕上的代码。',
+		err_code_expired: '代码已过期。请在车辆屏幕上获取新代码。',
+		err_rate_limited: '尝试次数过多。请稍后再试。',
+		err_too_large: '文件太大(最大50MB)。',
+		err_unsupported_type: '不支持此文件格式。',
+		err_too_many_files: '此报修无法再添加文件(最多10个)。',
+		err_network: '网络错误。请重试。',
+		err_unknown: '无法上传。请重试。'
 	}
 } satisfies Record<UiLang, Record<string, string>>;
 
@@ -246,6 +358,82 @@ const report = {
 		err_location_invalid: 'The location is not valid. Remove it and send again.',
 		err_too_many_reports: 'No more phone reports can be sent for this rental (max 5). Please contact the rental company directly.',
 		err_unknown: 'Could not send. Please try again.'
+	},
+	ja: {
+		title: 'スマートフォンで受付',
+		intro: '車の画面が使えないときにご利用ください。貸出時に車のレンタル情報画面に表示された8文字のスマートフォン受付コードを入力してください。',
+		codeLabel: 'スマートフォン受付コード',
+		verify: '確認',
+		verifying: '確認中…',
+		vehicle: '車両',
+		vendor: '送信先',
+		type: '何がありましたか?',
+		note: '状況の説明(任意)',
+		notePlaceholder: '例: スタートボタンを押しても反応しません',
+		locationTitle: '現在地(任意)',
+		locationButton: 'このスマートフォンの現在地を入れる',
+		locationSaving: '位置を確認中…',
+		locationAdded: '位置を入れました(精度 約{m}m)。',
+		locationDenied: '位置を取得できませんでした。位置なしでも受付できます。',
+		locationRemove: '位置を外す',
+		consent: '{vendor}にこの受付(車両情報、種類、説明、位置)を送ることに同意します。受付日から90日後に削除されます。',
+		submit: '受付を送る',
+		submitting: '送信中…',
+		done: '受付が完了しました。',
+		receiptNo: '受付番号',
+		attachIntro: '写真・動画は下のコードで追加できます(任意、24時間有効)。',
+		attachCode: '添付コード',
+		attachLink: '写真・動画を追加する',
+		statusNote: 'レンタカー会社が確認したら連絡します。急ぎの場合は会社に直接電話してください。車の警告は車の案内に従ってください。',
+		otherCode: '別のコードを入力',
+		noscript: '位置の入力には JavaScript が必要です。位置なしでも受付できます。',
+		err_code_invalid: 'コードが正しくないか、返却済みのレンタルです。レンタル契約書またはレンタカー会社に確認してください。',
+		err_code_expired: 'コードの有効期限が切れました。レンタカー会社に直接連絡してください。',
+		err_rate_limited: '試行回数が多すぎます。しばらくしてからもう一度お試しください。',
+		err_type_required: '受付の種類を選んでください。',
+		err_consent_required: '送信への同意が必要です。',
+		err_note_too_long: '説明は2000文字まで入力できます。',
+		err_location_invalid: '位置の値が正しくありません。位置を外してもう一度送ってください。',
+		err_too_many_reports: 'このレンタルではこれ以上スマートフォンから受付できません(最大5件)。レンタカー会社に直接連絡してください。',
+		err_unknown: '送信できませんでした。もう一度お試しください。'
+	},
+	zh: {
+		title: '用手机报修',
+		intro: '无法使用车辆屏幕时请使用此页面。请输入取车时车辆租赁信息页面上显示的8位手机报修码。',
+		codeLabel: '手机报修码',
+		verify: '确认',
+		verifying: '正在确认…',
+		vehicle: '车辆',
+		vendor: '发送至',
+		type: '发生了什么?',
+		note: '情况说明(可选)',
+		notePlaceholder: '例：按下启动按钮没有反应',
+		locationTitle: '当前位置(可选)',
+		locationButton: '添加此手机的当前位置',
+		locationSaving: '正在获取位置…',
+		locationAdded: '已添加位置(精度约{m}米)。',
+		locationDenied: '无法获取位置。没有位置也可以报修。',
+		locationRemove: '移除位置',
+		consent: '我同意将此报修(车辆信息、类型、说明、位置)发送给{vendor}。将在报修之日起90天后删除。',
+		submit: '发送报修',
+		submitting: '正在发送…',
+		done: '报修已受理。',
+		receiptNo: '受理编号',
+		attachIntro: '可以使用下面的代码添加照片或视频(可选，24小时内有效)。',
+		attachCode: '附件码',
+		attachLink: '去添加照片/视频',
+		statusNote: '租车公司确认后会与您联系。如情况紧急，请直接致电租车公司。车辆警告请按车辆提示操作。',
+		otherCode: '输入其他代码',
+		noscript: '添加位置需要 JavaScript。没有位置也可以报修。',
+		err_code_invalid: '代码不正确，或该租赁已还车。请查看租赁合同或联系租车公司。',
+		err_code_expired: '代码已过期。请直接联系租车公司。',
+		err_rate_limited: '尝试次数过多。请稍后再试。',
+		err_type_required: '请选择报修类型。',
+		err_consent_required: '需要同意发送。',
+		err_note_too_long: '说明最多2000个字符。',
+		err_location_invalid: '位置值不正确。请移除位置后重新发送。',
+		err_too_many_reports: '此租赁无法再通过手机报修(最多5次)。请直接联系租车公司。',
+		err_unknown: '发送失败。请重试。'
 	}
 } satisfies Record<UiLang, Record<string, string>>;
 

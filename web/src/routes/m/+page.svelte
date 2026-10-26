@@ -3,7 +3,7 @@
 	import Logo from '#lib/Logo.svelte';
 	import { enhance } from '$app/forms';
 	import { ACCEPT_ATTR, MAX_FILE_BYTES, resolveMime } from '#lib/files.ts';
-	import { MOBILE_STRINGS, mobileError, typeLabel, type UiLang } from '#lib/i18n.ts';
+	import { MOBILE_STRINGS, mobileError, typeLabel, type UiLang, UNREVIEWED_NOTICE } from '#lib/i18n.ts';
 	import { fmtBytes } from '#lib/format.ts';
 	import type { PageProps } from './$types';
 
@@ -142,6 +142,7 @@
 <main class="mobile" lang={lang}>
 	<Logo height={36} />
 	<h1>{t.title}</h1>
+	{#if UNREVIEWED_NOTICE[lang]}<p class="unreviewed" role="note" data-unreviewed>{UNREVIEWED_NOTICE[lang]} <a href="?lang=en" data-sveltekit-reload>English</a></p>{/if}
 
 	{#if !verified}
 		<p>{t.intro}</p>
@@ -239,6 +240,12 @@
 </main>
 
 <style>
+	.unreviewed {
+		background: #fff3c4;
+		border-radius: 12px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.9rem;
+	}
 	.retention {
 		color: var(--muted);
 		font-size: 0.85rem;

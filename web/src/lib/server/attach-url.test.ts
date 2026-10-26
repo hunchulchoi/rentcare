@@ -8,7 +8,7 @@ describe('attachUrl', () => {
 	});
 
 	it('drops languages the phone page does not have yet', () => {
-		expect(attachUrl('https://rentcare.example', 'ja')).toBe('https://rentcare.example/m');
+		expect(attachUrl('https://rentcare.example', 'fr')).toBe('https://rentcare.example/m');
 		expect(attachUrl('https://rentcare.example', 'en&code=1')).toBe('https://rentcare.example/m');
 	});
 });
@@ -17,6 +17,6 @@ describe('reportUrl (v11)', async () => {
 	const { reportUrl } = await import('./attach-url.ts');
 	it('is the plain /r address with only the language', () => {
 		expect(reportUrl('https://rentcare.example/', 'ko')).toBe('https://rentcare.example/r?lang=ko');
-		expect(reportUrl('https://rentcare.example', 'ja')).toBe('https://rentcare.example/r');
+		expect(reportUrl('https://rentcare.example', 'fr')).toBe('https://rentcare.example/r');
 	});
 });

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { HOME_STRINGS, photoHref } from './home.ts';
 
 describe('home page', () => {
-	it('has the same strings in ko and en', () => {
-		expect(Object.keys(HOME_STRINGS.ko).sort()).toEqual(Object.keys(HOME_STRINGS.en).sort());
+	it('has the same strings in every language', () => {
+		for (const l of ['ko', 'ja', 'zh'] as const) expect(Object.keys(HOME_STRINGS[l]).sort()).toEqual(Object.keys(HOME_STRINGS.en).sort());
 	});
 
 	it('keeps an explicit ?lang for the photo page, otherwise lets the phone browser decide', () => {

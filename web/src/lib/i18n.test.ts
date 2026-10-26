@@ -36,3 +36,34 @@ describe('REPORT_STRINGS (/r)', async () => {
 		expect(reportError('en', 'whatever')).toBe(REPORT_STRINGS.en.err_unknown);
 	});
 });
+
+describe('ja / zh (RENTCARE-31, unreviewed drafts)', async () => {
+	const m = await import('./i18n');
+	it('has every string in every UI language', () => {
+		expect(m.UI_LANGS).toEqual(['ko', 'en', 'ja', 'zh']);
+		for (const lang of m.UI_LANGS) {
+			for (const t of m.INCIDENT_TYPES) expect(m.INCIDENT_TYPE_LABELS[lang][t]).toBeTruthy();
+			expect(Object.keys(m.MOBILE_STRINGS[lang]).sort()).toEqual(Object.keys(m.MOBILE_STRINGS.en).sort());
+			expect(Object.keys(m.REPORT_STRINGS[lang]).sort()).toEqual(Object.keys(m.REPORT_STRINGS.en).sort());
+			for (const v of [...Object.values(m.MOBILE_STRINGS[lang]), ...Object.values(m.REPORT_STRINGS[lang])]) expect(v.trim()).not.toBe('');
+		}
+	});
+	it('keeps placeholders in translations', () => {
+		for (const lang of m.UI_LANGS) {
+			expect(m.REPORT_STRINGS[lang].consent).toContain('{vendor}');
+			expect(m.REPORT_STRINGS[lang].locationAdded).toContain('{m}');
+		}
+	});
+	it('marks ja / zh as unreviewed and never picks them from Accept-Language', () => {
+		expect(m.isReviewedLang('ko')).toBe(true);
+		expect(m.isReviewedLang('en')).toBe(true);
+		expect(m.isReviewedLang('ja')).toBe(false);
+		expect(m.isReviewedLang('zh')).toBe(false);
+		expect(m.pickUiLang('ja', 'ko')).toBe('ja'); // explicit link from the car
+		expect(m.pickUiLang(null, 'ja-JP,en;q=0.5')).toBe('en');
+		expect(m.pickUiLang(null, 'zh-CN,zh;q=0.9')).toBe('en');
+	});
+	it('accepts ja / zh as report languages', () => {
+		expect(m.LANGUAGES).toEqual(['ko', 'en', 'ja', 'zh']);
+	});
+});

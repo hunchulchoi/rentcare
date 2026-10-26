@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Logo from '#lib/Logo.svelte';
 	import { HOME_STRINGS, photoHref } from '#lib/home.ts';
+	import { UNREVIEWED_NOTICE } from '#lib/i18n.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -26,6 +27,7 @@
 		</nav>
 	</header>
 
+	{#if UNREVIEWED_NOTICE[data.lang]}<p class="unreviewed" role="note">{UNREVIEWED_NOTICE[data.lang]} <a href="?lang=en">English</a></p>{/if}
 	<section class="hero">
 		<p class="tagline">{t.tagline}</p>
 		<a class="cta" href={photoHref(data.explicit)}>{t.photoCta}</a>
@@ -52,6 +54,11 @@
 </div>
 
 <style>
+	.unreviewed {
+		background: #fff3c4;
+		border-radius: 12px;
+		padding: 0.5rem 0.75rem;
+	}
 	.page {
 		--brand: #00756f;
 		--brand-soft: #e3f4f2;

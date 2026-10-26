@@ -3,7 +3,7 @@
 	import Logo from '#lib/Logo.svelte';
 	import { enhance } from '$app/forms';
 	import { onMount } from 'svelte';
-	import { REPORT_STRINGS, reportError, typeLabel, type UiLang } from '#lib/i18n.ts';
+	import { REPORT_STRINGS, reportError, typeLabel, type UiLang, UNREVIEWED_NOTICE } from '#lib/i18n.ts';
 	import { RENTAL_CODE_LENGTH } from '#lib/rental-code.ts';
 	import type { PageProps } from './$types';
 
@@ -50,6 +50,7 @@
 <main class="mobile" {lang} data-ready={ready ? '1' : undefined}>
 	<Logo height={36} />
 	<h1>{t.title}</h1>
+	{#if UNREVIEWED_NOTICE[lang]}<p class="unreviewed" role="note" data-unreviewed>{UNREVIEWED_NOTICE[lang]} <a href="?lang=en" data-sveltekit-reload>English</a></p>{/if}
 
 	{#if done}
 		<div class="notice" role="status" data-receipt={done.receiptNo}>
@@ -151,6 +152,12 @@
 </main>
 
 <style>
+	.unreviewed {
+		background: #fff3c4;
+		border-radius: 12px;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.9rem;
+	}
 	.mobile {
 		max-width: 520px;
 	}
