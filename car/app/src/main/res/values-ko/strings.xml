@@ -178,4 +178,5 @@
     <string name="state_done">완료</string>
     <string name="state_current">진행 중</string>
     <string name="state_todo">대기</string>
+    <string name="retention_notice">접수일로부터 90일 후 사진·영상과 함께 삭제됩니다.</string>
 </resources>

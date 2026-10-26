@@ -132,6 +132,8 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
 
         Section(stringResource(R.string.recipient_title)) {
             Text(stringResource(R.string.purpose_notice, r.vendorName))
+            // Must match the server's RETENTION_DAYS (docs/privacy.md).
+            Text(stringResource(R.string.retention_notice), style = MaterialTheme.typography.bodySmall)
             // Whole row is the touch target: a bare checkbox is too small for a car screen.
             Row(
                 Modifier.toggleable(

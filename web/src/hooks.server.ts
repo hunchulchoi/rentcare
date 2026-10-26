@@ -1,7 +1,13 @@
 import { errorId, routeForLog } from '#lib/server/log-safe.ts';
-import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
+import type { Handle, HandleServerError, ServerInit } from '@sveltejs/kit/hooks';
+import { scheduleRetention } from '#lib/server/retention.ts';
 import { securityHeaders } from '#lib/server/security-headers.ts';
 import { SESSION_COOKIE, getSession } from '#lib/server/vendor.ts';
+
+/** Start background retention (delete reports past RETENTION_DAYS). */
+export const init: ServerInit = () => {
+	scheduleRetention();
+};
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const { pathname } = event.url;

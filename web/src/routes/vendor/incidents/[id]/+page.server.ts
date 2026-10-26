@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit';
 import { parseActionForm } from '#lib/incident-actions.ts';
 import { acknowledge, addIncidentAction, getIncidentDetail, reopenIncident, resolveIncident } from '#lib/server/vendor.ts';
 import { isUuid } from '#lib/server/validate.ts';
+import { config } from '#lib/server/config.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
@@ -9,7 +10,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 	if (!isUuid(params.id)) error(404, 'Not found');
 	const detail = await getIncidentDetail(vendor.vendorId, params.id);
 	if (!detail) error(404, 'Not found');
-	return detail;
+	return { ...detail, retentionDays: config.retentionDays };
 };
 
 export const actions: Actions = {

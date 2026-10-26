@@ -196,10 +196,15 @@
 		{/if}
 
 		<p><a href={`/m?lang=${lang}`} data-sveltekit-reload>{t.otherCode}</a></p>
+	<p class="retention">{t.retention}</p>
 	{/if}
 </main>
 
 <style>
+	.retention {
+		color: var(--muted);
+		font-size: 0.85rem;
+	}
 	.mobile {
 		max-width: 480px;
 	}

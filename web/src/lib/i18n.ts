@@ -78,6 +78,7 @@ const mobile = {
 	ko: {
 		title: '사진·영상 추가',
 		intro: '차량 화면에 표시된 6자리 첨부 코드를 입력하세요.',
+		retention: '보낸 사진·영상은 이 접수 처리에만 쓰이며 접수일로부터 90일 후 삭제됩니다.',
 		codeLabel: '첨부 코드',
 		codePlaceholder: '예: K7Q2M9',
 		verify: '확인',
@@ -111,6 +112,7 @@ const mobile = {
 	en: {
 		title: 'Add photos & videos',
 		intro: 'Enter the 6-character attach code shown on the car screen.',
+		retention: 'Photos and videos are used only for this report and deleted 90 days after it.',
 		codeLabel: 'Attach code',
 		codePlaceholder: 'e.g. K7Q2M9',
 		verify: 'Continue',

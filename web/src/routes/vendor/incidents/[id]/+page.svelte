@@ -4,6 +4,7 @@
 	import { fmtBytes, fmtKst } from '#lib/format.ts';
 	import { LANGUAGE_NAMES_KO, LOCATION_SOURCE_LABELS_KO, typeLabel, warningLabelKo } from '#lib/i18n.ts';
 	import { ACTION_BODY_MAX, ACTION_TYPES, ACTION_TYPE_LABELS_KO, timeline, type ActionKind, type ActionType } from '#lib/incident-actions.ts';
+	import { deleteAfter } from '#lib/retention.ts';
 	import StaticMap from '#lib/StaticMap.svelte';
 	import StatusBadge from '#lib/StatusBadge.svelte';
 	import type { PageProps } from './$types';
@@ -64,6 +65,7 @@
 		<div><dt>발생</dt><dd>{fmtKst(i.occurred_at)}</dd></div>
 		<div><dt>사용자 언어</dt><dd>{LANGUAGE_NAMES_KO[i.language] ?? i.language}</dd></div>
 		<div><dt>차량</dt><dd>{i.vehicle_model ?? '-'} · {i.vehicle_plate}</dd></div>
+		<div><dt>삭제 예정</dt><dd title={`접수일로부터 ${data.retentionDays}일 후 첨부와 함께 자동 삭제`}>{fmtKst(deleteAfter(i.created_at, data.retentionDays))}</dd></div>
 	</dl>
 </header>
 

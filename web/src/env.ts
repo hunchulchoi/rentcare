@@ -32,6 +32,7 @@ export const variables = defineEnvVars({
 		schema: optional,
 		description: 'Raster tile source for the proxy, {z}/{x}/{y}. Default OpenStreetMap (demo use only)'
 	},
+	RETENTION_DAYS: { schema: optional, description: 'Days to keep a report and its files (default 90)' },
 	STORAGE_DIR: {
 		schema: (value) => optional(value) ?? './storage',
 		description: 'Private directory for uploaded files (outside static/)'

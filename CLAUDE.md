@@ -42,6 +42,7 @@ cd web && pnpm test && pnpm check && pnpm build
 scripts/with-secrets.sh /postgres -- sh -c 'cd web && node --env-file-if-exists=.env scripts/migrate.ts'
 pnpm build && scripts/server.sh restart          # LOCAL server 127.0.0.1:3000 → Funnel (web/.env LOCAL_BASE_URL)
 scripts/attach-check.sh          # no emulator: create report, phone upload, vendor download (MinIO)
+scripts/retention-check.sh       # 90-day retention: backdated demo report + file are purged (docs/privacy.md)
 tailscale funnel --bg 3000                       # public HTTPS for the local server = LOCAL_BASE_URL
 # web/.env PUBLIC_BASE_URL = deployed server (https://rentcare.devfor.link). The car app build reads it
 # (and CAR_API_KEY); override with ./gradlew -Prentcare.apiBaseUrl=… .

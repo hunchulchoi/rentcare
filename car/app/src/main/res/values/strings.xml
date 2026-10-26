@@ -178,4 +178,5 @@
     <string name="state_done">Done</string>
     <string name="state_current">In progress</string>
     <string name="state_todo">Waiting</string>
+    <string name="retention_notice">Deleted with photos and videos 90 days after the report.</string>
 </resources>
