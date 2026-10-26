@@ -13,8 +13,10 @@ export function issueIncidentToken(): { token: string; hash: string } {
 	return { token, hash: sha256Hex(token) };
 }
 
-export function readIncidentToken(request: Request): string | null {
-	const v = request.headers.get(INCIDENT_TOKEN_HEADER)?.trim() ?? '';
+export const RENTAL_TOKEN_HEADER = 'x-rental-token';
+
+export function readIncidentToken(request: Request, header = INCIDENT_TOKEN_HEADER): string | null {
+	const v = request.headers.get(header)?.trim() ?? '';
 	return TOKEN_RE.test(v) ? v : null;
 }
 

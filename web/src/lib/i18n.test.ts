@@ -25,3 +25,14 @@ describe('i18n', () => {
 		expect(warningLabelKo('TPMS_FAULT')).toBe('TPMS 장치 이상 (저압 신호 아님)');
 	});
 });
+
+describe('REPORT_STRINGS (/r)', async () => {
+	const { REPORT_STRINGS, reportError } = await import('./i18n');
+	it('has the same keys in every language and an error text for every parse error', () => {
+		expect(Object.keys(REPORT_STRINGS.ko).sort()).toEqual(Object.keys(REPORT_STRINGS.en).sort());
+		for (const e of ['code_invalid', 'code_expired', 'rate_limited', 'type_required', 'consent_required', 'note_too_long', 'location_invalid', 'too_many_reports']) {
+			expect(reportError('ko', e)).not.toBe(REPORT_STRINGS.ko.err_unknown);
+		}
+		expect(reportError('en', 'whatever')).toBe(REPORT_STRINGS.en.err_unknown);
+	});
+});

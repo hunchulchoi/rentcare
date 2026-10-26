@@ -46,7 +46,13 @@ async function issueAttachCode(sql: Tx, incidentId: string, now: Date): Promise<
  * Create an incident, or replay an existing one with the same Idempotency-Key
  * (which issues a fresh attach code and revokes the previous one).
  */
-export async function createIncident(input: IncidentInput, idempotencyKey: string, now = new Date()): Promise<CreateResult> {
+export async function createIncident(
+	input: IncidentInput,
+	idempotencyKey: string,
+	now = new Date(),
+	/** Phone basic report (RENTCARE-13): filed with a rental code, no car token. */
+	phone?: { rentalRef: string; maxReports: number }
+): Promise<CreateResult | { kind: 'too_many_reports' }> {
 	return db().begin(async (sql) => {
 		// Serialize concurrent requests with the same key.
 		await sql`select pg_advisory_xact_lock(hashtextextended(${idempotencyKey}, 0))`;
@@ -59,7 +65,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 			const { code, expiresAt } = await issueAttachCode(sql, e.id, now);
 			// Rotate: the replaying car gets a fresh token, the previous one stops working.
 			const t = issueIncidentToken();
-			await sql`update incidents set car_token_hash = ${t.hash} where id = ${e.id}`;
+			if (!phone) await sql`update incidents set car_token_hash = ${t.hash} where id = ${e.id}`;
 			return {
 				kind: 'replayed',
 				incident: {
@@ -71,6 +77,12 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 
 		const vendor = await sql`select 1 from vendors where id = ${input.vendorId}`;
 		if (!vendor.length) return { kind: 'unknown_vendor' } as const;
+		if (phone) {
+			await sql`select 1 from rentals where id = ${phone.rentalRef} for update`;
+			const [{ n }] = await sql<{ n: number }[]>`
+				select count(*)::int as n from incidents where rental_ref = ${phone.rentalRef} and channel = 'PHONE'`;
+			if (n >= phone.maxReports) return { kind: 'too_many_reports' } as const;
+		}
 
 		const day = kstDayKey(now);
 		const [{ last_no }] = await sql<{ last_no: number }[]>`
@@ -89,7 +101,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 				rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 				vehicle_read, fuel_percent, soc, vehicle_read_at,
 				latitude, longitude, address, location_read_at, location_source, location_edited,
-				car_token_hash, warnings, created_at
+				car_token_hash, warnings, created_at, channel, rental_ref
 			) values (
 				${input.vendorId}, ${receiptNo}, ${idempotencyKey}, ${input.type}, ${input.language}, ${input.note},
 				${input.occurredAt}, ${input.demo},
@@ -97,7 +109,7 @@ export async function createIncident(input: IncidentInput, idempotencyKey: strin
 				${v !== null}, ${v?.fuelPercent ?? null}, ${v?.soc ?? null}, ${v?.readAt ?? null},
 				${l?.latitude ?? null}, ${l?.longitude ?? null}, ${l?.address ?? null}, ${l?.readAt ?? null},
 				${l?.source ?? null}, ${l?.edited ?? null},
-				${token.hash}, ${input.warnings}, ${now}
+				${phone ? null : token.hash}, ${input.warnings}, ${now}, ${phone ? 'PHONE' : 'CAR'}, ${phone?.rentalRef ?? null}
 			)
 			returning id`;
 

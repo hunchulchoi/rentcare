@@ -7,6 +7,7 @@ export type ListRow = {
 	type: IncidentType;
 	language: string;
 	demo: boolean;
+	channel?: 'CAR' | 'PHONE';
 	status: IncidentStatus;
 	vehicle_plate: string;
 	vehicle_model: string | null;

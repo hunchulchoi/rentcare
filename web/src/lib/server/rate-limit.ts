@@ -38,3 +38,5 @@ export class FailureLimiter {
 export const attachCodeLimiter = new FailureLimiter(10, 10 * 60 * 1000);
 /** Failed vendor logins. */
 export const loginLimiter = new FailureLimiter(10, 15 * 60 * 1000);
+/** Failed rental-code checks on /r (verify + report). */
+export const rentalCodeLimiter = new FailureLimiter(10, 10 * 60 * 1000);

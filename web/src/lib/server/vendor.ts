@@ -64,7 +64,7 @@ export async function listIncidents(vendorId: string): Promise<{ rows: IncidentL
 	const sql = db();
 	const [rows, [{ total }]] = await Promise.all([
 		sql<IncidentListRow[]>`
-			select i.id, i.receipt_no, i.type, i.language, i.demo, i.status, i.vehicle_plate, i.vehicle_model, i.created_at,
+			select i.id, i.receipt_no, i.type, i.language, i.demo, i.channel, i.status, i.vehicle_plate, i.vehicle_model, i.created_at,
 				i.latitude::float8 as latitude, i.longitude::float8 as longitude, i.address, i.location_source,
 				(select count(*)::int from attachments a where a.incident_id = i.id) as attachments
 			from incidents i
@@ -84,6 +84,7 @@ export interface IncidentDetailRow {
 	note: string | null;
 	occurred_at: Date;
 	demo: boolean;
+	channel: 'CAR' | 'PHONE';
 	rental_id: string;
 	vehicle_plate: string;
 	vehicle_model: string | null;
@@ -124,7 +125,7 @@ export interface AttachmentRow {
 export async function getIncidentDetail(vendorId: string, id: string) {
 	const sql = db();
 	const rows = await sql<IncidentDetailRow[]>`
-		select id, receipt_no, type, language, note, occurred_at, demo,
+		select id, receipt_no, type, language, note, occurred_at, demo, channel,
 			rental_id, vehicle_plate, vehicle_model, powertrain, return_place, return_at,
 			vehicle_read, fuel_percent, soc, vehicle_read_at,
 			latitude, longitude, address, location_read_at, location_source, location_edited, warnings,

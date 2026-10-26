@@ -200,3 +200,26 @@ describe('parseIdempotencyKey', () => {
 		expect(r.ok && r.value.location?.readAt).toBeNull();
 	});
 });
+
+describe('validateRentalRegistration (v11)', async () => {
+	const { validateRentalRegistration } = await import('./validate');
+	const body = {
+		vendorId: 'demo-jeju',
+		language: 'ko',
+		demo: true,
+		rental: { rentalId: 'R-1001', vehiclePlate: '12하3456', vehicleModel: 'IONIQ 5', powertrain: 'EV', returnPlace: '판교역', returnAt: '2026-10-27T09:00:00Z' }
+	};
+
+	it('accepts a rental', () => {
+		const r = validateRentalRegistration(body);
+		expect(r.ok && r.value.rental.vehiclePlate).toBe('12하3456');
+		expect(r.ok && r.value.rental.returnAt?.toISOString()).toBe('2026-10-27T09:00:00.000Z');
+		expect(r.ok && r.value.demo).toBe(true);
+	});
+
+	it('rejects unknown fields, a missing plate and a bad language', () => {
+		expect(validateRentalRegistration({ ...body, extra: 1 }).ok).toBe(false);
+		expect(validateRentalRegistration({ ...body, rental: { ...body.rental, vehiclePlate: undefined } }).ok).toBe(false);
+		expect(validateRentalRegistration({ ...body, language: 'fr' }).ok).toBe(false);
+	});
+});

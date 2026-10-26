@@ -139,13 +139,63 @@ const RENTAL_KEYS = ['rentalId', 'vehiclePlate', 'vehicleModel', 'powertrain', '
 const VEHICLE_KEYS = ['fuelPercent', 'soc', 'readAt'];
 const LOCATION_KEYS = ['latitude', 'longitude', 'address', 'readAt', 'source', 'edited'];
 
+type Rental = IncidentInput['rental'];
+
+function parseRental(c: Checker, v: unknown): Rental | undefined {
+	const r = c.object(v, '$.rental', RENTAL_KEYS);
+	if (!r) return undefined;
+	const rentalId = c.string(r.rentalId, '$.rental.rentalId', 64);
+	const vehiclePlate = c.string(r.vehiclePlate, '$.rental.vehiclePlate', 20);
+	const vehicleModel = c.string(r.vehicleModel, '$.rental.vehicleModel', 64, { nullable: true });
+	const powertrain = c.string(r.powertrain, '$.rental.powertrain', 32, { nullable: true });
+	const returnPlace = c.string(r.returnPlace, '$.rental.returnPlace', 200, { nullable: true });
+	const returnAt = c.date(r.returnAt, '$.rental.returnAt', { nullable: true });
+	if (!rentalId || !vehiclePlate) return undefined;
+	return {
+		rentalId,
+		vehiclePlate,
+		vehicleModel: vehicleModel ?? null,
+		powertrain: powertrain ?? null,
+		returnPlace: returnPlace ?? null,
+		returnAt: returnAt ?? null
+	};
+}
+
+function parseVendorId(c: Checker, v: unknown): string | undefined {
+	const vendorId = c.string(v, '$.vendorId', 64);
+	if (typeof vendorId === 'string' && !/^[a-z0-9][a-z0-9-]*$/.test(vendorId)) c.fail('$.vendorId', 'invalid format');
+	return vendorId ?? undefined;
+}
+
+export interface RentalRegistration {
+	vendorId: string;
+	language: Language;
+	demo: boolean;
+	rental: Rental;
+}
+
+/** POST /api/rentals body (docs/api.md v11). */
+export function validateRentalRegistration(body: unknown): ValidationResult<RentalRegistration> {
+	const c = new Checker();
+	const o = c.object(body, '$', ['vendorId', 'language', 'demo', 'rental']);
+	if (!o) return { ok: false, errors: c.errors };
+	const vendorId = parseVendorId(c, o.vendorId);
+	const language = c.oneOf(o.language, '$.language', LANGUAGES);
+	let demo = false;
+	if (o.demo !== undefined) demo = c.boolean(o.demo, '$.demo') ?? false;
+	const rental = c.has(o, 'rental', '$') ? parseRental(c, o.rental) : undefined;
+	if (c.errors.length > 0 || !vendorId || !language || !rental) {
+		return { ok: false, errors: c.errors.length ? c.errors : ['$: invalid'] };
+	}
+	return { ok: true, value: { vendorId, language, demo, rental } };
+}
+
 export function validateIncidentInput(body: unknown): ValidationResult<IncidentInput> {
 	const c = new Checker();
 	const o = c.object(body, '$', TOP_KEYS);
 	if (!o) return { ok: false, errors: c.errors };
 
-	const vendorId = c.string(o.vendorId, '$.vendorId', 64);
-	if (typeof vendorId === 'string' && !/^[a-z0-9][a-z0-9-]*$/.test(vendorId)) c.fail('$.vendorId', 'invalid format');
+	const vendorId = parseVendorId(c, o.vendorId);
 	const type = c.oneOf(o.type, '$.type', INCIDENT_TYPES);
 	const language = c.oneOf(o.language, '$.language', LANGUAGES);
 	let note = c.string(o.note, '$.note', NOTE_MAX, { nullable: true, min: 0 });
@@ -154,28 +204,7 @@ export function validateIncidentInput(body: unknown): ValidationResult<IncidentI
 	let demo = false;
 	if (o.demo !== undefined) demo = c.boolean(o.demo, '$.demo') ?? false;
 
-	let rental: IncidentInput['rental'] | undefined;
-	if (c.has(o, 'rental', '$')) {
-		const r = c.object(o.rental, '$.rental', RENTAL_KEYS);
-		if (r) {
-			const rentalId = c.string(r.rentalId, '$.rental.rentalId', 64);
-			const vehiclePlate = c.string(r.vehiclePlate, '$.rental.vehiclePlate', 20);
-			const vehicleModel = c.string(r.vehicleModel, '$.rental.vehicleModel', 64, { nullable: true });
-			const powertrain = c.string(r.powertrain, '$.rental.powertrain', 32, { nullable: true });
-			const returnPlace = c.string(r.returnPlace, '$.rental.returnPlace', 200, { nullable: true });
-			const returnAt = c.date(r.returnAt, '$.rental.returnAt', { nullable: true });
-			if (rentalId && vehiclePlate) {
-				rental = {
-					rentalId,
-					vehiclePlate,
-					vehicleModel: vehicleModel ?? null,
-					powertrain: powertrain ?? null,
-					returnPlace: returnPlace ?? null,
-					returnAt: returnAt ?? null
-				};
-			}
-		}
-	}
+	const rental = c.has(o, 'rental', '$') ? parseRental(c, o.rental) : undefined;
 
 	let vehicle: IncidentInput['vehicle'] = null;
 	if (o.vehicle !== undefined && o.vehicle !== null) {

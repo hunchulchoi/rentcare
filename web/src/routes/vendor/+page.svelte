@@ -139,6 +139,7 @@
 						<td class="nowrap">
 							<a href={`/vendor/incidents/${i.id}`}>{i.receipt_no}</a>
 							{#if i.demo}<span class="badge demo">데모</span>{/if}
+								{#if i.channel === 'PHONE'}<span class="badge phone" title="차량 화면 없이 휴대폰으로 접수">휴대폰 접수</span>{/if}
 						</td>
 						<td class="nowrap">{typeLabel(i.type, 'ko')}</td>
 						<td>
@@ -285,6 +286,10 @@
 	}
 	.loc-text {
 		min-width: 0;
+	}
+	.badge.phone {
+		background: #e3effd;
+		color: #1d4f91;
 	}
 	.empty {
 		text-align: center;

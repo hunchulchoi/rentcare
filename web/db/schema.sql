@@ -120,3 +120,30 @@ alter table incidents add column if not exists resolved_by text;
 alter table incidents add column if not exists expected_at timestamptz;
 alter table incidents add column if not exists expected_set_at timestamptz;
 alter table incident_actions add column if not exists expected_at timestamptz;
+
+-- v8: rentals registered by the car (RENTCARE-13). The rental code lets the renter file a basic report
+-- from a phone when the car screen cannot be used. Code and car token are stored as SHA-256 hashes only.
+create table if not exists rentals (
+	id uuid primary key default gen_random_uuid(),
+	vendor_id text not null references vendors (id),
+	idempotency_key text not null unique,
+	language text not null check (language in ('ko', 'en', 'ja', 'zh')),
+	demo boolean not null default false,
+	rental_id text not null,
+	vehicle_plate text not null,
+	vehicle_model text,
+	powertrain text,
+	return_place text,
+	return_at timestamptz,
+	code_hash text unique,
+	code_expires_at timestamptz,
+	car_token_hash text,
+	released_at timestamptz,
+	created_at timestamptz not null default now()
+);
+create index if not exists rentals_created_idx on rentals (created_at);
+alter table incidents add column if not exists channel text not null default 'CAR';
+alter table incidents drop constraint if exists incidents_channel_check;
+alter table incidents add constraint incidents_channel_check check (channel in ('CAR', 'PHONE'));
+alter table incidents add column if not exists rental_ref uuid references rentals (id) on delete set null;
+create index if not exists incidents_rental_ref_idx on incidents (rental_ref);

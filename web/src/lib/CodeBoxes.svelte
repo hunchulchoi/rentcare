@@ -2,33 +2,34 @@
 	import { onMount } from 'svelte';
 	import { ATTACH_CODE_LENGTH, cleanCodeInput } from '#lib/attach-code.ts';
 
-	// One real input (paste, autofill, IME and screen readers work) drawn as 6 boxes.
+	// One real input (paste, autofill, IME and screen readers work) drawn as boxes (6: attach code, 8: rental code).
 	let {
 		value = $bindable(''),
 		name = 'code',
 		label,
 		disabled = false,
 		invalid = false,
-		oncomplete
-	}: { value?: string; name?: string; label: string; disabled?: boolean; invalid?: boolean; oncomplete?: () => void } = $props();
+		oncomplete,
+		length = ATTACH_CODE_LENGTH
+	}: { value?: string; name?: string; label: string; disabled?: boolean; invalid?: boolean; oncomplete?: () => void; length?: number } = $props();
 
 	let focused = $state(false);
 	// Interactive marker for scripts/browser-login-check.mjs.
 	let ready = $state(false);
 	onMount(() => (ready = true));
 	let input: HTMLInputElement;
-	const active = $derived(Math.min(value.length, ATTACH_CODE_LENGTH - 1));
+	const active = $derived(Math.min(value.length, length - 1));
 
 	function onInput(e: Event & { currentTarget: HTMLInputElement }) {
-		const next = cleanCodeInput(e.currentTarget.value);
-		const completed = next.length === ATTACH_CODE_LENGTH && value.length !== ATTACH_CODE_LENGTH;
+		const next = cleanCodeInput(e.currentTarget.value, length);
+		const completed = next.length === length && value.length !== length;
 		value = next;
 		e.currentTarget.value = next; // drop rejected characters from the field too
 		if (completed) oncomplete?.();
 	}
 </script>
 
-<div class="boxes" class:focused class:invalid class:disabled data-ready={ready ? '1' : undefined}>
+<div class="boxes" style:--n={length} class:focused class:invalid class:disabled data-ready={ready ? '1' : undefined}>
 	<input
 		bind:this={input}
 		{name}
@@ -48,7 +49,7 @@
 		enterkeyhint="go"
 		required
 	/>
-	{#each Array(ATTACH_CODE_LENGTH) as _, k (k)}
+	{#each Array(length) as _, k (k)}
 		<span class="box" class:filled={!!value[k]} class:active={focused && k === active} aria-hidden="true">{value[k] ?? ''}</span>
 	{/each}
 </div>
@@ -57,9 +58,9 @@
 	.boxes {
 		position: relative;
 		display: grid;
-		grid-template-columns: repeat(6, 1fr);
+		grid-template-columns: repeat(var(--n), 1fr);
 		gap: 8px;
-		max-width: 360px;
+		max-width: calc(var(--n) * 60px);
 		margin: 6px 0 4px;
 	}
 	input {

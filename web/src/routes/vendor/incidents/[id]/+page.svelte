@@ -56,6 +56,7 @@
 		<div class="tags">
 			<StatusBadge status={i.status} />
 			{#if i.demo}<span class="badge demo">데모 접수</span>{/if}
+			{#if i.channel === 'PHONE'}<span class="badge phone">휴대폰 접수 · 차량 정보 없음</span>{/if}
 		</div>
 		<h1>{typeLabel(i.type, 'ko')}</h1>
 		<p class="receipt">{i.receipt_no}</p>
@@ -267,6 +268,10 @@
 </div>
 
 <style>
+	.badge.phone {
+		background: #e3effd;
+		color: #1d4f91;
+	}
 	.back {
 		display: inline-block;
 		margin: 4px 0 14px;

@@ -4,7 +4,7 @@ import { db } from './db';
 import { errorId } from './log-safe.ts';
 import { removeFile } from './storage';
 
-export type PurgeResult = { incidents: number; files: number; failedFiles: number };
+export type PurgeResult = { incidents: number; files: number; failedFiles: number; rentals: number };
 
 /**
  * Delete reports past their retention (docs/privacy.md): files first, then the incident row
@@ -19,8 +19,11 @@ export async function purgeExpired(now = new Date(), days = config.retentionDays
 		where i.created_at < ${cutoff}
 		group by i.id
 		limit 500`;
-	const result: PurgeResult = { incidents: 0, files: 0, failedFiles: 0 };
-	if (dryRun) return { incidents: rows.length, files: rows.reduce((n, r) => n + r.files.length, 0), failedFiles: 0 };
+	const result: PurgeResult = { incidents: 0, files: 0, failedFiles: 0, rentals: 0 };
+	if (dryRun) {
+		const [{ n }] = await db()<{ n: number }[]>`select count(*)::int as n from rentals where created_at < ${cutoff}`;
+		return { incidents: rows.length, files: rows.reduce((n, r) => n + r.files.length, 0), failedFiles: 0, rentals: n };
+	}
 	for (const r of rows) {
 		let failed = 0;
 		for (const f of r.files) {
@@ -37,6 +40,8 @@ export async function purgeExpired(now = new Date(), days = config.retentionDays
 			result.incidents++;
 		}
 	}
+	// Rentals registered by the car (RENTCARE-13). Their reports keep their own copy of the rental fields.
+	result.rentals = (await db()`delete from rentals where created_at < ${cutoff} returning id`).length;
 	return result;
 }
 
@@ -53,8 +58,8 @@ export function scheduleRetention(): void {
 	const run = () =>
 		purgeExpired()
 			.then((r) => {
-				if (r.incidents || r.failedFiles) {
-					console.log(`[rentcare] retention: deleted ${r.incidents} reports, ${r.files} files, ${r.failedFiles} file errors`);
+				if (r.incidents || r.failedFiles || r.rentals) {
+					console.log(`[rentcare] retention: deleted ${r.incidents} reports, ${r.files} files, ${r.failedFiles} file errors, ${r.rentals} rentals`);
 				}
 			})
 			.catch((e) => console.error(`[rentcare] retention failed: ${errorId(e)}`));

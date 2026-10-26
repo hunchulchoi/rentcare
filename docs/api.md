@@ -144,6 +144,39 @@ labeled as the vendor's estimate, and says so when it has passed. The app never 
 None of these is a dispatch or repair guarantee. Action details (tow, call, …) stay internal to the vendor;
 the car only sees the status. Cars must treat an unknown future value as "received" (do not crash).
 
+## POST /api/rentals (v11, 2026-10-26)
+
+Car registers the rental when it is saved, so the renter can still report from a phone if the car screen
+cannot be used (e.g. the car does not start). Headers: `Authorization`, `Idempotency-Key` (UUID), JSON body:
+
+```json
+{ "vendorId": "demo-jeju", "language": "ko", "demo": true,
+  "rental": { "rentalId": "R-1001", "vehiclePlate": "12하3456", "vehicleModel": "IONIQ 5", "powertrain": "EV",
+              "returnPlace": "판교역 렌터카 반납장", "returnAt": "2026-10-23T09:00:00Z" } }
+```
+
+Response `201` (`200` on replay: new code and token, the previous ones stop working):
+`{ "rentalCode": "K7Q2M9AB", "rentalCodeExpiresAt": "…", "reportUrl": "https://host/r?lang=ko", "rentalToken": "…" }`
+
+- `rentalCode`: 8 chars, same alphabet as attach codes, stored hashed, valid until `returnAt` + 24 h.
+  Shown on the car's rental screen next to a QR of `reportUrl` (no code in the URL).
+- `rentalToken`: like the incident token — only for this car, used to release; never shown or logged.
+
+## POST /api/rentals/release (v11)
+
+Rental end. Headers: `Authorization`, `X-Rental-Token`, `Origin`. `204`, then `404` for the same token
+(already released — the car treats both as done). Revokes the rental code and the token.
+
+## Phone basic report `/r` (v11)
+
+- `POST /r?/verify` form `code` → rental summary (plate, model, vendor name, language).
+- `POST /r?/report` form `code`, `type`, `note` (optional, ≤ 2000), `consent=yes`, optional `lat`,`lon`,`accuracy`
+  and `key` (UUID per page view; a resend returns the same report with a fresh attach code)
+  → creates an incident with `channel: PHONE`, the registered rental, `vehicle: null`, location source `MOBILE`
+  (if given) and returns `receiptNo` and an attach code for `/m`. 10 failed codes / 10 min per IP;
+  at most 5 phone reports per rental (`too_many_reports`).
+- Vendor screens mark these reports "휴대폰 접수".
+
 ## POST /api/incidents/{id}/release (v9, 2026-10-26)
 
 Car calls this when the rental ends ("반납 완료"). Headers: `Authorization`, `X-Incident-Token`, `Origin` (CSRF check).

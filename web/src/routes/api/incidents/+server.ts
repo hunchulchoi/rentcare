@@ -37,6 +37,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 	const result = await createIncident(v.value, key);
 	if (result.kind === 'unknown_vendor') return apiError(400, 'invalid_request', 'Unknown vendorId');
+	if (result.kind === 'too_many_reports') return apiError(500, 'server_error', 'Unexpected result');
 	if (result.kind === 'key_conflict') {
 		return apiError(409, 'invalid_request', 'Idempotency-Key was already used for a different vendor');
 	}

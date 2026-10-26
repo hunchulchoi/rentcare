@@ -14,6 +14,7 @@ const path = arg('--path');
 const hover = process.argv.includes('--hover');
 const actionCheck = arg('--action-check'); // incident detail path
 const codeCheck = arg('--code-check'); // attach code: phone page 6-box input, no login
+const rentalCheck = arg('--rental-check'); // rental code: phone basic report on /r (RENTCARE-13)
 const width = Number(arg('--width') ?? 1400);
 const token = readFileSync('web/.env', 'utf8').match(/^DEMO_VENDOR_TOKEN=(.*)$/m)?.[1]?.trim();
 if (!base || !token) throw new Error('usage: browser-login-check.mjs <base url> (needs DEMO_VENDOR_TOKEN in web/.env)');
@@ -42,6 +43,50 @@ try {
 
 	await send('Page.enable');
 	await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 600 });
+	const capture = async (file) => {
+		if (!file) return;
+		const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+		writeFileSync(file, Buffer.from(data, 'base64'));
+	};
+	if (rentalCheck) {
+		const lang = arg('--lang') ?? 'ko';
+		await send('Browser.grantPermissions', { permissions: ['geolocation'], origin: new URL(base).origin });
+		await send('Emulation.setGeolocationOverride', { latitude: 37.3947, longitude: 127.1112, accuracy: 25 });
+		await send('Page.navigate', { url: `${base}/r?lang=${lang}` });
+		if (!(await waitFor(`!!document.querySelector('main[data-ready] .boxes[data-ready]')`, 60000))) throw new Error('/r never became interactive');
+		await capture(shot && shot.replace(/\.png$/, '-1-code.png'));
+		for (const ch of rentalCheck.toLowerCase()) {
+			await evalJs(`(() => { const i = document.querySelector('.boxes input'); i.focus(); i.value += ${JSON.stringify(ch)}; i.dispatchEvent(new InputEvent('input', { bubbles: true })); return true })()`);
+			await sleep(60);
+		}
+		const verified = await waitFor(`!!document.querySelector('fieldset.types')`, 15000);
+		const car = verified ? await evalJs(`document.querySelector('.car')?.innerText`) : '';
+		console.log(`${verified ? 'PASS' : 'FAIL'} 8-box rental code auto-verified: ${String(car).replace(/\s+/g, ' ')}`);
+		let filed = false, receipt = '', attach = '';
+		if (verified) {
+			await evalJs(`document.querySelector('input[name=type][value=NO_START]').click()`);
+			await evalJs(`(() => { const t = document.querySelector('#note'); t.value = 'browser rental-check'; t.dispatchEvent(new InputEvent('input', { bubbles: true })); return true })()`);
+			await evalJs(`document.querySelector('section.loc button').click()`);
+			const loc = await waitFor(`!!document.querySelector('input[name=lat]')`, 20000);
+			console.log(`${loc ? 'PASS' : 'FAIL'} phone location added: ${await evalJs(`document.querySelector('section.loc [role]')?.innerText`)}`);
+			await evalJs(`document.querySelector('input[name=consent]').click()`);
+			await capture(shot && shot.replace(/\.png$/, '-2-form.png'));
+			await evalJs(`document.querySelector('form[action*=report] button[type=submit]').click()`);
+			filed = await waitFor(`!!document.querySelector('[data-receipt]')`, 20000);
+			receipt = await evalJs(`document.querySelector('[data-receipt]')?.dataset.receipt`);
+			attach = await evalJs(`document.querySelector('[data-attach-code]')?.dataset.attachCode`);
+			await capture(shot && shot.replace(/\.png$/, '-3-done.png'));
+			filed = filed && /^RC-/.test(receipt ?? '') && /^[A-Z0-9]{6}$/.test(attach ?? '') && loc;
+			console.log(`${filed ? 'PASS' : 'FAIL'} report filed: ${receipt} attach code ${attach ? 'shown' : 'missing'}`);
+			console.log(`RECEIPT=${receipt}`);
+		}
+		process.exitCode = verified && filed ? 0 : 1;
+		ws.close();
+		proc.kill();
+		await sleep(300);
+		rmSync(profile, { recursive: true, force: true });
+		process.exit(process.exitCode ?? 0);
+	}
 	if (codeCheck) {
 		await send('Page.navigate', { url: `${base}/m?lang=ko` });
 		if (!(await waitFor(`!!document.querySelector('.boxes[data-ready]')`, 60000))) throw new Error('code input never became interactive');

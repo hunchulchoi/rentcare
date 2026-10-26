@@ -169,6 +169,94 @@ export function mobileError(lang: UiLang, code: string | undefined): string {
 	return MOBILE_STRINGS[lang][key] ?? MOBILE_STRINGS[lang].err_unknown;
 }
 
+/** Phone basic report page /r (RENTCARE-13). Keys must exist in every language. */
+const report = {
+	ko: {
+		title: '휴대폰으로 신고하기',
+		intro: '차량 화면을 쓸 수 없을 때 이용하세요. 대여 시 차량의 대여 정보 화면에 표시된 8자리 휴대폰 접수 코드를 입력하세요.',
+		codeLabel: '휴대폰 접수 코드',
+		verify: '확인',
+		verifying: '확인 중…',
+		vehicle: '차량',
+		vendor: '받는 업체',
+		type: '무슨 일인가요?',
+		note: '상황 설명 (선택)',
+		notePlaceholder: '예: 시동 버튼을 눌러도 반응이 없어요',
+		locationTitle: '현재 위치 (선택)',
+		locationButton: '이 휴대폰의 현재 위치 넣기',
+		locationSaving: '위치 확인 중…',
+		locationAdded: '위치를 넣었습니다 (정확도 약 {m}m).',
+		locationDenied: '위치를 가져오지 못했습니다. 위치 없이도 접수할 수 있습니다.',
+		locationRemove: '위치 빼기',
+		consent: '{vendor}에 이 신고(차량 정보, 유형, 설명, 위치)를 보내는 데 동의합니다. 접수일로부터 90일 후 삭제됩니다.',
+		submit: '신고 보내기',
+		submitting: '보내는 중…',
+		done: '접수되었습니다.',
+		receiptNo: '접수 번호',
+		attachIntro: '사진·영상은 아래 코드로 추가할 수 있습니다 (선택, 24시간 유효).',
+		attachCode: '첨부 코드',
+		attachLink: '사진·영상 추가하러 가기',
+		statusNote: '업체가 확인하면 연락드립니다. 급하면 업체에 직접 전화하세요. 차량 경고는 차량 안내를 따르세요.',
+		otherCode: '다른 코드 입력',
+		noscript: '위치 넣기에는 JavaScript가 필요합니다. 위치 없이 접수할 수 있습니다.',
+		err_code_invalid: '코드가 올바르지 않거나 반납 처리된 대여입니다. 대여 계약서나 업체에 확인하세요.',
+		err_code_expired: '코드가 만료되었습니다. 업체에 직접 연락하세요.',
+		err_rate_limited: '시도 횟수가 너무 많습니다. 잠시 후 다시 시도하세요.',
+		err_type_required: '신고 유형을 고르세요.',
+		err_consent_required: '보내기 동의가 필요합니다.',
+		err_note_too_long: '설명은 2000자까지 쓸 수 있습니다.',
+		err_location_invalid: '위치 값이 올바르지 않습니다. 위치를 빼고 다시 보내세요.',
+		err_too_many_reports: '이 대여로는 더 이상 휴대폰 신고를 보낼 수 없습니다(최대 5건). 업체에 직접 연락하세요.',
+		err_unknown: '보내지 못했습니다. 다시 시도하세요.'
+	},
+	en: {
+		title: 'Report from your phone',
+		intro: 'Use this when the car screen cannot be used. Enter the 8-character phone report code shown on the car\'s rental screen when you picked up the car.',
+		codeLabel: 'Phone report code',
+		verify: 'Continue',
+		verifying: 'Checking…',
+		vehicle: 'Car',
+		vendor: 'Sent to',
+		type: 'What happened?',
+		note: 'Details (optional)',
+		notePlaceholder: 'e.g. Nothing happens when I press the start button',
+		locationTitle: 'Current location (optional)',
+		locationButton: 'Add this phone\'s location',
+		locationSaving: 'Getting location…',
+		locationAdded: 'Location added (about {m} m accurate).',
+		locationDenied: 'Could not get the location. You can still report without it.',
+		locationRemove: 'Remove location',
+		consent: 'I agree to send this report (car details, type, details, location) to {vendor}. It is deleted 90 days after the report.',
+		submit: 'Send report',
+		submitting: 'Sending…',
+		done: 'Your report has been received.',
+		receiptNo: 'Receipt number',
+		attachIntro: 'You can add photos or videos with the code below (optional, valid for 24 hours).',
+		attachCode: 'Attach code',
+		attachLink: 'Add photos & videos',
+		statusNote: 'The rental company will contact you after checking. If it is urgent, call them directly. Follow the car\'s own warnings.',
+		otherCode: 'Enter a different code',
+		noscript: 'Adding a location needs JavaScript. You can report without it.',
+		err_code_invalid: 'That code is not valid, or the rental has ended. Check your rental contract or ask the rental company.',
+		err_code_expired: 'This code has expired. Please contact the rental company directly.',
+		err_rate_limited: 'Too many attempts. Please wait a few minutes and try again.',
+		err_type_required: 'Please choose what happened.',
+		err_consent_required: 'Please agree to send the report.',
+		err_note_too_long: 'Details can be up to 2000 characters.',
+		err_location_invalid: 'The location is not valid. Remove it and send again.',
+		err_too_many_reports: 'No more phone reports can be sent for this rental (max 5). Please contact the rental company directly.',
+		err_unknown: 'Could not send. Please try again.'
+	}
+} satisfies Record<UiLang, Record<string, string>>;
+
+export type ReportStrings = (typeof report)['en'];
+export const REPORT_STRINGS: Record<UiLang, ReportStrings> = report;
+
+export function reportError(lang: UiLang, code: string | undefined): string {
+	const key = `err_${code ?? 'unknown'}` as keyof ReportStrings;
+	return REPORT_STRINGS[lang][key] ?? REPORT_STRINGS[lang].err_unknown;
+}
+
 /** Korean names of car warning lights (Pleos TelltaleType) for vendor screens. */
 const WARNING_LABELS_KO: Record<string, string> = {
 	TPMS: '타이어 공기압 경고',
