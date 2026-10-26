@@ -69,6 +69,8 @@ Headers: `Authorization`, `Idempotency-Key: <uuid>` (required).
 - `warnings` (optional, default `[]`): car warning lights on at report time, Pleos `TelltaleType` names
   (`^[A-Z][A-Z0-9_]{0,39}$`, max 20, duplicates dropped), e.g. `["TPMS","LOW_VOLT_BATTERY"]`.
   The car sends only fault lights (not lamps/turn signals/modes). Vendor screens show Korean names.
+  Derived tire codes (v8): `TIRE_LOW_FL|FR|RL|RR` (wheel below the car's low-pressure threshold, only when the car
+  reports per-wheel pressure) and `TPMS_FAULT` (blinking TPMS lamp = monitoring fault, not low pressure).
 - Validation is strict: unknown fields at any level → `400 invalid_request`. Timestamps must be UTC with `Z`.
   - required: `vendorId`, `type`, `language`, `occurredAt`, `rental.rentalId` (≤64), `rental.vehiclePlate` (≤20);
     if `vehicle` is an object: `vehicle.readAt`; if `location` is an object: `latitude`, `longitude`,

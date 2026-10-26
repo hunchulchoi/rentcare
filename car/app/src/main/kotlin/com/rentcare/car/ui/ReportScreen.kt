@@ -33,6 +33,7 @@ import com.rentcare.car.BuildConfig
 import com.rentcare.core.IncidentRequest
 import com.rentcare.core.IncidentType
 import com.rentcare.core.InputGate
+import com.rentcare.core.TireCheck
 import com.rentcare.core.IsoTime
 import com.rentcare.core.UrlPolicy
 import com.rentcare.core.Warnings
@@ -86,6 +87,9 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
                 }
             }
         }
+
+        val tire by vm.tire.collectAsStateWithLifecycle()
+        tire?.let { t -> TireSection(t, allowed) { vm.updateDraft { it.copy(type = IncidentType.TIRE) } } }
 
         if (warnings.isNotEmpty()) {
             Section(stringResource(R.string.report_warnings_title)) {
@@ -269,6 +273,41 @@ private fun PendingPanel(p: IncidentRequest, send: SendState, vm: AppViewModel) 
                 Text(stringResource(if (sending) R.string.sending else R.string.resend))
             }
             OutlinedButton(onClick = vm::discardPending, enabled = !sending) { Text(stringResource(R.string.discard)) }
+        }
+    }
+}
+
+/** RENTCARE-33: tire pressure from the car's own signals. No diagnosis, no "tires are fine". */
+@Composable
+private fun TireSection(t: TireCheck.Result, allowed: Boolean, onRequest: () -> Unit) {
+    val sc = LocalStatusColors.current
+    fun wheelName(w: TireCheck.Wheel) = when (w) {
+        TireCheck.Wheel.FL -> R.string.wheel_fl
+        TireCheck.Wheel.FR -> R.string.wheel_fr
+        TireCheck.Wheel.RL -> R.string.wheel_rl
+        TireCheck.Wheel.RR -> R.string.wheel_rr
+    }
+    Section(stringResource(R.string.tire_title)) {
+        when (t) {
+            is TireCheck.Result.LowWheels -> Text(
+                stringResource(R.string.tire_low_wheels, t.wheels.map { stringResource(wheelName(it)) }.joinToString(", ")),
+                color = sc.progress, fontWeight = FontWeight.Bold,
+            )
+            TireCheck.Result.LowPositionUnknown -> Text(stringResource(R.string.tire_low_unknown), color = sc.progress, fontWeight = FontWeight.Bold)
+            TireCheck.Result.TpmsFault -> Text(stringResource(R.string.tire_fault), color = sc.progress, fontWeight = FontWeight.Bold)
+            TireCheck.Result.NoLowSignal -> Text(stringResource(R.string.tire_no_low), style = MaterialTheme.typography.bodySmall)
+            is TireCheck.Result.Unknown -> {
+                val reason = when (t.reason) {
+                    TireCheck.Reason.UNSUPPORTED -> R.string.reason_unsupported
+                    TireCheck.Reason.STALE -> R.string.reason_stale_reading
+                    TireCheck.Reason.ERROR -> R.string.reason_read_error
+                }
+                Text(stringResource(R.string.tire_unknown, stringResource(reason)), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        if (t.warningCodes().isNotEmpty()) {
+            Text(stringResource(R.string.tire_note), style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = onRequest, enabled = allowed) { Text(stringResource(R.string.tire_request)) }
         }
     }
 }

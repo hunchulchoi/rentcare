@@ -26,4 +26,9 @@ class WarningsTest {
         kotlin.test.assertTrue(Warnings.forRequest(Warnings.FAULT_CODES.toList() + Warnings.FAULT_CODES).size <= Warnings.MAX_IN_REQUEST)
         assertEquals(listOf("TPMS"), Warnings.forRequest(listOf("TPMS", "TPMS")))
     }
+
+    @Test fun `tire check codes join the lamp codes without duplicates`() {
+        assertEquals(listOf("TPMS", "LOW_FUEL", "TIRE_LOW_FL"), Warnings.forRequest(listOf("TPMS", "LOW_FUEL"), extra = listOf("TPMS", "TIRE_LOW_FL")))
+        assertEquals(listOf("TPMS_FAULT"), Warnings.forRequest(emptyList(), extra = listOf("TPMS_FAULT")))
+    }
 }

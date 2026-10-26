@@ -156,6 +156,12 @@ export function mobileError(lang: UiLang, code: string | undefined): string {
 /** Korean names of car warning lights (Pleos TelltaleType) for vendor screens. */
 const WARNING_LABELS_KO: Record<string, string> = {
 	TPMS: '타이어 공기압 경고',
+	// Derived by the car from per-wheel data (TireCheck), not dashboard lamps.
+	TPMS_FAULT: 'TPMS 장치 이상 (저압 신호 아님)',
+	TIRE_LOW_FL: '타이어 저압: 앞 왼쪽',
+	TIRE_LOW_FR: '타이어 저압: 앞 오른쪽',
+	TIRE_LOW_RL: '타이어 저압: 뒤 왼쪽',
+	TIRE_LOW_RR: '타이어 저압: 뒤 오른쪽',
 	LOW_VOLT_BATTERY: '12V 배터리 경고',
 	ENGINE: '엔진 경고',
 	ENGINE_OIL_PRESSURE: '엔진오일 압력 경고',

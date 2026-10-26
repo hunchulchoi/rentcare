@@ -66,6 +66,7 @@ node scripts/browser-login-check.mjs "$B" --list-check >/dev/null && ok "S4 brow
 $VC telltale TPMS On >/dev/null
 restart_app; $UI tap "고장·사고 접수"; sleep 5
 wait_for "S4 warning listed" "TPMS" 8
+check "S4 tire section: TPMS on, wheel unknown (no diagnosis)" "타이어 공기압 경고(TPMS)가 켜져 있습니다. 바퀴 위치는 확인할 수 없습니다."
 $UI tap "제주 데모렌터카에 보내기에 동의"; sleep 1; $UI tap "접수 보내기"
 wait_step "S4 received" "^기본 접수 완료 · (완료|진행 중)$" 15
 receipt=$($UI texts | grep -oE 'RC-[0-9]{8}-[0-9]{4}' | head -1)

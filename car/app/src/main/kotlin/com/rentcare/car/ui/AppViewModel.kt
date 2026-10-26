@@ -25,6 +25,7 @@ import com.rentcare.core.LocationSource
 import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
 import com.rentcare.core.WaypointCoords
+import com.rentcare.core.TireCheck
 import com.rentcare.core.Reading
 import com.rentcare.core.Gear
 import com.rentcare.core.InputGate
@@ -339,12 +340,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun updateDraft(f: (IncidentDraft) -> IncidentDraft) = _report.update { it.copy(draft = f(it.draft)) }
 
     /** Read warning lights and pre-select a matching report type (renter can change it). */
+    private val _tire = MutableStateFlow<TireCheck.Result?>(null)
+    /** RENTCARE-33: what the car's own signals say about tire pressure (no diagnosis). */
+    val tire: StateFlow<TireCheck.Result?> = _tire
+
     fun loadWarnings() {
         work.launch { token ->
-            val list = runCatching { deps.vehicle.activeTelltales() }.getOrDefault(emptyList())
+            val read = runCatching { deps.vehicle.activeTelltales() }
+            val list = read.getOrDefault(emptyList())
+            val now = System.currentTimeMillis()
+            val lamp = read.getOrNull()?.let { l ->
+                val tpms = l.firstOrNull { it.type.name == "TPMS" }
+                TireCheck.LampReading(
+                    when (tpms?.state?.name) { null, "OFF" -> TireCheck.Lamp.OFF; "BLINK" -> TireCheck.Lamp.BLINK; else -> TireCheck.Lamp.ON },
+                    now,
+                )
+            }
+            // Per-wheel values only where the car supports them (emulator: pressure unsupported, threshold 137).
+            val wheels = mapOf(
+                TireCheck.Wheel.FL to WheelValue.LEFT_FRONT, TireCheck.Wheel.FR to WheelValue.RIGHT_FRONT,
+                TireCheck.Wheel.RL to WheelValue.LEFT_REAR, TireCheck.Wheel.RR to WheelValue.RIGHT_REAR,
+            )
+            val pressures = wheels.mapNotNull { (w, v) -> runCatching { deps.vehicle.tirePressure(v) }.getOrNull()?.let { w to it } }.toMap()
+            val thresholds = wheels.mapNotNull { (w, v) -> runCatching { deps.vehicle.lowTirePressure(v) }.getOrNull()?.let { w to it } }.toMap()
             if (!work.isCurrent(token)) return@launch
             _telltales.value = list
-            val suggested = Warnings.suggestType(list.map { it.type.name })
+            val tire = TireCheck.of(lamp, pressures, thresholds, now)
+            _tire.value = tire
+            val suggested = if (tire.warningCodes().isNotEmpty()) IncidentType.TIRE else Warnings.suggestType(list.map { it.type.name })
             if (suggested != null) updateDraft { if (it.type == null) it.copy(type = suggested) else it }
         }
     }
@@ -475,7 +498,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Instant.ofEpochMilli(r.returnAtMillis).toString(),
             ),
             vehicle = if (readAt == null) null else VehicleDto(st.fuelPercent?.value, st.soc?.value, readAt),
-            warnings = Warnings.forRequest(_telltales.value.map { it.type.name }),
+            warnings = Warnings.forRequest(_telltales.value.map { it.type.name }, extra = _tire.value?.warningCodes().orEmpty()),
             location = d.location?.let {
                 LocationDto(
                     it.latitude, it.longitude, it.address,
@@ -535,7 +558,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             probe("EvBattery.getEvBatteryCapacity (Wh)") { v.evBatteryCapacity().toString() }
             probe("Odometer.getRangeRemainingDistance (unit?)") { v.rangeRemaining().toString() }
             probe("Gear.getCurrentGearSelectionState") { v.gear() }
-            probe("Tire.getLowTirePressure(LEFT_FRONT)") { v.lowTirePressure(WheelValue.LEFT_FRONT).toString() }
+            probe("Tire.checkTirePressureCapabilities (wheels)") { v.tirePressureWheels().joinToString().ifEmpty { "(none)" } }
+            probe("Tire.getTirePressure (LEFT_FRONT)") { v.tirePressure(WheelValue.LEFT_FRONT).toString() }
+            probe("Tire.checkLowTirePressureCapabilities (wheels)") { v.lowTirePressureWheels().joinToString().ifEmpty { "(none)" } }
+            for (w in listOf(WheelValue.LEFT_FRONT, WheelValue.RIGHT_FRONT, WheelValue.LEFT_REAR, WheelValue.RIGHT_REAR)) {
+                probe("Tire.getLowTirePressure ($w)") { v.lowTirePressure(w).toString() }
+            }
             probe("Safety.getTelltalesInfo (ON/BLINK)") {
                 v.activeTelltales().joinToString { "${it.type}:${it.state}" }.ifEmpty { "(none on)" }
             }

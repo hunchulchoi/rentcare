@@ -85,6 +85,21 @@ class VehicleGateway(context: Context) {
         vehicle.getTire().getLowTirePressure(WheelArea(wheel), ok, fail)
     }
 
+    /** Current tire pressure for one wheel (unit per SDK; kPa on the emulator console). */
+    suspend fun tirePressure(wheel: WheelValue): Float? = call { ok, fail ->
+        vehicle.getTire().getTirePressure(WheelArea(wheel), ok, fail)
+    }
+
+    /** Wheels that report a current pressure (empty = not supported). */
+    suspend fun tirePressureWheels(): List<WheelValue> = call<List<WheelValue>> { ok, fail ->
+        vehicle.getTire().checkTirePressureCapabilities({ _, areas -> ok(areas.flatMap { it.values.toList() }.distinct()) }, fail)
+    }
+
+    /** Wheels that report a low-pressure threshold. */
+    suspend fun lowTirePressureWheels(): List<WheelValue> = call<List<WheelValue>> { ok, fail ->
+        vehicle.getTire().checkLowTirePressureCapabilities({ _, areas -> ok(areas.flatMap { it.values.toList() }.distinct()) }, fail)
+    }
+
     /** Warning lights currently ON/BLINK, e.g. TPMS, LOW_VOLT_BATTERY, LOW_FUEL. */
     suspend fun activeTelltales(): List<ActiveTelltale> = call<List<ActiveTelltale>> { ok, fail ->
         vehicle.getSafety().getTelltalesInfo({ t ->

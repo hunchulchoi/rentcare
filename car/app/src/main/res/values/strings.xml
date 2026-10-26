@@ -179,4 +179,18 @@
     <string name="state_current">In progress</string>
     <string name="state_todo">Waiting</string>
     <string name="retention_notice">Deleted with photos and videos 90 days after the report.</string>
+    <string name="tire_title">Tire pressure (from the car)</string>
+    <string name="tire_low_wheels">Low tire pressure: %1$s</string>
+    <string name="tire_low_unknown">The tire pressure warning (TPMS) is on. Wheel position is not available.</string>
+    <string name="tire_fault">The tire pressure monitoring system (TPMS) reports a fault. This is not a low-pressure signal.</string>
+    <string name="tire_no_low">No low-pressure signal now. This does not mean the tires are fine.</string>
+    <string name="tire_unknown">Tire pressure cannot be checked (%1$s). If something is wrong, report \"Tire problem\" yourself.</string>
+    <string name="tire_note">Follow the car\'s guidance first. We do not judge punctures or causes.</string>
+    <string name="tire_request">Write a tire check request</string>
+    <string name="wheel_fl">front left</string>
+    <string name="wheel_fr">front right</string>
+    <string name="wheel_rl">rear left</string>
+    <string name="wheel_rr">rear right</string>
+    <string name="reason_unsupported">not supported by this car</string>
+    <string name="reason_read_error">read failed</string>
 </resources>

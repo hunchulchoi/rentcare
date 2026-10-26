@@ -17,7 +17,9 @@ object Warnings {
 
     fun relevant(activeCodes: List<String>): List<String> = activeCodes.filter { it in FAULT_CODES }.distinct()
 
-    fun forRequest(activeCodes: List<String>): List<String> = relevant(activeCodes).take(MAX_IN_REQUEST)
+    /** Lamp codes plus derived codes (e.g. TireCheck: TIRE_LOW_FL, TPMS_FAULT), distinct, at most 20. */
+    fun forRequest(activeCodes: List<String>, extra: List<String> = emptyList()): List<String> =
+        (relevant(activeCodes) + extra).distinct().take(MAX_IN_REQUEST)
 
     /** Pre-select the report type the renter most likely needs. The renter can change it. */
     fun suggestType(activeCodes: List<String>): IncidentType? {

@@ -14,7 +14,7 @@ for _ in 1 2; do curl -s -X POST -m 2 "$C/browser/session?client=vconsole-cli" >
 case "${1:-}" in
   soc)      curl -s -X POST -m 5 "$C/vehicle/ev-battery?field=soc&value=$2" ;;
   telltale) curl -s -X POST -m 5 "$C/vehicle/telltales/simulator?color=Red&type=$2&state=$3" ;;
-  tire)     curl -s -X POST -m 5 "$C/vehicle/tire-pressure?area=$2&pressure_kpa=$3" ;;
+  tire)     curl -s -X POST -m 5 "$C/vehicle/tire-pressure?area=$2&pressure_kpa=$3" ;;  # area: FL FR RL RR
   gear)     curl -s -X POST -m 5 "$C/vehicle/gear?gear=$2" ;;
   state)    curl -s -m 5 "$C/vehicle/state" ;;
   *) sed -n '2,8p' "$0"; exit 1 ;;

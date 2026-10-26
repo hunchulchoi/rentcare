@@ -20,5 +20,8 @@ describe('i18n', () => {
 		expect(warningLabelKo('TPMS')).toBe('타이어 공기압 경고');
 		expect(warningLabelKo('LOW_VOLT_BATTERY')).toBe('12V 배터리 경고');
 		expect(warningLabelKo('NEW_THING')).toBe('NEW_THING');
+		expect(warningLabelKo('TIRE_LOW_FL')).toBe('타이어 저압: 앞 왼쪽');
+		expect(warningLabelKo('TIRE_LOW_RR')).toBe('타이어 저압: 뒤 오른쪽');
+		expect(warningLabelKo('TPMS_FAULT')).toBe('TPMS 장치 이상 (저압 신호 아님)');
 	});
 });
