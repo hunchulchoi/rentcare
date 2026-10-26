@@ -126,6 +126,27 @@ class ReturnPlannerTest {
         assertEquals(3000, a.settlementCostWon)
     }
 
+    @Test fun `ev minimum - arrival meets the minimum - no action`() {
+        val r = rental(Powertrain.EV, ReturnRule.EvMinimum(minSoc = 50))
+        val a = planner.assess(r, ev, trip(20, 30, arrivalSoc = 55), now)
+        assertEquals(Verdict.NO_ACTION, a.verdict)
+    }
+
+    @Test fun `ev - stale soc reading - info missing, no charge push`() {
+        val r = rental(Powertrain.EV, ReturnRule.EvSameAsPickup(pickupSoc = 80))
+        val old = VehicleState(soc = Reading(40, now - 11 * 60_000L))
+        val a = planner.assess(r, old, trip(20, 30, arrivalSoc = 35), now)
+        assertEquals(Verdict.INFO_MISSING, a.verdict)
+        assertTrue(Reason.STALE_READING in a.reasons)
+    }
+
+    @Test fun `ev - no soc reading - info missing`() {
+        val r = rental(Powertrain.EV, ReturnRule.EvMinimum(minSoc = 50))
+        val a = planner.assess(r, VehicleState(), trip(20, 30, arrivalSoc = null), now)
+        assertEquals(Verdict.INFO_MISSING, a.verdict)
+        assertTrue(Reason.NO_READING in a.reasons)
+    }
+
     @Test fun `ev waived - reachable - no action`() {
         val r = rental(Powertrain.EV, ReturnRule.EvChargeWaived)
         val a = planner.assess(r, ev, trip(20, 30, arrivalSoc = 30), now)

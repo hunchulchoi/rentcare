@@ -53,7 +53,13 @@ try {
 		await send('Browser.grantPermissions', { permissions: ['geolocation'], origin: new URL(base).origin });
 		await send('Emulation.setGeolocationOverride', { latitude: 37.3947, longitude: 127.1112, accuracy: 25 });
 		await send('Page.navigate', { url: `${base}/r?lang=${lang}` });
-		if (!(await waitFor(`!!document.querySelector('main[data-ready] .boxes[data-ready]')`, 60000))) throw new Error('/r never became interactive');
+		const live = `!!document.querySelector('main[data-ready] .boxes[data-ready]')`;
+		if (!(await waitFor(live, 30000))) {
+			// One reload: a slow first load over Funnel sometimes never hydrates.
+			console.log(`retry /r: readyState=${await evalJs('document.readyState')} title=${await evalJs('document.title')}`);
+			await send('Page.reload', { ignoreCache: true });
+			if (!(await waitFor(live, 30000))) throw new Error('/r never became interactive');
+		}
 		await capture(shot && shot.replace(/\.png$/, '-1-code.png'));
 		for (const ch of rentalCheck.toLowerCase()) {
 			await evalJs(`(() => { const i = document.querySelector('.boxes input'); i.focus(); i.value += ${JSON.stringify(ch)}; i.dispatchEvent(new InputEvent('input', { bubbles: true })); return true })()`);

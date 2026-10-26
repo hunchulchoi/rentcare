@@ -29,6 +29,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -137,7 +139,8 @@ fun MapPicker(vm: AppViewModel, start: MapTiles.Point, onPick: (MapTiles.Point) 
             val view = MapTiles.View(center, zoom)
             val grid = remember(center, zoom, w, h) { MapTiles.grid(center.lat, center.lon, zoom, w, h) }
             Box(
-                Modifier.fillMaxWidth().height(height).pointerInput(center, zoom, w, h) {
+                // "map-picker": test hook for scripts/e2e.sh (tap = pick).
+                Modifier.fillMaxWidth().height(height).semantics { contentDescription = "map-picker" }.pointerInput(center, zoom, w, h) {
                     detectTapGestures { o ->
                         val p = MapTiles.fromView(o.x / density.toDouble(), o.y / density.toDouble(), view, w, h)
                         picked = p

@@ -19,15 +19,22 @@ python3 -c 'import struct,zlib,sys,os;r=lambda t,d:struct.pack(">I",len(d))+t+d+
 before=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
 up=$(curl -s -o "$d/up" -w '%{http_code}' -X POST "$B/m/upload" -H "Origin: $B" -F "code=$code" -F "file=@$d/a.png;type=image/png")
 [[ "$up" == 201 ]] && ok "phone upload" || bad "phone upload http $up $(cat "$d/up")"
+# Video: a real 1-second MP4 if ffmpeg exists, else a minimal ftyp box (server checks the signature only).
+if command -v ffmpeg >/dev/null; then ffmpeg -loglevel error -f lavfi -i color=c=teal:s=160x120:d=1 -pix_fmt yuv420p "$d/v.mp4"
+else python3 -c 'import struct,sys;open(sys.argv[1],"wb").write(struct.pack(">I",24)+b"ftypisom"+b"\0\0\2\0isomiso2")' "$d/v.mp4"; fi
+up=$(curl -s -o "$d/upv" -w '%{http_code}' -X POST "$B/m/upload" -H "Origin: $B" -F "code=$code" -F "file=@$d/v.mp4;type=video/mp4")
+[[ "$up" == 201 ]] && ok "phone video upload (mp4, $(wc -c < "$d/v.mp4" | tr -d ' ') bytes)" || bad "video upload http $up $(cat "$d/upv")"
 after=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
 if [[ "${EXPECT_S3:-1}" == 1 ]]; then
   [[ "$before" == "$after" ]] && ok "not written to local disk" || bad "written locally ($before -> $after)"
 fi
 jar="$d/jar"; curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
 id=$(curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | head -1)
-fid=$(curl -s -b "$jar" "$B$id" | grep -oE "/vendor/files/[0-9a-f-]{36}" | head -1)
-curl -s -b "$jar" -o "$d/dl" "$B$fid"
-cmp -s "$d/dl" "$d/a.png" && ok "vendor downloads same bytes" || bad "vendor download (${fid:-no link})"
+fids=$(curl -s -b "$jar" "$B$id" | grep -oE "/vendor/files/[0-9a-f-]{36}" | awk '!s[$0]++')
+fid=""; vid=""
+for f in $fids; do curl -s -b "$jar" -o "$d/dl" "$B$f"; cmp -s "$d/dl" "$d/a.png" && fid=$f; cmp -s "$d/dl" "$d/v.mp4" && vid=$f; done
+[[ -n "$fid" ]] && ok "vendor downloads same bytes (photo)" || bad "vendor photo download"
+[[ -n "$vid" ]] && ok "vendor downloads same bytes (video)" || bad "vendor video download"
 anon=$(curl -s -o /dev/null -w '%{http_code}' "$B$fid")
 [[ "$anon" != 200 ]] && ok "download without login refused ($anon)" || bad "anonymous download allowed"
 # Rental end: the car releases the report -> its token and the attach code stop working.

@@ -26,6 +26,7 @@ Pleos Connect rental-car app for the Hyundai Motor Group in-car app contest.
 | `car/app` | Android Automotive app (Compose). Pleos wrappers in `pleos/`, screens in `ui/` |
 | `web/` | SvelteKit: car API, phone attach `/m`, vendor `/vendor`. `pnpm test`, `pnpm check`, `pnpm build` |
 | `docs/api.md` | Car ↔ server contract. Change it first, then both sides |
+| `docs/evidence.md` | Scenario evidence table: real SDK vs Virtual Console vs mock vs server (RENTCARE-18) |
 | `docs/deploy.md` | rentcare.devfor.link: Portainer stack, tag push → rebuild, Sablier, tunnel |
 
 ## Commands
@@ -42,6 +43,8 @@ cd web && pnpm test && pnpm check && pnpm build
 scripts/with-secrets.sh /postgres -- sh -c 'cd web && node --env-file-if-exists=.env scripts/migrate.ts'
 pnpm build && scripts/server.sh restart          # LOCAL server 127.0.0.1:3000 → Funnel (web/.env LOCAL_BASE_URL)
 scripts/attach-check.sh          # no emulator: create report, phone upload, vendor download (MinIO)
+scripts/phone-report-check.sh    # phone-only basic report /r with the rental code (RENTCARE-13)
+scripts/i18n-check.sh            # car strings: en/ko pairs and placeholders
 scripts/retention-check.sh       # 90-day retention: backdated demo report + file are purged (docs/privacy.md)
 tailscale funnel --bg 3000                       # public HTTPS for the local server = LOCAL_BASE_URL
 # web/.env PUBLIC_BASE_URL = deployed server (https://rentcare.devfor.link). The car app build reads it
@@ -54,7 +57,7 @@ tailscale funnel --bg 3000                       # public HTTPS for the local se
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
 
 # End-to-end scenarios (emulator + production server on 127.0.0.1:3000 + Funnel). Run before every demo/release.
-scripts/e2e.sh                  # wipes app data on the emulator, 48 checks, against the LOCAL server: builds the
+scripts/e2e.sh                  # wipes app data on the emulator, 53 checks, against the LOCAL server: builds the
                                 # app for LOCAL_BASE_URL, S6 stops/starts the local server, then reinstalls the
                                 # app for the deployed server (E2E_RESTORE=0 to skip).
 ```

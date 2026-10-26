@@ -73,6 +73,9 @@ $VC telltale TPMS On >/dev/null
 restart_app; $UI tap "고장·사고 접수"; sleep 5
 wait_for "S4 warning listed (readable name)" "타이어 공기압 경고" 8
 check "S4 tire section: TPMS on, wheel unknown (no diagnosis)" "타이어 공기압 경고(TPMS)가 켜져 있습니다. 바퀴 위치는 확인할 수 없습니다."
+# Location edit (RENTCARE-10): pick a point on the map → marked as edited for the vendor.
+$UI tap "지도에서 위치 고르기"; sleep 3; "$ADB" shell input swipe 1800 1100 1800 600 400; sleep 2; $UI tapdescre "map-picker"; sleep 1
+wait_for "S4 location edited on the map is flagged" "직접 수정함" 5
 $UI tap "제주 데모렌터카에 보내기에 동의"; sleep 1; $UI tap "접수 보내기"
 wait_step "S4 received" "^기본 접수 완료 · (완료|진행 중)$" 15
 receipt=$($UI texts | grep -oE 'RC-[0-9]{8}-[0-9]{4}' | head -1)
@@ -81,6 +84,7 @@ curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-
 id=$(curl -s -b "$jar" "$B/vendor" | grep -oE "/vendor/incidents/[0-9a-f-]{36}" | head -1)
 page=$(curl -s -b "$jar" "$B$id")
 [[ "$page" == *"$receipt"* && "$page" == *"타이어 공기압 경고"* && "$page" == *"타이어 이상"* ]] && ok "S4 vendor sees $receipt, TIRE, TPMS" || bad "S4 vendor detail"
+[[ "$page" == *"사용자가 수정함"* ]] && ok "S4 vendor sees the location was edited by the user" || bad "S4 vendor edited flag"
 curl -s -b "$jar" -o /dev/null -X POST "$B$id?/acknowledge" -H "Origin: $B" -H 'Content-Type: application/x-www-form-urlencoded' -d ''
 $UI tap "새로고침" || true
 wait_step "S4 car shows staff seen" "^업체 담당자 확인 · (완료|진행 중)$" 20
@@ -192,6 +196,11 @@ python3 -c 'import struct,zlib,sys;r=lambda t,d:struct.pack(">I",len(d))+t+d+str
 local_before=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
 up=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/m/upload" -H "Origin: $B" -F "code=$code" -F "file=@$png;type=image/png")
 [[ "$up" == 201 ]] && ok "S8 phone upload accepted" || bad "S8 phone upload (http $up)"
+# Attachment failure keeps the report: a fake PNG is refused, the report stays received on the car.
+printf 'not an image' > "$png.bad.png"
+up=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/m/upload" -H "Origin: $B" -F "code=$code" -F "file=@$png.bad.png;type=image/png")
+[[ "$up" == 415 ]] && ok "S8 bad file refused (415)" || bad "S8 bad file http $up"
+wait_step "S8 report still received after the failed upload" "^Report received · (Done|In progress)$" 5
 local_after=$(find web/storage -type f 2>/dev/null | wc -l | tr -d ' ')
 [[ "$local_before" == "$local_after" ]] && ok "S8 file went to object storage, not local disk" || bad "S8 file written locally ($local_before -> $local_after)"
 jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
@@ -209,6 +218,8 @@ wait_step "S7 car shows staff seen in English" "^Seen by rental company staff ·
 check "S8 car shows 1 attachment" "Photos/videos: 1"
 rm -f "$jar"
 $UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
+$UI tap "접수 상태"; sleep 2
+$UI texts | grep -qF "$receipt" && $UI has "사진·영상: 1개" && ok "S7 after switching to Korean: same receipt $receipt and 1 attachment" || bad "S7 language switch lost the receipt or attachments"
 
 echo "== S9 phone-only basic report with the car's rental code (car screen unusable)"
 if [[ -n "${pcode:-}" ]]; then
