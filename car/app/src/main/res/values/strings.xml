@@ -193,4 +193,26 @@
     <string name="wheel_rr">rear right</string>
     <string name="reason_unsupported">not supported by this car</string>
     <string name="reason_read_error">read failed</string>
+    <string name="volt_title">12V battery (dashboard light)</string>
+    <string name="volt_low">The car shows a low 12V battery warning.</string>
+    <string name="volt_note">This is the car\'s signal only. We do not predict when it may run flat or whether the car will start.</string>
+    <string name="volt_request">Write a 12V battery check request</string>
+    <string name="warn_tpms">Tire pressure warning</string>
+    <string name="warn_low_volt_battery">12V battery warning</string>
+    <string name="warn_engine">Engine warning</string>
+    <string name="warn_engine_oil_pressure">Engine oil pressure warning</string>
+    <string name="warn_engine_temperature">Engine overheating warning</string>
+    <string name="warn_master_warning">Master warning</string>
+    <string name="warn_abs">ABS warning</string>
+    <string name="warn_esc">Stability control (ESC) warning</string>
+    <string name="warn_mdps">Power steering (MDPS) warning</string>
+    <string name="warn_airbag">Airbag warning</string>
+    <string name="warn_ev_system">EV system warning</string>
+    <string name="warn_hev_system">Hybrid system warning</string>
+    <string name="warn_power_down">Power reduced</string>
+    <string name="warn_low_ev_battery">Low drive battery</string>
+    <string name="warn_low_fuel">Low fuel</string>
+    <string name="warn_door_open">Door open</string>
+    <string name="warn_trunk_open">Trunk open</string>
+    <string name="warn_immobilizer">Immobilizer warning</string>
 </resources>

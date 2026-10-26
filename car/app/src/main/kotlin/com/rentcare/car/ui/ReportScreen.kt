@@ -90,10 +90,20 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
 
         val tire by vm.tire.collectAsStateWithLifecycle()
         tire?.let { t -> TireSection(t, allowed) { vm.updateDraft { it.copy(type = IncidentType.TIRE) } } }
+        val volt by vm.volt.collectAsStateWithLifecycle()
+        if (volt == com.rentcare.core.LampSignal.ON) {
+            Section(stringResource(R.string.volt_title)) {
+                Text(stringResource(R.string.volt_low), color = LocalStatusColors.current.progress, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.volt_note), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = { vm.updateDraft { it.copy(type = IncidentType.WARNING_LIGHT) } }, enabled = allowed) {
+                    Text(stringResource(R.string.volt_request))
+                }
+            }
+        }
 
         if (warnings.isNotEmpty()) {
             Section(stringResource(R.string.report_warnings_title)) {
-                Text(warnings.joinToString(" · "))
+                Text(warnings.map { c -> warningLabel(c)?.let { stringResource(it) } ?: c }.joinToString(" · "))
                 Text(stringResource(R.string.report_warnings_note), style = MaterialTheme.typography.bodySmall)
             }
         }

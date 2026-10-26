@@ -193,4 +193,26 @@
     <string name="wheel_rr">뒤 오른쪽</string>
     <string name="reason_unsupported">이 차량에서 지원하지 않음</string>
     <string name="reason_read_error">읽기 실패</string>
+    <string name="volt_title">12V 배터리 (계기판 경고등)</string>
+    <string name="volt_low">차량에 12V 배터리 부족 경고가 켜져 있습니다.</string>
+    <string name="volt_note">차량 신호를 그대로 전달할 뿐이며, 방전 시각이나 시동 가능 여부는 판단하지 않습니다.</string>
+    <string name="volt_request">12V 배터리 점검 요청으로 작성</string>
+    <string name="warn_tpms">타이어 공기압 경고</string>
+    <string name="warn_low_volt_battery">12V 배터리 경고</string>
+    <string name="warn_engine">엔진 경고</string>
+    <string name="warn_engine_oil_pressure">엔진오일 압력 경고</string>
+    <string name="warn_engine_temperature">엔진 과열 경고</string>
+    <string name="warn_master_warning">마스터 경고</string>
+    <string name="warn_abs">ABS 경고</string>
+    <string name="warn_esc">차체자세제어(ESC) 경고</string>
+    <string name="warn_mdps">전동 조향(MDPS) 경고</string>
+    <string name="warn_airbag">에어백 경고</string>
+    <string name="warn_ev_system">전기차 시스템 경고</string>
+    <string name="warn_hev_system">하이브리드 시스템 경고</string>
+    <string name="warn_power_down">출력 제한</string>
+    <string name="warn_low_ev_battery">구동 배터리 부족</string>
+    <string name="warn_low_fuel">연료 부족</string>
+    <string name="warn_door_open">문 열림</string>
+    <string name="warn_trunk_open">트렁크 열림</string>
+    <string name="warn_immobilizer">이모빌라이저 경고</string>
 </resources>

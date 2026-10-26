@@ -26,6 +26,7 @@ import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
 import com.rentcare.core.WaypointCoords
 import com.rentcare.core.TireCheck
+import com.rentcare.core.LampSignal
 import com.rentcare.core.Reading
 import com.rentcare.core.Gear
 import com.rentcare.core.InputGate
@@ -344,6 +345,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** RENTCARE-33: what the car's own signals say about tire pressure (no diagnosis). */
     val tire: StateFlow<TireCheck.Result?> = _tire
 
+    private val _volt = MutableStateFlow(LampSignal.UNKNOWN)
+    /** RENTCARE-32: 12V battery low lamp (dashboard). ON = low signal only; no prediction. */
+    val volt: StateFlow<LampSignal> = _volt
+
     fun loadWarnings() {
         work.launch { token ->
             val read = runCatching { deps.vehicle.activeTelltales() }
@@ -367,6 +372,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _telltales.value = list
             val tire = TireCheck.of(lamp, pressures, thresholds, now)
             _tire.value = tire
+            _volt.value = LampSignal.of(read.getOrNull()?.map { it.type.name }, if (read.isSuccess) now else null, "LOW_VOLT_BATTERY", now)
             val suggested = if (tire.warningCodes().isNotEmpty()) IncidentType.TIRE else Warnings.suggestType(list.map { it.type.name })
             if (suggested != null) updateDraft { if (it.type == null) it.copy(type = suggested) else it }
         }

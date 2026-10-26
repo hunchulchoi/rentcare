@@ -84,7 +84,7 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
         if (faults.isNotEmpty()) {
             Section(stringResource(R.string.telltales_title)) {
                 Text(stringResource(R.string.telltales_note), style = MaterialTheme.typography.bodySmall)
-                faults.forEach { Text("• ${it.type} (${it.state})") }
+                faults.forEach { f -> Text("• " + (warningLabel(f.type.name)?.let { stringResource(it) } ?: f.type.name)) }
             }
         }
 

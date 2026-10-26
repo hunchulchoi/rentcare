@@ -54,7 +54,7 @@ tailscale funnel --bg 3000                       # public HTTPS for the local se
 scripts/vconsole.sh soc 55      # forwards 8088 and keeps a console session alive
 
 # End-to-end scenarios (emulator + production server on 127.0.0.1:3000 + Funnel). Run before every demo/release.
-scripts/e2e.sh                  # wipes app data on the emulator, 39 checks, against the LOCAL server: builds the
+scripts/e2e.sh                  # wipes app data on the emulator, 40 checks, against the LOCAL server: builds the
                                 # app for LOCAL_BASE_URL, S6 stops/starts the local server, then reinstalls the
                                 # app for the deployed server (E2E_RESTORE=0 to skip).
 ```
@@ -78,6 +78,8 @@ scripts/e2e.sh                  # wipes app data on the emulator, 39 checks, aga
 - Tire (2026-10-26): per-wheel `getTirePressure` is NOT supported on the emulator (TIRE_PRESSURE missing);
   `getLowTirePressure` = fixed threshold 137.0 on all wheels; console tire pressure (`vconsole.sh tire FL 120`)
   does not reach the SDK nor light TPMS. Only the TPMS lamp is a live signal → TireCheck (core).
+- 12V: no Connect SDK API for the auxiliary battery; only the `LOW_VOLT_BATTERY` lamp (needs PRIVATE_CAR_SAFETY,
+  debug only) → release builds show tire/12V lamp signals as unknown until Pleos allows it (RENTCARE-26).
 - **Never toggle airplane mode on the emulator** (`cmd connectivity airplane-mode`): the guest loses its
   network and does not recover; a reboot hung the emulator (2026-10-22). Simulate outages by stopping the
   local server instead.
