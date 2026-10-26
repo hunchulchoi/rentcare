@@ -57,6 +57,25 @@ class ReturnPlannerTest {
         assertEquals(85, a.currentPercent)
     }
 
+    @Test fun `gasoline - plan example 40 target, 28 now, 3 points to go - short 15 points`() {
+        // 50 L tank, 15 km/L: 3 % of the tank = 1.5 L = 22.5 km. Worst case adds the 15 % model error.
+        val model = GasolineModel(tankLiters = 50.0, kmPerLiter = 15.0)
+        val r = rental(Powertrain.GASOLINE, ReturnRule.FuelTarget(targetPercent = 40))
+        val a = planner.assess(r, VehicleState(fuelPercent = Reading(28, now)), TripEstimate(22_500, 1_800, null, now), now, model)
+        assertEquals(Verdict.REFUEL, a.verdict)
+        assertEquals(15, a.shortfallMinPoints)
+        assertEquals(16, a.shortfallMaxPoints) // 15.45 rounded up
+        assertEquals(7.5, assertNotNull(a.refuelLiters).start, 0.01)
+    }
+
+    @Test fun `gasoline - below target now without a model - only the certain minimum shortfall`() {
+        val r = rental(Powertrain.GASOLINE, ReturnRule.FuelTarget(targetPercent = 40))
+        val a = planner.assess(r, VehicleState(fuelPercent = Reading(28, now)), trip(50, 60), now)
+        assertEquals(12, a.shortfallMinPoints)
+        assertNull(a.shortfallMaxPoints) // route consumption unknown: no upper bound, no guess
+        assertNull(a.refuelLiters)
+    }
+
     @Test fun `gasoline - stale reading - info missing`() {
         val old = now - 11 * 60_000L
         val a = planner.assess(gas, VehicleState(fuelPercent = Reading(90, old)), trip(10, 10), now, avante)

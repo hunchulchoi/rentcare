@@ -215,4 +215,8 @@
     <string name="warn_door_open">Door open</string>
     <string name="warn_trunk_open">Trunk open</string>
     <string name="warn_immobilizer">Immobilizer warning</string>
+    <string name="shortfall_label">Short of the target</string>
+    <string name="shortfall_range">%1$d–%2$d%%p</string>
+    <string name="shortfall_exact">%1$d%%p</string>
+    <string name="shortfall_min">At least %1$d%%p (driving use not counted)</string>
 </resources>

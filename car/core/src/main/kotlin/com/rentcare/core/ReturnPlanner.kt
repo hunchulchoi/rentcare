@@ -76,6 +76,10 @@ data class Assessment(
     val settlementCostWon: Int? = null,
     /** Minutes spent at the station/charger. null = needed but unknown. 0 = no stop. */
     val stopMinutes: Int? = 0,
+    /** Gasoline: percentage points short of the target on arrival (nominal..worst case). */
+    val shortfallMinPoints: Int? = null,
+    /** null with a min = upper bound unknown (no verified model): never guessed. */
+    val shortfallMaxPoints: Int? = null,
 )
 
 /** Pure calculation. No I/O, no clock: pass [nowMillis]. */
@@ -148,6 +152,7 @@ class ReturnPlanner(private val config: PlannerConfig = PlannerConfig()) {
                 return Assessment(
                     Verdict.REFUEL, reasons + Reason.BELOW_TARGET_NOW, current, target,
                     stopMinutes = config.refuelStopMinutes,
+                    shortfallMinPoints = target - current,
                     settlementCostWon = rule.settlement?.let { (target - current) * it.wonPerPercent },
                 )
             }
@@ -181,6 +186,8 @@ class ReturnPlanner(private val config: PlannerConfig = PlannerConfig()) {
             verdict, reasons, current, target, projectedInt,
             refuelLiters = litersLow..litersHigh, refuelCostWon = cost,
             settlementCostWon = settlement, stopMinutes = config.refuelStopMinutes,
+            shortfallMinPoints = (target - projected).roundToInt(),
+            shortfallMaxPoints = ceil(target - projectedWorst).toInt(),
         )
     }
 

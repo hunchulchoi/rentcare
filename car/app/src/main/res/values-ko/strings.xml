@@ -215,4 +215,8 @@
     <string name="warn_door_open">문 열림</string>
     <string name="warn_trunk_open">트렁크 열림</string>
     <string name="warn_immobilizer">이모빌라이저 경고</string>
+    <string name="shortfall_label">목표까지 부족</string>
+    <string name="shortfall_range">%1$d–%2$d%%p</string>
+    <string name="shortfall_exact">%1$d%%p</string>
+    <string name="shortfall_min">최소 %1$d%%p (이동 중 소모 미반영)</string>
 </resources>

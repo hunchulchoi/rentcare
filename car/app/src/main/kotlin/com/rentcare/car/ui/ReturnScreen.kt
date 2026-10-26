@@ -49,6 +49,15 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
                 KeyValue(stringResource(R.string.target_level), a.targetPercent?.let { "$it %" } ?: stringResource(R.string.rule_ev_waived))
                 KeyValue(stringResource(R.string.arrival_level), a.projectedArrivalPercent?.let { "$it %" } ?: "-")
                 KeyValue(stringResource(R.string.read_at), fmtTime(ui.state.soc?.readAtMillis ?: ui.state.fuelPercent?.readAtMillis))
+                a.shortfallMinPoints?.let { min ->
+                    val max = a.shortfallMaxPoints
+                    KeyValue(
+                        stringResource(R.string.shortfall_label),
+                        if (max != null && max != min) stringResource(R.string.shortfall_range, min, max)
+                        else if (max != null) stringResource(R.string.shortfall_exact, min)
+                        else stringResource(R.string.shortfall_min, min),
+                    )
+                }
                 a.refuelLiters?.let {
                     KeyValue(stringResource(R.string.refuel_liters), "%.1f – %.1f L".format(it.start, it.endInclusive))
                 }
