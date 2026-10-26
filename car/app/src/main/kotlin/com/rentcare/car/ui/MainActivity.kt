@@ -91,9 +91,13 @@ private fun Localized(lang: String, content: @Composable () -> Unit) {
         cfg.setLocale(Locale.forLanguageTag(lang))
         base.createConfigurationContext(cfg)
     }
+    // The localized context is not an Activity: hand over the Activity's result registry explicitly,
+    // otherwise rememberLauncherForActivityResult (photo picker) cannot find it and crashes.
+    val registry = checkNotNull(androidx.activity.compose.LocalActivityResultRegistryOwner.current)
     CompositionLocalProvider(
         LocalContext provides ctx,
         LocalConfiguration provides ctx.resources.configuration,
+        androidx.activity.compose.LocalActivityResultRegistryOwner provides registry,
         content = content,
     )
 }

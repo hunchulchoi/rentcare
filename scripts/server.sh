@@ -18,8 +18,10 @@ start() {
 }
 stop() {
   local p; p=$(pid); [[ -z "$p" ]] && { echo "not running"; return 0; }
-  kill "$p"; for _ in $(seq 1 10); do [[ -z "$(pid)" ]] && { echo "stopped"; return 0; }; sleep 1; done
-  echo "still running (pid $p)" >&2; return 1
+  kill "$p"
+  # Wait for the process itself to exit (closing the port is not enough), then force this PID only.
+  for _ in $(seq 1 15); do kill -0 "$p" 2>/dev/null || { echo "stopped"; return 0; }; sleep 1; done
+  kill -9 "$p" 2>/dev/null; echo "stopped (forced pid $p)"
 }
 case "${1:-}" in
   start) start ;; stop) stop ;; restart) stop && start ;;

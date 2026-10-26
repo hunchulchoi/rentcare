@@ -61,6 +61,9 @@ data class IncidentCreated(
 )
 
 @Serializable
+data class AttachCreated(val attachmentId: String, val attachments: Int)
+
+@Serializable
 data class IncidentStatusDto(
     val id: String,
     val receiptNo: String,

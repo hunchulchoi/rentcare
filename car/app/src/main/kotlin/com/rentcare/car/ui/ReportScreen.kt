@@ -237,6 +237,7 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
                 }
             }
         }
+        CarAttachSection(vm)
         rental?.let { Text(stringResource(R.string.emergency_contact, it.vendorName, it.vendorPhone), fontWeight = FontWeight.Bold) }
         OutlinedButton(onClick = { vm.newReport(); onNew() }) { Text(stringResource(R.string.new_report)) }
     }
@@ -318,6 +319,76 @@ private fun TireSection(t: TireCheck.Result, allowed: Boolean, onRequest: () -> 
         if (t.warningCodes().isNotEmpty()) {
             Text(stringResource(R.string.tire_note), style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = onRequest, enabled = allowed) { Text(stringResource(R.string.tire_request)) }
+        }
+    }
+}
+
+/** RENTCARE-12: pick photos/videos in the car (system photo picker only) and upload with progress. */
+@Composable
+private fun CarAttachSection(vm: AppViewModel) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val gate by vm.inputGate.collectAsStateWithLifecycle()
+    val uploads by vm.uploads.collectAsStateWithLifecycle()
+    val allowed = gate == InputGate.Decision.ALLOWED
+    val available = remember { androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.isPhotoPickerAvailable(ctx) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia(5),
+    ) { uris -> if (uris.isNotEmpty()) vm.attachFromCar(uris) }
+    Section(stringResource(R.string.car_attach_title)) {
+        if (!available) {
+            Text(stringResource(R.string.car_attach_none))
+            return@Section
+        }
+        Button(
+            onClick = {
+                launcher.launch(
+                    androidx.activity.result.PickVisualMediaRequest(
+                        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageAndVideo,
+                    ),
+                )
+            },
+            enabled = allowed,
+        ) { Text(stringResource(R.string.car_attach_pick)) }
+        if (!allowed) Text(stringResource(R.string.car_attach_parked), style = MaterialTheme.typography.bodySmall)
+        uploads.forEachIndexed { n, u ->
+            val s = u.state
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${n + 1}.", fontWeight = FontWeight.Bold)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val text = when (s) {
+                        AppViewModel.CarUpload.State.Waiting -> stringResource(R.string.up_waiting)
+                        AppViewModel.CarUpload.State.Uploading ->
+                            stringResource(R.string.up_uploading, if (u.total > 0) (u.sent * 100 / u.total).toInt() else 0)
+                        AppViewModel.CarUpload.State.Done -> stringResource(R.string.up_done)
+                        is AppViewModel.CarUpload.State.Failed -> stringResource(R.string.up_failed, s.message)
+                        is AppViewModel.CarUpload.State.Rejected -> stringResource(
+                            when (s.check) {
+                                com.rentcare.core.AttachPolicy.Check.TooLarge -> R.string.up_too_large
+                                com.rentcare.core.AttachPolicy.Check.Unknown -> R.string.up_unknown
+                                com.rentcare.core.AttachPolicy.Check.TooMany -> R.string.up_too_many
+                                else -> R.string.up_unsupported
+                            },
+                        )
+                    }
+                    Text(
+                        text,
+                        color = when (s) {
+                            AppViewModel.CarUpload.State.Done -> LocalStatusColors.current.active
+                            is AppViewModel.CarUpload.State.Failed, is AppViewModel.CarUpload.State.Rejected -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
+                    )
+                    if (s == AppViewModel.CarUpload.State.Uploading) {
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { if (u.total > 0) u.sent.toFloat() / u.total else 0f },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+                if (s is AppViewModel.CarUpload.State.Failed && s.retryable) {
+                    OutlinedButton(onClick = { vm.retryUpload(u.key) }) { Text(stringResource(R.string.up_retry)) }
+                }
+            }
         }
     }
 }

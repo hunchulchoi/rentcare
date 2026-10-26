@@ -145,6 +145,24 @@ after=$(vendor_count)
 [[ $((after - before)) -eq 1 ]] && ok "S6c vendor list grew by exactly 1 ($before -> $after)" || bad "S6c vendor count $before -> $after"
 rm -f "$jar"
 
+echo "== S8b car direct attach: system photo picker -> upload with progress"
+# Put one test photo into the car user's MediaStore (user build: no root, so via the content provider).
+png=$(mktemp -d)/car.png
+python3 -c 'import struct,zlib,sys;r=lambda t,d:struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d));open(sys.argv[1],"wb").write(b"\x89PNG\r\n\x1a\n"+r(b"IHDR",struct.pack(">IIBBBBB",64,64,8,2,0,0,0))+r(b"IDAT",zlib.compress(b"".join(b"\x00"+b"\x00\x75\x6f"*64 for _ in range(64))))+r(b"IEND",b""))' "$png"
+"$ADB" push "$png" /data/local/tmp/e2e_car.png >/dev/null
+CU=$("$ADB" shell am get-current-user | tr -d '\r')
+MS=content://media/external_primary/images/media
+"$ADB" shell content insert --user "$CU" --uri $MS --bind _display_name:s:e2e_car_$RANDOM.png --bind mime_type:s:image/png --bind relative_path:s:Pictures/ >/dev/null
+row=$("$ADB" shell content query --user "$CU" --uri $MS --projection _id | grep -oE '_id=[0-9]+' | cut -d= -f2 | sort -n | tail -1)
+"$ADB" shell "content write --user $CU --uri $MS/$row < /data/local/tmp/e2e_car.png"
+"$ADB" shell content update --user "$CU" --uri $MS/$row --bind is_pending:i:0 >/dev/null
+rm -rf "$(dirname "$png")"
+$UI tap "접수 상태"; sleep 2
+$UI tap "차량에서 사진·영상 고르기"; sleep 5
+$UI tapdescre "촬영한 사진|Photo taken" && sleep 1 && $UI tap "추가(1)" || "$ADB" shell input keyevent 4
+wait_for "S8b car upload finished" "전송 완료" 30
+check "S8b car shows 1 attachment" "사진·영상: 1개"
+
 echo "== S7 English user: car in English, vendor in Korean, phone page in English"
 $UI tap "대여 정보"; sleep 1; $UI tap "English"; sleep 2
 $UI tap "Status"; sleep 1; $UI tap "New report"; sleep 2

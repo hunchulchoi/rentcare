@@ -42,6 +42,11 @@ export async function purgeExpired(now = new Date(), days = config.retentionDays
 
 let timer: ReturnType<typeof setInterval> | undefined;
 
+export function stopRetention(): void {
+	if (timer) clearInterval(timer);
+	timer = undefined;
+}
+
 /** Run at start and every 6 hours (a stopped container under Sablier simply runs it at its next start). */
 export function scheduleRetention(): void {
 	if (timer || !config.databaseUrl) return;

@@ -17,6 +17,13 @@ export function db(): postgres.Sql {
 	return client;
 }
 
+/** Close the pool so the process can exit on shutdown (otherwise idle connections keep it alive). */
+export async function closeDb(): Promise<void> {
+	const c = client;
+	client = undefined;
+	await c?.end({ timeout: 5 });
+}
+
 export const DEMO_VENDOR_ID = 'demo-jeju';
 export const DEMO_VENDOR_NAME = '제주 데모렌터카';
 

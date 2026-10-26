@@ -1,6 +1,7 @@
 package com.rentcare.car.data
 
 import com.rentcare.core.ApiError
+import com.rentcare.core.AttachCreated
 import com.rentcare.core.IncidentCreated
 import com.rentcare.core.IncidentRequest
 import com.rentcare.core.IncidentStatusDto
@@ -53,6 +54,43 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
             .get()
             .build()
         return execute(request, IncidentStatusDto.serializer())
+    }
+
+    /**
+     * Car direct attach (docs/api.md): streams the file (no full copy in memory) and reports progress.
+     * Multipart POST needs Origin = our base URL (SvelteKit CSRF check).
+     */
+    suspend fun uploadAttachment(
+        id: String, incidentToken: String, fileName: String, mime: String, size: Long,
+        open: () -> java.io.InputStream, onProgress: (sent: Long, total: Long) -> Unit,
+    ): ApiResult<AttachCreated> {
+        val part = object : okhttp3.RequestBody() {
+            override fun contentType() = mime.toMediaType()
+            override fun contentLength() = size
+            override fun writeTo(sink: okio.BufferedSink) {
+                open().use { input ->
+                    val buf = ByteArray(64 * 1024)
+                    var sent = 0L
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        sink.write(buf, 0, n)
+                        sent += n
+                        onProgress(sent, size)
+                    }
+                }
+            }
+        }
+        val body = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
+            .addFormDataPart("file", fileName, part).build()
+        val request = Request.Builder()
+            .url("$baseUrl/api/incidents/$id/attachments")
+            .header("Authorization", "Bearer $apiKey")
+            .header("X-Incident-Token", incidentToken)
+            .header("Origin", baseUrl)
+            .post(body)
+            .build()
+        return execute(request, AttachCreated.serializer())
     }
 
     /** Map tile PNG from our tile proxy (docs/api.md). Null when unavailable; the map just stays blank. */

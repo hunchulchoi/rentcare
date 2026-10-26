@@ -26,6 +26,7 @@ import com.rentcare.core.NOTE_MAX_LENGTH
 import com.rentcare.core.Powertrain
 import com.rentcare.core.WaypointCoords
 import com.rentcare.core.TireCheck
+import com.rentcare.core.AttachPolicy
 import com.rentcare.core.LampSignal
 import com.rentcare.core.Reading
 import com.rentcare.core.Gear
@@ -225,6 +226,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Rental ended: wipe rental data, reports, codes. Vehicle state is not ours to reset. */
     fun endRental() {
         work.reset() // cancel sends, polls, reads; invalidate late callbacks first
+        _uploads.value = emptyList()
         statusJob?.cancel()
         liveJob?.cancel()
         deps.store.clearAll()
@@ -333,6 +335,73 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     it.copy(naviStops = stops, routeMessage = if (stops.isEmpty()) "NO_WAYPOINTS" else "IMPORTED ${stops.size}")
                 }
             }.onFailure { e -> _ret.update { it.copy(routeMessage = "ROUTE_FAIL: ${e.message}") } }
+        }
+    }
+
+    // ---- Car direct attach (RENTCARE-12) ----
+
+    data class CarUpload(val key: Long, val uri: String, val sent: Long, val total: Long, val state: State) {
+        sealed interface State {
+            data object Waiting : State
+            data object Uploading : State
+            data object Done : State
+            data class Failed(val message: String, val retryable: Boolean) : State
+            data class Rejected(val check: AttachPolicy.Check) : State
+        }
+    }
+
+    private val _uploads = MutableStateFlow<List<CarUpload>>(emptyList())
+    val uploads: StateFlow<List<CarUpload>> = _uploads
+    private var uploadKey = 0L
+
+    /** Files the renter picked in the car's photo picker. Uploaded one by one. */
+    fun attachFromCar(uris: List<android.net.Uri>) {
+        val added = uris.map { CarUpload(++uploadKey, it.toString(), 0, 0, CarUpload.State.Waiting) }
+        _uploads.update { it + added }
+        added.forEach { upload(it.key) }
+    }
+
+    fun retryUpload(key: Long) {
+        _uploads.update { l -> l.map { if (it.key == key) it.copy(state = CarUpload.State.Waiting, sent = 0) else it } }
+        upload(key)
+    }
+
+    private fun upload(key: Long) {
+        val rec = _report.value.received ?: return
+        work.launch { token ->
+            val item = _uploads.value.firstOrNull { it.key == key } ?: return@launch
+            val cr = getApplication<android.app.Application>().contentResolver
+            val uri = android.net.Uri.parse(item.uri)
+            val mime = cr.getType(uri)
+            val size = runCatching {
+                cr.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { c ->
+                    if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+                }
+            }.getOrNull()
+            val inFlight = _uploads.value.count { it.key != key && it.state is CarUpload.State.Uploading }
+            fun set(f: (CarUpload) -> CarUpload) = _uploads.update { l -> l.map { if (it.key == key) f(it) else it } }
+            when (val check = AttachPolicy.check(mime, size, already = _report.value.attachments + inFlight)) {
+                is AttachPolicy.Check.Ok -> {
+                    set { it.copy(state = CarUpload.State.Uploading, total = size!!) }
+                    val res = deps.api.uploadAttachment(
+                        rec.id, rec.incidentToken, check.fileName, mime!!, size!!,
+                        open = { cr.openInputStream(uri) ?: throw java.io.IOException("cannot open") },
+                        onProgress = { sent, total -> set { it.copy(sent = sent, total = total) } },
+                    )
+                    if (!work.isCurrent(token)) return@launch
+                    when (res) {
+                        is ApiResult.Ok -> {
+                            set { it.copy(state = CarUpload.State.Done, sent = it.total) }
+                            _report.update { it.copy(attachments = res.value.attachments) }
+                        }
+                        is ApiResult.Network -> set { it.copy(state = CarUpload.State.Failed(res.message, retryable = true)) }
+                        is ApiResult.Http -> set {
+                            it.copy(state = CarUpload.State.Failed("${res.code} ${res.error?.error ?: ""}".trim(), retryable = res.code >= 500 || res.code == 429))
+                        }
+                    }
+                }
+                else -> set { it.copy(state = CarUpload.State.Rejected(check)) }
+            }
         }
     }
 
@@ -484,6 +553,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun newReport() {
+        _uploads.value = emptyList()
         statusJob?.cancel()
         deps.store.saveReceived(null)
         _report.value = ReportUi()
