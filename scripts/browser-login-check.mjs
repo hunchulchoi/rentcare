@@ -58,7 +58,16 @@ try {
 			await sleep(60);
 		}
 		const verified = await waitFor(`!!document.querySelector('.notice')`, 15000);
-		const pass = boxes === codeCheck.slice(0, 5) && verified;
+		let locOk = true;
+		if (process.argv.includes('--send-location') && verified) {
+			// Phone location fallback: grant geolocation and fake a fix at Jeju airport.
+			await send('Browser.grantPermissions', { permissions: ['geolocation'], origin: new URL(base).origin });
+			await send('Emulation.setGeolocationOverride', { latitude: 33.5066, longitude: 126.4929, accuracy: 25 });
+			await evalJs(`[...document.querySelectorAll('section.loc button')][0].click()`);
+			locOk = await waitFor(`/위치를 보냈습니다|Location sent|이미 있어|already there/.test(document.querySelector('section.loc')?.innerText ?? '')`, 20000);
+			console.log(`${locOk ? 'PASS' : 'FAIL'} phone location: ${(await evalJs(`document.querySelector('section.loc [role]')?.innerText`)) ?? 'no message'}`);
+		}
+		const pass = boxes === codeCheck.slice(0, 5) && verified && locOk;
 		console.log(`${pass ? 'PASS' : 'FAIL'} 6-box code: typed '${typed}' → boxes before last key=${boxes}, auto-verified on 6th=${verified}`);
 		process.exitCode = pass ? 0 : 1;
 		ws.close();

@@ -234,4 +234,8 @@
     <string name="up_too_many">전송 안 함: 이미 10개</string>
     <string name="reason_level_unsupported">이 차량은 앱에 연료·배터리 잔량을 제공하지 않습니다. 계기판을 확인하세요.</string>
     <string name="reason_level_denied">연료·배터리 잔량을 읽을 권한이 없습니다. 계기판을 확인하세요.</string>
+    <string name="map_pick_open">지도에서 위치 고르기</string>
+    <string name="map_pick_close">지도 닫기</string>
+    <string name="map_pick_hint">차가 있는 곳을 누르세요. +/−로 확대·축소합니다. 직접 입력한 위치로 표시됩니다.</string>
+    <string name="not_insurance">이 접수는 렌터카 업체에만 전달됩니다. 보험사 사고 접수가 아니므로 필요하면 보험사에 따로 연락하세요.</string>
 </resources>

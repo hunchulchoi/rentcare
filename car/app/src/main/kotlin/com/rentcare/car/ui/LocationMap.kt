@@ -2,6 +2,9 @@ package com.rentcare.car.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,4 +115,64 @@ private fun Pin(m: MapMarker, x: Double, y: Double) {
                 .background(m.color, RoundedCornerShape(14.dp)).padding(horizontal = 10.dp, vertical = 2.dp),
         ) { Text(it, color = Color.White, style = MaterialTheme.typography.labelMedium) }
     }
+}
+
+/**
+ * Pick a point by tapping a static map (RENTCARE-10 fallback when the car location is missing or wrong).
+ * Tap = choose and re-center there; +/- = zoom. No panning gestures (simple, no motion).
+ */
+@Composable
+fun MapPicker(vm: AppViewModel, start: MapTiles.Point, onPick: (MapTiles.Point) -> Unit, height: Dp = 340.dp) {
+    var center by remember(start) { mutableStateOf(start) }
+    var zoom by remember { mutableStateOf(15) }
+    var picked by remember { mutableStateOf<MapTiles.Point?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        BoxWithConstraints(
+            Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            val w = maxWidth.value.toInt()
+            val h = maxHeight.value.toInt()
+            val density = androidx.compose.ui.platform.LocalDensity.current.density
+            val view = MapTiles.View(center, zoom)
+            val grid = remember(center, zoom, w, h) { MapTiles.grid(center.lat, center.lon, zoom, w, h) }
+            Box(
+                Modifier.fillMaxWidth().height(height).pointerInput(center, zoom, w, h) {
+                    detectTapGestures { o ->
+                        val p = MapTiles.fromView(o.x / density.toDouble(), o.y / density.toDouble(), view, w, h)
+                        picked = p
+                        center = p
+                        onPick(p)
+                    }
+                },
+            ) {
+                grid.tiles.forEach { t ->
+                    key(t.zoom, t.x, t.y) {
+                        val img by produceState<ImageBitmap?>(null, t.zoom, t.x, t.y) { value = vm.mapTile(t.zoom, t.x, t.y) }
+                        img?.let { Image(it, contentDescription = null, modifier = Modifier.offset(t.left.dp, t.top.dp).size(MapTiles.TILE.dp)) }
+                    }
+                }
+                picked?.let { p ->
+                    val (x, y) = MapTiles.toView(p, view, w, h)
+                    Icon(Icons.Filled.Place, contentDescription = null, tint = PinRed, modifier = Modifier.offset((x - 28).dp, (y - 52).dp).size(56.dp))
+                }
+            }
+            Column(Modifier.align(Alignment.TopEnd).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ZoomButton("+", zoom < MapTiles.MAX_PROXY_ZOOM) { zoom++ }
+                ZoomButton("−", zoom > MapTiles.MIN_PROXY_ZOOM) { zoom-- }
+            }
+            Box(Modifier.align(Alignment.BottomEnd).background(Color(0xD9FFFFFF), RoundedCornerShape(topStart = 12.dp))) {
+                Text("© OpenStreetMap contributors", color = Color(0xFF131417), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZoomButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(Color.White)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, color = if (enabled) Color(0xFF131417) else Color(0xFFA4A8AE), style = MaterialTheme.typography.headlineSmall) }
 }

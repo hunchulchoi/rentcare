@@ -1,7 +1,8 @@
 import type postgres from 'postgres';
 import { ATTACH_CODE_TTL_MS, generateAttachCode } from '../attach-code';
 import { MAX_FILE_BYTES, MAX_FILES_PER_INCIDENT, magicMatches, resolveMime, sanitizeDisplayName } from '../files';
-import type { IncidentStatus, IncidentType } from '../i18n';
+import type { IncidentStatus, IncidentType, LocationSource } from '../i18n';
+import { mayPhoneSetLocation, type PhoneLocation } from '../phone-location.ts';
 import { formatReceiptNo, isoZ, kstDayKey } from '../receipt';
 import { sha256Hex } from './crypto';
 import { incidentTokenMatches, issueIncidentToken } from './incident-token';
@@ -119,6 +120,20 @@ export async function releaseIncident(id: string): Promise<void> {
 	await db().begin(async (sql) => {
 		await sql`update attach_codes set revoked_at = now() where incident_id = ${id} and revoked_at is null`;
 		await sql`update incidents set car_token_hash = null where id = ${id}`;
+	});
+}
+
+/** Phone location fallback (RENTCARE-10). 'kept' = the car GPS or a picked point is already there. */
+export async function setPhoneLocation(id: string, loc: PhoneLocation): Promise<'saved' | 'kept'> {
+	return db().begin(async (sql) => {
+		const rows = await sql<{ location_source: LocationSource | null }[]>`
+			select location_source from incidents where id = ${id} for update`;
+		if (!rows.length || !mayPhoneSetLocation(rows[0].location_source)) return 'kept';
+		await sql`
+			update incidents set latitude = ${loc.latitude}, longitude = ${loc.longitude}, address = null,
+				location_read_at = now(), location_source = 'MOBILE', location_edited = false
+			where id = ${id}`;
+		return 'saved';
 	});
 }
 

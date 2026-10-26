@@ -91,3 +91,14 @@ class MapChooseTest {
         assertEquals(434.0, MapTiles.distanceKm(now, ret), 10.0)
     }
 }
+
+class MapPickTest {
+    @Test fun `tapping the view returns the point drawn there (inverse of toView)`() {
+        val v = MapTiles.View(MapTiles.Point(37.4127, 127.0947), 16)
+        assertEquals(37.4127, MapTiles.fromView(400.0, 150.0, v, 800, 300).lat, 1e-6) // center
+        val p = MapTiles.Point(37.4150, 127.0990)
+        val (x, y) = MapTiles.toView(p, v, 800, 300)
+        val back = MapTiles.fromView(x, y, v, 800, 300)
+        assertEquals(p.lat, back.lat, 1e-6); assertEquals(p.lon, back.lon, 1e-6)
+    }
+}

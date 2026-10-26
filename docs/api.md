@@ -188,6 +188,15 @@ Map tile for the car's static location map. `Authorization: Bearer CAR_API_KEY`.
   case-insensitive; spaces/hyphens are ignored. Revoked/unknown → `code_invalid`, past 24h → `code_expired`.
   Too many failed code checks from one IP (10 / 10 min) → `429 rate_limited`.
 
+### POST /m/location (v10, 2026-10-26)
+
+Phone location fallback when the car could not send one. Form fields `code` (attach code, body only), `lat`, `lon`,
+`accuracy` (m, ≤ 5000). Response `{ "location": "saved" | "kept" }`.
+
+- `saved`: the report had no location or an earlier phone location; now `source: MOBILE`.
+- `kept`: a car GPS (`VEHICLE`) or a point picked on the car map (`MANUAL`) is already there — never replaced.
+- Invalid code → `400 code_invalid` (rate-limited like the other attach-code endpoints).
+
 ## Vendor (web pages, cookie session)
 
 - `/vendor/login` — staff token login (demo: env `DEMO_VENDOR_TOKEN` for vendor `demo-jeju`).

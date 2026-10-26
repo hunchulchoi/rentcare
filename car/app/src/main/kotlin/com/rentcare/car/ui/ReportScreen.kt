@@ -68,6 +68,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
         Text(stringResource(R.string.report_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.parked_notice), style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.emergency_contact, r.vendorName, r.vendorPhone), fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.not_insurance), style = MaterialTheme.typography.bodySmall)
         if (!allowed) {
             Text(
                 stringResource(if (gate == InputGate.Decision.BLOCKED_DRIVING) R.string.blocked_driving else R.string.blocked_not_parked),
@@ -121,17 +122,33 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
                 }
                 d.locationError -> Text(stringResource(R.string.location_failed), color = MaterialTheme.colorScheme.error)
             }
-            var lat by remember(loc) { mutableStateOf(loc?.latitude?.toString().orEmpty()) }
-            var lon by remember(loc) { mutableStateOf(loc?.longitude?.toString().orEmpty()) }
+            var picking by remember { mutableStateOf(false) }
             WrapRow {
                 OutlinedButton(onClick = vm::loadVehicleLocation, enabled = allowed) { Text(stringResource(R.string.load_location)) }
-                Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true, enabled = allowed)
-                Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true, enabled = allowed)
-                OutlinedButton(enabled = allowed, onClick = {
-                    val la = lat.toDoubleOrNull()
-                    val lo = lon.toDoubleOrNull()
-                    if (la != null && lo != null && la in -90.0..90.0 && lo in -180.0..180.0) vm.editLocation(la, lo)
-                }) { Text(stringResource(R.string.location_edit)) }
+                OutlinedButton(onClick = { picking = !picking }, enabled = allowed) {
+                    Text(stringResource(if (picking) R.string.map_pick_close else R.string.map_pick_open))
+                }
+            }
+            if (picking && allowed) {
+                Text(stringResource(R.string.map_pick_hint), style = MaterialTheme.typography.bodySmall)
+                val start = loc?.let { com.rentcare.core.MapTiles.Point(it.latitude, it.longitude) }
+                    ?: r.returnPlace.latitude?.let { la -> r.returnPlace.longitude?.let { lo -> com.rentcare.core.MapTiles.Point(la, lo) } }
+                    ?: com.rentcare.core.MapTiles.Point(37.5665, 126.9780)
+                MapPicker(vm, start, onPick = { p -> vm.editLocation(p.lat, p.lon) })
+            }
+            // Typing coordinates is for development only (renters pick on the map).
+            if (BuildConfig.DEBUG) {
+                var lat by remember(loc) { mutableStateOf(loc?.latitude?.toString().orEmpty()) }
+                var lon by remember(loc) { mutableStateOf(loc?.longitude?.toString().orEmpty()) }
+                WrapRow {
+                    Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true, enabled = allowed)
+                    Field(stringResource(R.string.return_lon), lon, { lon = it }, number = true, enabled = allowed)
+                    OutlinedButton(enabled = allowed, onClick = {
+                        val la = lat.toDoubleOrNull()
+                        val lo = lon.toDoubleOrNull()
+                        if (la != null && lo != null && la in -90.0..90.0 && lo in -180.0..180.0) vm.editLocation(la, lo)
+                    }) { Text(stringResource(R.string.location_edit)) }
+                }
             }
         }
 

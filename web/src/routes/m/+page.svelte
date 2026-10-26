@@ -21,6 +21,33 @@
 	let code = $state('');
 	let formEl = $state<HTMLFormElement>();
 	let verifiedCode = $state(''); // kept in memory only; sent in POST bodies
+	let locState = $state<'idle' | 'saving' | 'saved' | 'kept' | 'denied' | 'failed'>('idle');
+
+	/** RENTCARE-10: phone location when the car could not send one (the server never replaces a car location). */
+	function sendLocation() {
+		if (!navigator.geolocation) {
+			locState = 'denied';
+			return;
+		}
+		locState = 'saving';
+		navigator.geolocation.getCurrentPosition(
+			async (pos) => {
+				const body = new FormData();
+				body.append('code', verifiedCode);
+				body.append('lat', String(pos.coords.latitude));
+				body.append('lon', String(pos.coords.longitude));
+				body.append('accuracy', String(Math.round(pos.coords.accuracy)));
+				try {
+					const res = await fetch('/m/location', { method: 'POST', body });
+					locState = res.ok ? ((await res.json()).location === 'saved' ? 'saved' : 'kept') : 'failed';
+				} catch {
+					locState = 'failed';
+				}
+			},
+			() => (locState = 'denied'),
+			{ enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+		);
+	}
 	let verifying = $state(false);
 	let uploading = $state(false);
 	let items = $state<Item[]>([]);
@@ -195,7 +222,18 @@
 			<p class="ok" role="status">{t.allDone}</p>
 		{/if}
 
-		<p><a href={`/m?lang=${lang}`} data-sveltekit-reload>{t.otherCode}</a></p>
+		<section class="loc">
+			<h2>{t.locationTitle}</h2>
+			<p class="retention">{t.locationNote}</p>
+			<button type="button" class="secondary" onclick={sendLocation} disabled={locState === 'saving' || locState === 'saved'}>
+				{locState === 'saving' ? t.locationSaving : t.locationButton}
+			</button>
+			{#if locState === 'saved'}<p role="status" class="ok">{t.locationSaved}</p>{/if}
+			{#if locState === 'kept'}<p role="status">{t.locationKept}</p>{/if}
+			{#if locState === 'denied'}<p role="alert" class="error">{t.locationDenied}</p>{/if}
+			{#if locState === 'failed'}<p role="alert" class="error">{t.locationFailed}</p>{/if}
+		</section>
+	<p><a href={`/m?lang=${lang}`} data-sveltekit-reload>{t.otherCode}</a></p>
 	<p class="retention">{t.retention}</p>
 	{/if}
 </main>

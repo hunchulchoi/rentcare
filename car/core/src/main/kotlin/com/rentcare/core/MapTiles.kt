@@ -84,6 +84,13 @@ object MapTiles {
         return (px - cx + widthPx / 2.0) to (py - cy + heightPx / 2.0)
     }
 
+    /** Point drawn at view pixel ([x], [y]) — used to pick a location by tapping the static map. */
+    fun fromView(x: Double, y: Double, v: View, widthPx: Int, heightPx: Int): Point {
+        val (cx, cy) = world(v.center, v.zoom)
+        val scale = (1 shl v.zoom).toDouble()
+        return fromWorld0((cx + x - widthPx / 2.0) / scale, (cy + y - heightPx / 2.0) / scale)
+    }
+
     /**
      * Closest zoom (within the proxy range) where every point fits inside the view minus [paddingPx],
      * centered on the points' bounding box. One point → [DEFAULT_ZOOM].
