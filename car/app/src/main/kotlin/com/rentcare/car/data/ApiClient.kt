@@ -5,6 +5,8 @@ import com.rentcare.core.AttachCreated
 import com.rentcare.core.IncidentCreated
 import com.rentcare.core.IncidentRequest
 import com.rentcare.core.IncidentStatusDto
+import com.rentcare.core.RentalRegistered
+import com.rentcare.core.RentalRegistration
 import com.rentcare.core.RentcareJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -66,6 +68,30 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
             .post(ByteArray(0).toRequestBody(null))
             .build()
         runCatching { http.newCall(request).execute().use { it.code == 204 } }.getOrDefault(false)
+    }
+
+    /** Rental saved (docs/api.md v11): returns the rental code for the phone basic report. */
+    suspend fun registerRental(req: RentalRegistration, idempotencyKey: String): ApiResult<RentalRegistered> {
+        val body = RentcareJson.encodeToString(RentalRegistration.serializer(), req).toRequestBody(jsonType)
+        val request = Request.Builder()
+            .url("$baseUrl/api/rentals")
+            .header("Authorization", "Bearer $apiKey")
+            .header("Idempotency-Key", idempotencyKey)
+            .post(body)
+            .build()
+        return execute(request, RentalRegistered.serializer())
+    }
+
+    /** Rental ended (v11): the rental code stops working. 404 = already released. */
+    suspend fun releaseRental(rentalToken: String): Boolean = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("$baseUrl/api/rentals/release")
+            .header("Authorization", "Bearer $apiKey")
+            .header("X-Rental-Token", rentalToken)
+            .header("Origin", baseUrl)
+            .post(ByteArray(0).toRequestBody(null))
+            .build()
+        runCatching { http.newCall(request).execute().use { it.code == 204 || it.code == 404 } }.getOrDefault(false)
     }
 
     /**

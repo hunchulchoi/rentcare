@@ -37,7 +37,7 @@
     <string name="save">저장</string>
     <string name="cancel">취소</string>
     <string name="end_rental">반납 완료</string>
-    <string name="end_rental_confirm">이 차량에 저장된 대여 정보·접수 기록·첨부 코드를 삭제합니다.</string>
+    <string name="end_rental_confirm">이 차량에 저장된 대여 정보·접수 기록·첨부 코드를 삭제합니다. 휴대폰 접수 코드도 더 이상 쓸 수 없습니다.</string>
     <string name="no_rental">먼저 대여 정보를 입력하세요.</string>
     <string name="return_title">반납 준비</string>
     <string name="refresh">새로고침</string>
@@ -238,4 +238,11 @@
     <string name="map_pick_close">지도 닫기</string>
     <string name="map_pick_hint">차가 있는 곳을 누르세요. +/−로 확대·축소합니다. 직접 입력한 위치로 표시됩니다.</string>
     <string name="not_insurance">이 접수는 렌터카 업체에만 전달됩니다. 보험사 사고 접수가 아니므로 필요하면 보험사에 따로 연락하세요.</string>
+    <!-- RENTCARE-13: 휴대폰 기본 접수 -->
+    <string name="phone_link_title">휴대폰 접수 코드</string>
+    <string name="phone_link_intro">시동이 안 걸리는 등 이 화면을 쓸 수 없을 때, 휴대폰으로 QR을 찍고 이 코드를 입력하면 차량 없이 신고할 수 있습니다. 지금 사진으로 찍어 두세요.</string>
+    <string name="phone_link_valid">%1$s까지 유효</string>
+    <string name="phone_link_registering">코드 받는 중…</string>
+    <string name="phone_link_failed">코드를 받지 못했습니다 (%1$s). 차량 신고는 코드 없이도 됩니다.</string>
+    <string name="phone_link_retry">다시 시도</string>
 </resources>

@@ -54,6 +54,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.util.UUID
+import com.rentcare.core.PhoneReportLink
 
 data class ReturnInputs(
     val gasolineModel: GasolineModel? = null,
@@ -154,6 +155,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _probeRunning = MutableStateFlow(false)
     val probeRunning: StateFlow<Boolean> = _probeRunning
 
+    /** RENTCARE-13: rental code for the phone basic report. */
+    data class PhoneLinkUi(val link: PhoneReportLink? = null, val registering: Boolean = false, val error: String? = null)
+
+    private val _phoneLink = MutableStateFlow(PhoneLinkUi(deps.store.loadPhoneLink()))
+    val phoneLink: StateFlow<PhoneLinkUi> = _phoneLink
+
     /** All work for the current rental; reset on rental end (Codex review: late replies). */
     private val work = RentalWork(viewModelScope)
     private var statusJob: Job? = null
@@ -179,6 +186,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         if (_report.value.received != null) startStatusPolling()
+        // Rentals saved before RENTCARE-13, or a registration that failed offline.
+        if (_rental.value != null && _phoneLink.value.link?.registered == null) registerPhoneLink()
         viewModelScope.launch {
             // Re-subscribe when the rental (and so the powertrain) changes.
             _rental.collect { r -> startLiveLevel(r?.powertrain) }
@@ -212,12 +221,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val language: String get() = _rental.value?.language ?: "ko"
 
+    /** Register (or re-register) the saved rental. Offline is fine: the card shows a retry. */
+    fun registerPhoneLink() {
+        val r = _rental.value ?: return
+        val plan = PhoneReportLink.plan(_phoneLink.value.link, r) { UUID.randomUUID().toString() }
+        plan.releaseToken?.let { old -> viewModelScope.launch { withTimeoutOrNull(5_000) { deps.api.releaseRental(old) } } }
+        deps.store.savePhoneLink(plan.link)
+        _phoneLink.value = PhoneLinkUi(plan.link)
+        if (!plan.register) return
+        work.launch { token ->
+            _phoneLink.update { it.copy(registering = true, error = null) }
+            val res = deps.api.registerRental(PhoneReportLink.request(r), plan.link.idempotencyKey)
+            work.ifCurrent(token) {
+                when (res) {
+                    is ApiResult.Ok -> {
+                        val done = plan.link.copy(registered = res.value)
+                        deps.store.savePhoneLink(done)
+                        _phoneLink.value = PhoneLinkUi(done)
+                    }
+                    is ApiResult.Http -> _phoneLink.update { it.copy(registering = false, error = res.error?.error ?: "http_${res.code}") }
+                    is ApiResult.Network -> _phoneLink.update { it.copy(registering = false, error = "network") }
+                }
+            }
+        }
+    }
+
     // ---- Rental ----
 
     fun saveRental(r: Rental) {
         deps.store.saveRental(r)
         _rental.value = r
         refreshReturn()
+        registerPhoneLink()
     }
 
     fun setLanguage(lang: String) {
@@ -231,6 +266,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         _report.value.received?.let { rec ->
             viewModelScope.launch { withTimeoutOrNull(5_000) { deps.api.release(rec.id, rec.incidentToken) } }
         }
+        _phoneLink.value.link?.registered?.let { reg ->
+            viewModelScope.launch { withTimeoutOrNull(5_000) { deps.api.releaseRental(reg.rentalToken) } }
+        }
+        _phoneLink.value = PhoneLinkUi()
         work.reset() // cancel sends, polls, reads; invalidate late callbacks first
         _uploads.value = emptyList()
         statusJob?.cancel()

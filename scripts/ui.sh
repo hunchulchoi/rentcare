@@ -26,6 +26,7 @@ case "${1:-}" in
     read -r x1 y1 x2 y2 <<< "$(echo "$b" | tr '[],' '   ')"
     "$ADB" shell input tap $(( (x1+x2)/2 )) $(( (y1+y2)/2 )) ;;
   texts) dump | grep -oE 'text="[^"]+"' | sed 's/^text="//; s/"$//' ;;
+  descs) dump | grep -oE 'content-desc="[^"]+"' | sed 's/^content-desc="//; s/"$//' ;;
   has) dump | grep -qF "text=\"$2\"" ;;
   hasdesc) dump | grep -qF "content-desc=\"$2\"" ;;
   hasdescre) dump | grep -oE 'content-desc="[^"]*"' | sed 's/^content-desc="//; s/"$//' | grep -qE "$2" ;;

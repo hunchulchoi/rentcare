@@ -43,6 +43,12 @@ $UI tap "대여 정보"; sleep 1
 $UI tap "데모 EV 계약 불러오기"; sleep 1
 $UI tap "저장"
 
+echo "== S0 phone report code (RENTCARE-13): shown on the rental screen after the first save"
+for _ in $(seq 1 15); do pcode=$($UI descs 2>/dev/null | grep -oE 'phone-code [A-Z0-9]{8}' | head -1 | cut -d' ' -f2); [[ -n "$pcode" ]] && break; sleep 1; done
+[[ -n "${pcode:-}" ]] && ok "S0 rental registered, code shown" || bad "S0 no phone report code"
+$UI texts | grep -q "지금 사진으로 찍어 두세요" && ok "S0 tells the renter to photograph it" || bad "S0 photo hint"
+$UI tap "반납 준비"; sleep 1
+
 echo "== S1 EV same-SOC return: 60% now, contract 80% -> charge"
 wait_for "S1 verdict charge" "반납 전 충전 필요" 25
 check "S1 shows current SOC" "60 %"
@@ -204,6 +210,19 @@ check "S8 car shows 1 attachment" "Photos/videos: 1"
 rm -f "$jar"
 $UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
 
+echo "== S9 phone-only basic report with the car's rental code (car screen unusable)"
+if [[ -n "${pcode:-}" ]]; then
+  out=$(node scripts/browser-login-check.mjs "$B" --rental-check "$pcode" --width 400 2>&1)
+  prec=$(echo "$out" | grep -oE '^RECEIPT=RC-[0-9-]+' | cut -d= -f2)
+  [[ -n "$prec" ]] && ok "S9 phone report $prec filed in a real browser (code typed, location, consent)" || bad "S9 phone report: $(echo "$out" | tr '\n' '|')"
+  jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$B/vendor/login" -H "Origin: $B" --data-urlencode "token=$tok" --data-urlencode "name=e2e"
+  vl=$(curl -s -b "$jar" "$B/vendor"); rm -f "$jar"
+  row=$(echo "$vl" | python3 -I -c 'import sys;s=sys.stdin.read();i=s.find(sys.argv[1]+"</a>");print(s[i:i+600] if i>=0 else "")' "${prec:-none}")
+  [[ "$row" == *"휴대폰 접수"* ]] && ok "S9 vendor list marks it 휴대폰 접수" || bad "S9 vendor badge"
+else
+  bad "S9 skipped: no rental code from S0"
+fi
+
 echo "== S5 end rental wipes local data"
 $UI tap "대여 정보"; sleep 1; $UI tap "반납 완료"; sleep 1; $UI tap "반납 완료" 2; sleep 2
 $UI tap "접수 상태"; sleep 1
@@ -211,6 +230,8 @@ check "S5 no report after rental end" "보낸 접수가 없습니다."
 sleep 3
 v=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=$code")
 [[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the last attach code on the server" || bad "S5 attach code still valid after rental end"
+v=$(curl -s -X POST "$B/r?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=${pcode:-none}")
+[[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the phone report code" || bad "S5 phone report code still valid after rental end"
 
 echo "== result: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

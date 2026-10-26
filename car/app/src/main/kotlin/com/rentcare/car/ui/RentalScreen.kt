@@ -14,14 +14,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.rentcare.core.UrlPolicy
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rentcare.car.BuildConfig
 import com.rentcare.car.R
+import com.rentcare.core.PhoneReportLink
 import com.rentcare.core.Place
+import com.rentcare.core.IsoTime
 import com.rentcare.core.Powertrain
 import com.rentcare.core.Rental
 import com.rentcare.core.ReturnRule
@@ -120,9 +129,13 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
     var form by remember(rental) { mutableStateOf(rental?.let(RentalForm::from) ?: RentalForm()) }
     var invalid by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-    Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val scroll = rememberScrollState()
+    Column(modifier.verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.rental_title), style = MaterialTheme.typography.headlineSmall)
+
+        if (rental != null) PhoneLinkCard(vm, rental!!.language)
 
         WrapRow {
             Text(stringResource(R.string.lang_label))
@@ -206,8 +219,10 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
                 val r = form.toRental()
                 invalid = r == null
                 if (r != null) {
+                    val first = rental == null
                     vm.saveRental(r)
-                    onSaved()
+                    // First save: stay so the renter sees (and photographs) the phone report code at the top.
+                    if (first) scope.launch { scroll.animateScrollTo(0) } else onSaved()
                 }
             }) { Text(stringResource(R.string.save)) }
             if (rental != null) {
@@ -229,5 +244,37 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { confirmEnd = false }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+/** RENTCARE-13: rental code and QR (plain URL) for a phone report when the car screen cannot be used. */
+@Composable
+private fun PhoneLinkCard(vm: AppViewModel, language: String) {
+    val ui by vm.phoneLink.collectAsStateWithLifecycle()
+    val reg = ui.link?.registered
+    Section(stringResource(R.string.phone_link_title)) {
+        when {
+            reg != null -> Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                val url = PhoneReportLink.urlIn(reg.reportUrl, language)
+                if (UrlPolicy.isSafeAttachUrl(url, BuildConfig.API_BASE_URL)) QrCode(url, size = 150.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        PhoneReportLink.display(reg.rentalCode),
+                        style = MaterialTheme.typography.headlineMedium.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold),
+                        modifier = Modifier.semantics { contentDescription = "phone-code " + reg.rentalCode },
+                    )
+                    Text(stringResource(R.string.phone_link_intro), style = MaterialTheme.typography.bodyMedium)
+                    Text(url, style = MaterialTheme.typography.bodySmall)
+                    IsoTime.millis(reg.rentalCodeExpiresAt)?.let {
+                        Text(stringResource(R.string.phone_link_valid, fmtDateTime(it)), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            ui.error != null -> {
+                Text(stringResource(R.string.phone_link_failed, ui.error!!), color = MaterialTheme.colorScheme.error)
+                OutlinedButton(onClick = { vm.registerPhoneLink() }) { Text(stringResource(R.string.phone_link_retry)) }
+            }
+            else -> Text(stringResource(R.string.phone_link_registering))
+        }
     }
 }

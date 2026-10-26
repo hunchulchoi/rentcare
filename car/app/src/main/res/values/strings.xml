@@ -37,7 +37,7 @@
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>
     <string name="end_rental">End rental</string>
-    <string name="end_rental_confirm">This deletes rental info, reports and attach codes from this car.</string>
+    <string name="end_rental_confirm">This deletes rental info, reports and attach codes from this car. The phone report code stops working.</string>
     <string name="no_rental">Enter rental information first.</string>
     <string name="return_title">Return preparation</string>
     <string name="refresh">Refresh</string>
@@ -238,4 +238,11 @@
     <string name="map_pick_close">Close the map</string>
     <string name="map_pick_hint">Tap where the car is. +/- to zoom. The point is marked as entered by you.</string>
     <string name="not_insurance">This goes to the rental company only. It is not an insurance claim; contact the insurer separately if needed.</string>
+    <!-- RENTCARE-13: phone basic report -->
+    <string name="phone_link_title">Phone report code</string>
+    <string name="phone_link_intro">If this screen cannot be used (e.g. the car does not start), scan the QR with your phone and type this code to report without the car. Take a photo of it now.</string>
+    <string name="phone_link_valid">Valid until %1$s</string>
+    <string name="phone_link_registering">Getting the code…</string>
+    <string name="phone_link_failed">Could not get the code (%1$s). The car report works without it.</string>
+    <string name="phone_link_retry">Try again</string>
 </resources>
