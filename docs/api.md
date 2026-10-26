@@ -171,7 +171,9 @@ Response `201` (`200` on replay: new code and token, the previous ones stop work
 ## POST /api/rentals/release (v11)
 
 Rental end. Headers: `Authorization`, `X-Rental-Token`, `Origin`. `204`, then `404` for the same token
-(already released — the car treats both as done). Revokes the rental code and the token.
+(already released — the car treats both as done). Revokes the rental code and the token, and the attach
+codes and car tokens of every report of this rental (same vendor, rental id and plate since registration,
+or filed with the rental code).
 
 ## Phone basic report `/r` (v11)
 

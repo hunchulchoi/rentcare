@@ -57,13 +57,26 @@ export async function registerRental(input: RentalRegistration, idempotencyKey: 
 	});
 }
 
-/** Rental end: revoke the code and the token. True if the token matched (idempotent per token). */
+/**
+ * Rental end: revoke the rental code and token, and the attach codes and car tokens of every report filed
+ * during this rental (the car only remembers its latest report). True if the token matched.
+ */
 export async function releaseRental(token: string): Promise<boolean> {
-	const rows = await db()`
-		update rentals set code_hash = null, code_expires_at = null, car_token_hash = null, released_at = now()
-		where car_token_hash = ${sha256Hex(token)}
-		returning id`;
-	return rows.length === 1;
+	return db().begin(async (sql) => {
+		const rows = await sql<{ id: string }[]>`
+			update rentals set code_hash = null, code_expires_at = null, car_token_hash = null, released_at = now()
+			where car_token_hash = ${sha256Hex(token)}
+			returning id`;
+		if (rows.length !== 1) return false;
+		const reports = sql`
+			select i.id from incidents i join rentals r on r.id = ${rows[0].id}
+			where i.rental_ref = r.id
+				or (i.vendor_id = r.vendor_id and i.rental_id = r.rental_id and i.vehicle_plate = r.vehicle_plate
+					and i.created_at >= r.created_at)`;
+		await sql`update attach_codes set revoked_at = now() where revoked_at is null and incident_id in (${reports})`;
+		await sql`update incidents set car_token_hash = null where id in (${reports})`;
+		return true;
+	});
 }
 
 export interface CodeRental {

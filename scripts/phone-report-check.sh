@@ -58,5 +58,7 @@ for i in 2 3 4 5; do rep "$(uuidgen | tr A-Z a-z)" OTHER >/dev/null; done
 st=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/rentals/release" -H "Origin: $B" -H "Authorization: Bearer $car" -H "X-Rental-Token: $rtok")
 [[ "$st" == 204 ]] && ok "rental end (204)" || bad "release http $st"
 [[ "$(act verify --data-urlencode "code=$c2")" == *code_invalid* ]] && ok "code revoked after rental end" || bad "code works after rental end"
+m=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=$acode")
+[[ "$m" == *code_invalid* ]] && ok "attach code of the rental's report revoked too" || bad "report attach code still works after rental end"
 rm -rf "$d"
 echo "== result: $pass passed, $fail failed"; [[ $fail -eq 0 ]]

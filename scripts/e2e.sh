@@ -222,6 +222,19 @@ $UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
 $UI tap "접수 상태"; sleep 2
 $UI texts | grep -qF "$receipt" && $UI has "사진·영상: 1개" && ok "S7 after switching to Korean: same receipt $receipt and 1 attachment" || bad "S7 language switch lost the receipt or attachments"
 
+echo "== S7b English: not received while the server is down, resend once (RENTCARE-31)"
+$UI tap "대여 정보"; sleep 1; $UI tap "English"; sleep 2
+$UI tap "Status"; sleep 1; $UI tap "New report"; sleep 2; $UI tap "Other"; sleep 1
+$UI tap "Send to 제주 데모렌터카"; sleep 1
+server_stop
+$UI tap "Send report"
+wait_for "S7b English: not received, resend offered" "There is an unsent report." 40
+check "S7b English: says resend is safe" "Not delivered yet. Sending again will not create a duplicate."
+server_start
+$UI tap "Send again"
+wait_step "S7b English: received after resend" "^Report received · (Done|In progress)$" 30
+$UI tap "Rental"; sleep 1; $UI tap "한국어"; sleep 2
+
 echo "== S9 phone-only basic report with the car's rental code (car screen unusable)"
 if [[ -n "${pcode:-}" ]]; then
   out=$(node scripts/browser-login-check.mjs "$B" --rental-check "$pcode" --width 400 2>&1)
@@ -241,7 +254,7 @@ $UI tap "접수 상태"; sleep 1
 check "S5 no report after rental end" "보낸 접수가 없습니다."
 sleep 3
 v=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=$code")
-[[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the last attach code on the server" || bad "S5 attach code still valid after rental end"
+[[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the attach code of an earlier report (S7) on the server" || bad "S5 attach code still valid after rental end"
 v=$(curl -s -X POST "$B/r?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=${pcode:-none}")
 [[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the phone report code" || bad "S5 phone report code still valid after rental end"
 
