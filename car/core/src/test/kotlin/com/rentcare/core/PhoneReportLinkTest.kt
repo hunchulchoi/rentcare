@@ -59,7 +59,8 @@ class PhoneReportLinkTest {
     @Test fun `QR follows the current language and never carries the code`() {
         assertEquals("https://h.example/r?lang=en", PhoneReportLink.urlIn("https://h.example/r?lang=ko", "en"))
         assertEquals("https://h.example/r?lang=ko", PhoneReportLink.urlIn("https://h.example/r", "ko"))
-        assertEquals("https://h.example/r", PhoneReportLink.urlIn("https://h.example/r?lang=ko", "ja"))
+        assertEquals("https://h.example/r?lang=ja", PhoneReportLink.urlIn("https://h.example/r?lang=ko", "ja"))
+        assertEquals("https://h.example/r", PhoneReportLink.urlIn("https://h.example/r?lang=ko", "fr"))
     }
 
     @Test fun `code is shown in two groups of four`() {

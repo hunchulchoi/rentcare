@@ -139,7 +139,10 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
 
         WrapRow {
             Text(stringResource(R.string.lang_label))
-            listOf("ko" to "한국어", "en" to "English").forEach { (code, label) ->
+            // ja / zh are unreviewed drafts (RENTCARE-31): debug builds only, marked as drafts.
+            val names = mapOf("ko" to "한국어", "en" to "English", "ja" to "日本語", "zh" to "中文")
+            com.rentcare.core.Languages.offered(BuildConfig.DEBUG).forEach { code ->
+                val label = names.getValue(code) + if (com.rentcare.core.Languages.isReviewed(code)) "" else " (draft)"
                 FilterChip(
                     selected = form.language == code,
                     onClick = {

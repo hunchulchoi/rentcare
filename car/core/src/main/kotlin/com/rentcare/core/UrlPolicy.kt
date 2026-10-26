@@ -5,7 +5,7 @@ import java.net.URI
 /** Pleos security guide: HTTPS only, domain names (no IPs), no tokens in URLs. */
 object UrlPolicy {
     /** UI languages the phone page supports (web/src/lib/i18n.ts UI_LANGS). */
-    private val langQueries = setOf("lang=ko", "lang=en")
+    private val langQueries = Languages.ALL.map { "lang=$it" }.toSet()
 
     private val ipv4 = Regex("""^\d{1,3}(\.\d{1,3}){3}$""")
 

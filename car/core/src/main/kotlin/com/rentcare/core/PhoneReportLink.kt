@@ -50,12 +50,10 @@ data class PhoneReportLink(
             return Plan(PhoneReportLink(fp, newKey()), true, current?.registered?.rentalToken)
         }
 
-        private val uiLangs = setOf("ko", "en")
-
         /** QR address in the renter's current language; only `lang` may ride along, never the code. */
         fun urlIn(reportUrl: String, language: String): String {
             val base = reportUrl.substringBefore('?').substringBefore('#')
-            return if (language in uiLangs) "$base?lang=$language" else base
+            return if (language in Languages.ALL) "$base?lang=$language" else base
         }
 
         fun display(code: String): String = code.chunked(4).joinToString(" ")

@@ -243,13 +243,16 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
         }
         Section(stringResource(R.string.attach_title)) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (UrlPolicy.isSafeAttachUrl(rec.attachUrl, BuildConfig.API_BASE_URL)) {
-                    QrCode(rec.attachUrl)
+                // Checked as the server sent it, then shown in the car's current language (RENTCARE-31).
+                val attachUrl = rec.attachUrl.takeIf { UrlPolicy.isSafeAttachUrl(it, BuildConfig.API_BASE_URL) }
+                    ?.let { com.rentcare.core.PhoneReportLink.urlIn(it, vm.language) }
+                if (attachUrl != null) {
+                    QrCode(attachUrl)
                 } else {
                     Text(stringResource(R.string.attach_url_rejected), color = MaterialTheme.colorScheme.error)
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.attach_step1, rec.attachUrl))
+                    Text(stringResource(R.string.attach_step1, attachUrl ?: "-"))
                     Text(stringResource(R.string.attach_step2))
                     Text(rec.attachCode, fontFamily = FontFamily.Monospace, fontSize = 40.sp, fontWeight = FontWeight.Bold)
                     Text(stringResource(R.string.attach_expires, fmtDateTime(IsoTime.millis(rec.attachCodeExpiresAt))), style = MaterialTheme.typography.bodySmall)

@@ -33,8 +33,13 @@ try {
 	await new Promise((r) => ws.addEventListener('open', r));
 	let id = 0;
 	const pending = new Map();
+	const posts = []; // POST responses, printed when a check fails
+	const postIds = new Set();
 	ws.addEventListener('message', (e) => {
 		const m = JSON.parse(e.data);
+		if (m.method === 'Network.requestWillBeSent' && m.params.request.method === 'POST') postIds.add(m.params.requestId);
+		if (m.method === 'Network.responseReceived' && postIds.has(m.params.requestId)) posts.push(`${m.params.response.status} ${m.params.response.url}`);
+		if (m.method === 'Network.loadingFailed' && postIds.has(m.params.requestId)) posts.push(`failed ${m.params.errorText}`);
 		if (m.id && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
 	});
 	const send = (method, params = {}) => new Promise((r) => { const n = ++id; pending.set(n, r); ws.send(JSON.stringify({ id: n, method, params })); });
@@ -42,6 +47,7 @@ try {
 	const waitFor = async (expr, ms = 70000) => { for (let t = 0; t < ms; t += 500) { if (await evalJs(expr)) return true; await sleep(500); } return false; };
 
 	await send('Page.enable');
+	await send('Network.enable');
 	await send('Emulation.setDeviceMetricsOverride', { width, height: 1000, deviceScaleFactor: 1, mobile: width < 600 });
 	const capture = async (file) => {
 		if (!file) return;
@@ -77,6 +83,8 @@ try {
 			console.log(`${loc ? 'PASS' : 'FAIL'} phone location added: ${await evalJs(`document.querySelector('section.loc [role]')?.innerText`)}`);
 			await evalJs(`document.querySelector('input[name=consent]').click()`);
 			await capture(shot && shot.replace(/\.png$/, '-2-form.png'));
+			// The button enables after the page re-renders the consent tick; clicking earlier does nothing.
+			await waitFor(`!document.querySelector('form[action*=report] button[type=submit]')?.disabled`, 5000);
 			await evalJs(`document.querySelector('form[action*=report] button[type=submit]').click()`);
 			filed = await waitFor(`!!document.querySelector('[data-receipt]')`, 20000);
 			receipt = await evalJs(`document.querySelector('[data-receipt]')?.dataset.receipt`);
@@ -84,6 +92,8 @@ try {
 			await capture(shot && shot.replace(/\.png$/, '-3-done.png'));
 			filed = filed && /^RC-/.test(receipt ?? '') && /^[A-Z0-9]{6}$/.test(attach ?? '') && loc;
 			console.log(`${filed ? 'PASS' : 'FAIL'} report filed: ${receipt} attach code ${attach ? 'shown' : 'missing'}`);
+			if (!filed) console.log(`  posts: ${posts.join(' | ') || 'none'}`);
+			if (!filed) console.log(`  page: ${String(await evalJs(`document.querySelector('main')?.innerText`)).replace(/\s+/g, ' ').slice(0, 300)}`);
 			console.log(`RECEIPT=${receipt}`);
 		}
 		process.exitCode = verified && filed ? 0 : 1;

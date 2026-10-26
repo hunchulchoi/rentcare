@@ -61,7 +61,7 @@
 | 사진 추가 (차량, 시스템 사진 선택기) | **에뮬레이터** | e2e S8b "car upload finished", "car shows 1 attachment" |
 | 영상 추가 (차량, 시스템 사진 선택기) | **에뮬레이터** + 서버 | `scripts/demo-record.sh attach` (2026-10-26): 사진 1 + MP4 1 선택 → 차량 "사진·영상: 2개", 업체 상세에 `video/mp4` (RC-20261026-0137). e2e에는 아직 없음 |
 | 첨부 실패 후 접수 유지 | 서버 + 에뮬레이터 | e2e "S8 bad file refused (415)", "S8 report still received after the failed upload" |
-| 미수신 표시 → 재시도 1회만 접수 | 에뮬레이터 + 서버 | e2e S6b (서버 정지 → 미접수·재시도 → 복구 후 1건만 증가) |
+| 미수신 표시 → 재시도 1회만 접수 | 에뮬레이터 + 서버 | e2e S6b (서버 정지 → 미접수·재시도 → 복구 후 1건만 증가), S7b 영어 |
 | 앱 재시작 후 미전송 접수 유지·재전송 | 에뮬레이터 + 서버 | e2e S6c |
 | 중복 방지 (같은 키 5번 동시) | 서버 | e2e S6a "one id for 5 parallel posts" |
 | 업체 확인 → 차량에 표시 | 에뮬레이터 + 서버 + 브라우저 | e2e S4 "car shows staff seen", S7 영어 |
@@ -80,7 +80,7 @@
 | 언어 변경 후 접수번호·첨부 유지 | 에뮬레이터 | e2e "S7 after switching to Korean: same receipt … and 1 attachment" |
 | 번역 누락 | 모의 | `scripts/i18n-check.sh` (차량), `i18n.test.ts` (웹: 휴대폰·접수 문자열 키 일치, 오류 문구 전부 존재) |
 | 휴대폰 접수 `/r` 영어 | 브라우저 | `browser-login-check.mjs --rental-check … --lang en` |
-| 일본어·중국어 | 미구현 | RENTCARE-31 (검수된 번역 필요) |
+| 일본어·중국어 (검수 전 초안) | 에뮬레이터 + 서버 + 브라우저 | 2026-10-26 수동: 차량 일본어 접수 RC-20261026-0169 → 업체 "일본어 / 시동 불가 / 원문 메모", 휴대폰 /m 일본어 + 검수 전 안내, 차량 중국어 전환 후 같은 접수·QR `lang=zh`; `/r` 중국어·일본어 브라우저 접수 5/5. 문자열 짝: `i18n-check.sh` 250×4, `i18n.test.ts`. **원어민 검수 전** — release 빌드에는 선택지 없음 |
 
 ## 타이어·12V (조건부)
 
@@ -94,4 +94,4 @@
 
 - **실차**: 모든 항목. 특히 휘발유 잔량, 바퀴별 공기압, 실제 위치 이동, 주행 중 앱 차단(에뮬레이터는 막지 않음).
 - **앱 심사 허용 여부**: 경고등·capability 권한(`PRIVATE_CAR_SAFETY`/`PRIVATE_CAR_INFO`) — RENTCARE-26.
-- 일본어·중국어.
+- 일본어·중국어 원어민 검수.
