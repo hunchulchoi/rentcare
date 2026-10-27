@@ -65,7 +65,7 @@ release 빌드는 HTTPS 도메인과 서명 키가 있어야 만들어진다 (`c
 |---|---|
 | `cd car && ./gradlew :core:test` | 반납 판정 등 순수 로직 (100개) |
 | `cd web && pnpm test && pnpm check` | 서버 검증·코드·보관·문자열 (115개), 타입 검사 |
-| `scripts/e2e.sh` | 에뮬레이터 + 로컬 서버 + 헤드리스 Chrome 통합 시나리오 (61개) |
+| `scripts/e2e.sh` | 에뮬레이터 + 로컬 서버 + 헤드리스 Chrome 통합 시나리오 (64개) |
 | `scripts/attach-check.sh`, `phone-report-check.sh`, `retention-check.sh`, `cross-vendor-check.sh`, `i18n-check.sh` | 첨부·휴대폰 접수·90일 삭제·업체 간 차단·번역 누락 |
 | `scripts/car-auth-check.sh`, `release-check.sh <apk>` | 공용 키 없는 차량 인증(등록 코드·대여 토큰·만료·폐기), 제출 APK 서명·권한 점검 |
 

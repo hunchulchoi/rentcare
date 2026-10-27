@@ -169,6 +169,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val _phoneLink = MutableStateFlow(PhoneLinkUi(deps.store.loadPhoneLink()))
     val phoneLink: StateFlow<PhoneLinkUi> = _phoneLink
 
+    // Declared before init: init may register a saved but unregistered rental right away
+    // (a release build crashed with an NPE on this Mutex when it was declared further down).
+    /**
+     * Vendor enrollment code typed on the rental screen (non-demo builds, docs/api.md v13). Kept with the link
+     * once a registration starts (see registerNow). Demo builds register as the demo vendor without one.
+     */
+    private val _enrollmentCode = MutableStateFlow("")
+    val enrollmentCode: StateFlow<String> = _enrollmentCode
+
+    /** One registration at a time: a replay rotates the token, so two in flight would void each other. */
+    private val registration = kotlinx.coroutines.sync.Mutex()
+
     /** All work for the current rental; reset on rental end (Codex review: late replies). */
     private val work = RentalWork(viewModelScope)
     private var statusJob: Job? = null
@@ -229,21 +241,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val language: String get() = _rental.value?.language ?: "ko"
 
-    /**
-     * Vendor enrollment code typed on the rental screen (non-demo builds, docs/api.md v13). Memory only;
-     * used by the next new registration, then cleared. Demo builds register as the demo vendor without one.
-     */
-    private val _enrollmentCode = MutableStateFlow("")
-    val enrollmentCode: StateFlow<String> = _enrollmentCode
     fun setEnrollmentCode(code: String) { _enrollmentCode.value = code.take(16) }
 
     /** Register (or re-register) the saved rental. Offline is fine: the card shows a retry. */
     fun registerPhoneLink() {
         work.launch { registerNow() }
     }
-
-    /** One registration at a time: a replay rotates the token, so two in flight would void each other. */
-    private val registration = kotlinx.coroutines.sync.Mutex()
 
     /**
      * The car's rental token (its only server credential, RENTCARE-36), registering first when needed.

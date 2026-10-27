@@ -5,7 +5,7 @@
 
 ## 전날
 
-1. `scripts/e2e.sh` — 61/61 통과 확인 (로컬 서버 기준, 끝나면 배포 서버용 앱으로 다시 설치).
+1. `scripts/e2e.sh` — 64/64 통과 확인 (로컬 서버 기준, 끝나면 배포 서버용 앱으로 다시 설치).
 2. `scripts/demo-record.sh` — 백업 영상 `demo-out/demo-draft.mp4` 새로 만들기 (라이브가 막히면 이걸 튼다).
 3. 백업 APK: 배포 서버가 죽었을 때 로컬 서버로 돌리는 앱
    `cd car && ./gradlew :app:assembleDebug -Prentcare.apiBaseUrl=<LOCAL_BASE_URL>` → 파일을 `demo-out/`에 복사.

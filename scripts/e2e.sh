@@ -272,5 +272,18 @@ v=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json'
 v=$(curl -s -X POST "$B/r?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=${pcode:-none}")
 [[ "$v" == *code_invalid* ]] && ok "S5 rental end revoked the phone report code" || bad "S5 phone report code still valid after rental end"
 
+echo "== S10 rental saved while the server is down, app restarted (unregistered rental at start)"
+# A release build crashed at start in this state (Mutex declared after init, 2026-10-27).
+server_stop
+$UI tap "대여 정보"; sleep 1; $UI tap "데모 EV 계약 불러오기"; sleep 1; $UI tap "저장"
+wait_for "S10 registration fails while the server is down" "다시 시도" 30
+restart_app
+if $UI has "대여 정보"; then ok "S10 app starts with an unregistered rental (no crash)"; else bad "S10 app not running after restart"; fi
+server_start || bad "S10 server restart"
+restart_app; $UI tap "대여 정보"; sleep 1
+for _ in $(seq 1 20); do c10=$($UI descs 2>/dev/null | grep -oE 'phone-code [A-Z0-9]{8}' | head -1); [[ -n "$c10" ]] && break; sleep 1; done
+[[ -n "${c10:-}" ]] && ok "S10 registered after restart once the server is back" || bad "S10 no phone code after restart"
+$UI tap "반납 완료"; sleep 1; $UI tap "반납 완료" 2; sleep 2
+
 echo "== result: $pass passed, $fail failed"
 [[ $fail -eq 0 ]]
