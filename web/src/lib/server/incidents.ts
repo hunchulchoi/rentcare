@@ -1,3 +1,4 @@
+import { reportReplay } from '../car-auth.ts';
 import type postgres from 'postgres';
 import { ATTACH_CODE_TTL_MS, generateAttachCode } from '../attach-code';
 import { MAX_FILE_BYTES, MAX_FILES_PER_INCIDENT, magicMatches, resolveMime, sanitizeDisplayName } from '../files';
@@ -61,11 +62,18 @@ export async function createIncident(
 		await sql`select pg_advisory_xact_lock(hashtextextended(${idempotencyKey}, 0))`;
 
 		const phone = link?.channel === 'PHONE';
-		const existing = await sql<{ id: string; receipt_no: string; status: IncidentStatus; vendor_id: string }[]>`
-			select id, receipt_no, status, vendor_id from incidents where idempotency_key = ${idempotencyKey}`;
+		const existing = await sql<
+			{ id: string; receipt_no: string; status: IncidentStatus; vendor_id: string; rental_ref: string | null; channel: 'CAR' | 'PHONE' }[]
+		>`
+			select id, receipt_no, status, vendor_id, rental_ref, channel from incidents where idempotency_key = ${idempotencyKey}`;
 		if (existing.length) {
 			const e = existing[0];
 			if (e.vendor_id !== input.vendorId) return { kind: 'key_conflict' } as const;
+			// Only the rental and channel that filed it may replay (rotate its code and token).
+			if (link && reportReplay({ vendorId: e.vendor_id, rentalRef: e.rental_ref, channel: e.channel },
+				{ vendorId: input.vendorId, rentalRef: link.rentalRef, channel: link.channel }) === 'conflict') {
+				return { kind: 'key_conflict' } as const;
+			}
 			const { code, expiresAt } = await issueAttachCode(sql, e.id, now);
 			// Rotate: the replaying car gets a fresh token, the previous one stops working.
 			const t = issueIncidentToken();

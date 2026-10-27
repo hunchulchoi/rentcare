@@ -40,6 +40,15 @@ Languages: `ko`, `en` (later `ja`, `zh`).
 | `incidentToken` | `POST /api/incidents` | that report: status, car attach, release | rental end / report release |
 
 The server takes the vendor, rental and `demo` flag from the credential, never from the request body.
+
+Replays (same `Idempotency-Key`, recheck 2026-10-27):
+- A report replay must come from the same registered rental and channel that filed it; otherwise `409` and
+  nothing rotates (the report's code and token stay as they were).
+- A registration replay (lost response, app restart) needs the credential that made it: the demo registration
+  for a demo-vendor rental, or the enrollment code this registration consumed. Key alone, another code, or a
+  demo request for a non-demo rental → `401`. The car keeps the code (encrypted) until the server answers.
+- Rental end revokes the reports linked to that registration; the rental id + plate match is only for reports
+  from before v13 (no `rental_ref`), so another registration with the same rental id and plate is untouched.
 A `vendorId` in a body that differs from the credential's vendor → `403 forbidden`. Missing, unknown, expired
 or released token → `401 unauthorized`.
 
@@ -187,14 +196,16 @@ Response `201` (`200` on replay: new code and token, the previous ones stop work
 - `rentalCode`: 8 chars, same alphabet as attach codes, stored hashed, valid until `returnAt` + 24 h.
   Shown on the car's rental screen next to a QR of `reportUrl` (no code in the URL).
 - `rentalToken`: the car's credential for this rental (see "Car credentials"); stored encrypted, never shown or logged.
-- Replay with the same `Idempotency-Key` returns a new code and token without a new enrollment code.
+- Replay with the same `Idempotency-Key` returns a new code and token; it needs the same enrollment code (or the
+  demo registration), see "Car credentials".
 
 ## POST /api/rentals/release (v11)
 
 Rental end. Headers: `X-Rental-Token`, `Origin`. `204`, then `404` for the same token
 (already released — the car treats both as done). Revokes the rental code and the token, and the attach
-codes and car tokens of every report of this rental (same vendor, rental id and plate since registration,
-or filed with the rental code).
+codes and car tokens of every report linked to this registration (`rental_ref`: car reports since v13 and
+phone reports), plus pre-v13 reports without `rental_ref` with the same vendor, rental id and plate since
+registration.
 
 ## Phone basic report `/r` (v11)
 

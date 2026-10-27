@@ -34,3 +34,33 @@ export function vendorScope(bodyVendorId: string | undefined, credentialVendorId
 export function enrollmentExpiry(now: Date): Date {
 	return new Date(now.getTime() + ENROLLMENT_TTL_MS);
 }
+
+export type ReportScope = { vendorId: string; rentalRef: string | null; channel: 'CAR' | 'PHONE' };
+
+/**
+ * A replay (same Idempotency-Key) rotates the report's attach code and car token, so it must come from the
+ * same rental and channel that filed it; another rental of the same vendor gets a conflict, nothing rotates.
+ */
+export function reportReplay(existing: ReportScope, request: ReportScope): 'ok' | 'conflict' {
+	return existing.vendorId === request.vendorId &&
+		existing.rentalRef !== null &&
+		existing.rentalRef === request.rentalRef &&
+		existing.channel === request.channel
+		? 'ok'
+		: 'conflict';
+}
+
+/**
+ * Replaying a registration (lost response, app restart) returns a fresh rental token, so it needs the same
+ * credential that made it: the demo registration for a demo-vendor rental, or the enrollment code that this
+ * registration consumed (`codeRentalRef` = the rental that code was used for). The key alone is not enough.
+ */
+export function registrationReplay(
+	existing: { vendorId: string; demo: boolean; id: string },
+	auth: Exclude<RegistrationAuth, { kind: 'denied' }>,
+	codeRentalRef: string | null,
+	demoVendorId: string
+): 'ok' | 'denied' {
+	if (auth.kind === 'demo') return existing.vendorId === demoVendorId && existing.demo ? 'ok' : 'denied';
+	return codeRentalRef !== null && codeRentalRef === existing.id ? 'ok' : 'denied';
+}

@@ -33,7 +33,16 @@ data class PhoneReportLink(
     val fingerprint: String,
     val idempotencyKey: String,
     val registered: RentalRegistered? = null,
+    /**
+     * Vendor enrollment code for this (not yet answered) registration (docs/api.md v13). Kept, encrypted with
+     * the link, until the server answers, so a lost response survives an app restart; the server only accepts
+     * the replay with the code this registration consumed. Cleared once registered.
+     */
+    val enrollmentCode: String? = null,
 ) {
+    fun withEnrollmentCode(code: String?) = copy(enrollmentCode = code?.uppercase()?.filter { it.isLetterOrDigit() }?.ifEmpty { null })
+    fun registeredWith(r: RentalRegistered) = copy(registered = r, enrollmentCode = null)
+
     data class Plan(val link: PhoneReportLink, val register: Boolean, val releaseToken: String?)
 
     companion object {

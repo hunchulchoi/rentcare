@@ -6,6 +6,8 @@ import {
 	bearerToken,
 	enrollmentExpiry,
 	registrationAuth,
+	registrationReplay,
+	reportReplay,
 	vendorScope
 } from './car-auth.ts';
 
@@ -54,5 +56,25 @@ describe('car credentials (RENTCARE-36, docs/api.md v13)', () => {
 	it('limits open demo registrations and car reports per rental', () => {
 		expect(DEMO_REGISTRATIONS_PER_HOUR).toBe(60);
 		expect(CAR_REPORTS_PER_RENTAL).toBe(30);
+	});
+
+	it('replays a report only for the same rental and channel (recheck P1)', () => {
+		const mine = { vendorId: DEMO, rentalRef: 'A', channel: 'CAR' as const };
+		expect(reportReplay(mine, { vendorId: DEMO, rentalRef: 'A', channel: 'CAR' })).toBe('ok');
+		expect(reportReplay(mine, { vendorId: DEMO, rentalRef: 'B', channel: 'CAR' })).toBe('conflict');
+		expect(reportReplay(mine, { vendorId: DEMO, rentalRef: 'A', channel: 'PHONE' })).toBe('conflict');
+		expect(reportReplay(mine, { vendorId: 'other', rentalRef: 'A', channel: 'CAR' })).toBe('conflict');
+		expect(reportReplay({ vendorId: DEMO, rentalRef: null, channel: 'CAR' }, { vendorId: DEMO, rentalRef: 'A', channel: 'CAR' })).toBe('conflict');
+	});
+
+	it('replays a registration only with the credential that made it (recheck P2)', () => {
+		const demoRental = { vendorId: DEMO, demo: true, id: 'R1' };
+		const realRental = { vendorId: 'jeju-real', demo: false, id: 'R2' };
+		expect(registrationReplay(demoRental, { kind: 'demo' }, null, DEMO)).toBe('ok');
+		expect(registrationReplay(realRental, { kind: 'demo' }, null, DEMO)).toBe('denied');
+		// The code must be the one this registration consumed, not any well-formed code.
+		expect(registrationReplay(realRental, { kind: 'code', code: 'K7Q2M9AB' }, 'R2', DEMO)).toBe('ok');
+		expect(registrationReplay(realRental, { kind: 'code', code: 'K7Q2M9AB' }, 'R9', DEMO)).toBe('denied');
+		expect(registrationReplay(realRental, { kind: 'code', code: 'K7Q2M9AB' }, null, DEMO)).toBe('denied');
 	});
 });

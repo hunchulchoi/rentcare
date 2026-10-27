@@ -258,20 +258,29 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _phoneLink.value = PhoneLinkUi(plan.link)
         }
         if (!plan.register) return@withLock plan.link.registered?.rentalToken
-        _phoneLink.update { it.copy(registering = true, error = null) }
-        val code = if (BuildConfig.DEMO_MODE) null else _enrollmentCode.value
-        val res = deps.api.registerRental(PhoneReportLink.request(r, BuildConfig.DEMO_MODE, code), plan.link.idempotencyKey)
+        // Non-demo: the code is stored with the link (encrypted) before sending, so a lost response can be
+        // replayed with the same key and code after an app restart (recheck P2).
+        var link = plan.link
+        if (!BuildConfig.DEMO_MODE && link.enrollmentCode == null && _enrollmentCode.value.isNotBlank()) {
+            link = link.withEnrollmentCode(_enrollmentCode.value)
+            deps.store.savePhoneLink(link)
+        }
+        _phoneLink.value = PhoneLinkUi(link, registering = true)
+        val code = if (BuildConfig.DEMO_MODE) null else link.enrollmentCode
+        val res = deps.api.registerRental(PhoneReportLink.request(r, BuildConfig.DEMO_MODE, code), link.idempotencyKey)
         if (_rental.value == null) return@withLock null // rental ended meanwhile
         when (res) {
             is ApiResult.Ok -> {
-                val done = plan.link.copy(registered = res.value)
+                val done = link.registeredWith(res.value)
                 deps.store.savePhoneLink(done)
                 _phoneLink.value = PhoneLinkUi(done)
                 _enrollmentCode.value = ""
                 res.value.rentalToken
             }
             is ApiResult.Http -> {
-                _phoneLink.update { it.copy(registering = false, error = res.error?.error ?: "http_${res.code}") }
+                // A refused code (wrong, used, expired) is useless for a retry: drop it so staff can enter a new one.
+                val kept = if (res.code == 401) link.withEnrollmentCode(null).also { deps.store.savePhoneLink(it) } else link
+                _phoneLink.value = PhoneLinkUi(kept, error = res.error?.error ?: "http_${res.code}")
                 null
             }
             is ApiResult.Network -> {

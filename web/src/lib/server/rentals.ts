@@ -8,14 +8,16 @@ import { createIncident, type CreatedIncident } from './incidents';
 import { issueIncidentToken } from './incident-token';
 import type { RentalRegistration } from './validate';
 import { DEMO_VENDOR_ID } from './db';
-import { enrollmentExpiry, type RegistrationAuth } from '../car-auth.ts';
+import { enrollmentExpiry, registrationReplay, type RegistrationAuth } from '../car-auth.ts';
 
 export type RegisterResult =
 	| { kind: 'created' | 'replayed'; rentalCode: string; rentalCodeExpiresAt: string; rentalToken: string }
 	| { kind: 'unknown_vendor' }
 	| { kind: 'key_conflict' }
 	| { kind: 'code_invalid' }
-	| { kind: 'code_expired' };
+	| { kind: 'code_expired' }
+	/** Same Idempotency-Key, but not the credential that made the registration. */
+	| { kind: 'replay_denied' };
 
 /** Vendor screen: a single-use car enrollment code for this vendor, valid 30 minutes (docs/api.md v13). */
 export async function issueEnrollmentCode(vendorId: string, now = new Date()): Promise<{ code: string; expiresAt: Date }> {
@@ -44,8 +46,18 @@ export async function registerRental(
 ): Promise<RegisterResult> {
 	return db().begin(async (sql) => {
 		await sql`select pg_advisory_xact_lock(hashtextextended(${'rental:' + idempotencyKey}, 0))`;
-		const existing = await sql<{ id: string; vendor_id: string }[]>`
-			select id, vendor_id from rentals where idempotency_key = ${idempotencyKey}`;
+		const existing = await sql<{ id: string; vendor_id: string; demo: boolean }[]>`
+			select id, vendor_id, demo from rentals where idempotency_key = ${idempotencyKey}`;
+		if (existing.length) {
+			const e = existing[0];
+			const codeRentalRef = auth.kind === 'code'
+				? ((await sql<{ rental_ref: string | null }[]>`
+					select rental_ref from enrollment_codes where code_hash = ${sha256Hex(auth.code)}`)[0]?.rental_ref ?? null)
+				: null;
+			if (registrationReplay({ vendorId: e.vendor_id, demo: e.demo, id: e.id }, auth, codeRentalRef, DEMO_VENDOR_ID) === 'denied') {
+				return { kind: 'replay_denied' } as const;
+			}
+		}
 		let vendorId = auth.kind === 'demo' ? DEMO_VENDOR_ID : input.vendorId;
 		const demo = auth.kind === 'demo' ? true : input.demo;
 		let enrollment: string | null = null;
@@ -110,8 +122,10 @@ export async function releaseRental(token: string): Promise<boolean> {
 		const reports = sql`
 			select i.id from incidents i join rentals r on r.id = ${rows[0].id}
 			where i.rental_ref = r.id
-				or (i.vendor_id = r.vendor_id and i.rental_id = r.rental_id and i.vehicle_plate = r.vehicle_plate
-					and i.created_at >= r.created_at)`;
+				-- Reports from before v13 carry no rental_ref; match those by rental fields. Never reach into
+				-- reports linked to another registration that happens to share the rental id and plate.
+				or (i.rental_ref is null and i.vendor_id = r.vendor_id and i.rental_id = r.rental_id
+					and i.vehicle_plate = r.vehicle_plate and i.created_at >= r.created_at)`;
 		await sql`update attach_codes set revoked_at = now() where revoked_at is null and incident_id in (${reports})`;
 		await sql`update incidents set car_token_hash = null where id in (${reports})`;
 		return true;

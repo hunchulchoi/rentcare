@@ -19,6 +19,10 @@ fi
 [[ "$(curl -s -o /dev/null -w '%{http_code}' -m 5 "$B/")" == 200 ]] || { echo "Server not reachable at $B. Start it (see CLAUDE.md)." >&2; exit 2; }
 install_app() { (cd car && JAVA_HOME="$(/usr/libexec/java_home -v 21 2>/dev/null || echo "$JAVA_HOME")" ./gradlew -q :app:installDebug "$@" 2>&1 | grep -vE "^Warning: SDK|^$" | tail -2); }
 echo "== install debug app for $B"
+# A release build (other signing key) blocks installDebug; e2e wipes the app data anyway.
+if ! "$ADB" shell dumpsys package com.rentcare.car 2>/dev/null | grep -q "flags=.*DEBUGGABLE"; then
+  "$ADB" uninstall com.rentcare.car >/dev/null 2>&1 || true
+fi
 install_app -Prentcare.apiBaseUrl="$B"
 restore() { [[ "${E2E_RESTORE:-1}" == 1 ]] && { echo "== reinstall debug app for the deployed server"; install_app; }; }
 trap restore EXIT

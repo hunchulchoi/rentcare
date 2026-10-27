@@ -44,6 +44,10 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		enrollmentCodeLimiter.recordFailure(ip);
 		return apiError(401, r.kind, r.kind === 'code_expired' ? 'Enrollment code expired' : 'Enrollment code is not valid');
 	}
+	if (r.kind === 'replay_denied') {
+		if (auth.kind === 'code') enrollmentCodeLimiter.recordFailure(ip);
+		return apiError(401, 'unauthorized', 'Replay needs the credential that made this registration');
+	}
 	if (r.kind === 'unknown_vendor') return apiError(400, 'invalid_request', 'Unknown vendorId');
 	if (r.kind === 'key_conflict') return apiError(409, 'invalid_request', 'Idempotency-Key was already used for a different vendor');
 	const base = config.publicBaseUrl ?? url.origin;

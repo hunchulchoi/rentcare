@@ -38,6 +38,22 @@ class PhoneReportLinkTest {
         assertTrue(p.register)
     }
 
+    @Test fun `an unfinished registration keeps its enrollment code for the retry, even after a restart`() {
+        // Recheck P2: the response was lost and the app restarted; the stored link still has the code.
+        val cur = PhoneReportLink.plan(null, rental, newKey).link.withEnrollmentCode("K7Q2M9AB")
+        val restored = RentcareJson.decodeFromString(PhoneReportLink.serializer(), RentcareJson.encodeToString(PhoneReportLink.serializer(), cur))
+        val p = PhoneReportLink.plan(restored, rental, newKey)
+        assertEquals("K7Q2M9AB", p.link.enrollmentCode)
+        assertEquals("key-1", p.link.idempotencyKey)
+        assertTrue(p.register)
+    }
+
+    @Test fun `a finished or different registration drops the enrollment code`() {
+        val cur = PhoneReportLink.plan(null, rental, newKey).link.withEnrollmentCode("K7Q2M9AB")
+        assertNull(cur.registeredWith(registered).enrollmentCode)
+        assertNull(PhoneReportLink.plan(cur, rental.copy(vehiclePlate = "34허7890"), newKey).link.enrollmentCode)
+    }
+
     @Test fun `changed car or rental gets a new code and releases the old one`() {
         val cur = PhoneReportLink.plan(null, rental, newKey).link.copy(registered = registered)
         val p = PhoneReportLink.plan(cur, rental.copy(vehiclePlate = "34허7890"), newKey)
