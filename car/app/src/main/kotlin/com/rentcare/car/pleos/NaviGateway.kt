@@ -31,6 +31,8 @@ sealed interface NaviEvent {
     data class Trip(val info: TripInfo, val atMillis: Long) : NaviEvent
     data class Error(val code: NaviErrorCode) : NaviEvent
     data object RoutingCompleted : NaviEvent
+    /** Guidance started. Emulator 2.1.0 sends this (about 5 s after the request) and no onRoutingCompleted. */
+    data object RouteStarted : NaviEvent
     data object RouteCancelled : NaviEvent
     data class Waypoints(val list: List<WaypointInfo>) : NaviEvent
     data object WaypointsChanged : NaviEvent
@@ -41,7 +43,7 @@ data class GeoPoint(val latitude: Double, val longitude: Double, val name: Strin
 /**
  * Wrapper over Pleos NaviHelper. Requests return immediately; results arrive as listener events.
  * Requires a navigation app on the car. "Route requested" ≠ "route computed": wait for
- * [NaviEvent.RoutingCompleted] or [NaviEvent.Error].
+ * [NaviEvent.RoutingCompleted] / [NaviEvent.RouteStarted] or [NaviEvent.Error].
  */
 class NaviGateway(context: Context) {
     private val navi = NaviHelper(context.applicationContext)
@@ -76,6 +78,10 @@ class NaviGateway(context: Context) {
 
         override fun onRoutingCompleted() {
             _events.tryEmit(NaviEvent.RoutingCompleted)
+        }
+
+        override fun onRouteStarted(routeStartInfo: ai.pleos.playground.navi.data.RouteStartInfo) {
+            _events.tryEmit(NaviEvent.RouteStarted)
         }
 
         override fun onRouteCancelled() {
@@ -191,7 +197,8 @@ class NaviGateway(context: Context) {
             events.onSubscription { navi.requestRouteWithWaypoints(RouteWithWaypointsRequest(destination, wps)) }
                 .mapNotNull {
                 when (it) {
-                    NaviEvent.RoutingCompleted, is NaviEvent.Error -> it
+                    // onRouteCancelled arrives first when a previous route is replaced: not an outcome.
+                    NaviEvent.RoutingCompleted, NaviEvent.RouteStarted, is NaviEvent.Error -> it
                     else -> null
                 }
             }.first()
