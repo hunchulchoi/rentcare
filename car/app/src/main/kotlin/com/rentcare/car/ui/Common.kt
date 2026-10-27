@@ -19,6 +19,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
@@ -49,25 +52,26 @@ fun parseDateTime(s: String): Long? = runCatching {
 fun won(n: Int) = "%,d".format(n)
 
 @Composable
-fun Section(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+fun Section(title: String, modifier: Modifier = Modifier, key: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
     ) {
         Column(Modifier.padding(28.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(title, style = if (key) KeyTextStyle else MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             content()
         }
     }
 }
 
 @Composable
-fun KeyValue(key: String, value: String) {
+fun KeyValue(key: String, value: String, emphasis: Boolean = false) {
     // Proportional columns so the pair also fits a portrait window (840 dp).
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(key, Modifier.weight(0.4f), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, Modifier.weight(0.6f), fontWeight = FontWeight.Medium)
+        if (emphasis) Text(value, Modifier.weight(0.6f), style = KeyTextStyle)
+        else Text(value, Modifier.weight(0.6f), fontWeight = FontWeight.Medium)
     }
 }
 
@@ -91,6 +95,16 @@ fun Field(
         enabled = enabled,
         keyboardOptions = if (number) KeyboardOptions(keyboardType = KeyboardType.Decimal) else KeyboardOptions.Default,
     )
+}
+
+/** Visible progress for a request that may take a while (Pleos: show progress when a response is delayed). */
+@Composable
+fun Busy(label: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "busy" }) {
+        androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable

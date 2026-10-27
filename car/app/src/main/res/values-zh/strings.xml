@@ -252,4 +252,7 @@
     <string name="demo_fuel_value">模拟 %1$d%%</string>
     <string name="demo_fuel_clear">恢复使用车辆数值</string>
     <string name="demo_banner">演示用: 报修将发送到测试公司，不会实际出动。</string>
+    <string name="navi_waiting">正在等待导航响应…</string>
+    <string name="reading_car">正在读取车辆数据…</string>
+    <string name="status_checking">正在查询状态…</string>
 </resources>

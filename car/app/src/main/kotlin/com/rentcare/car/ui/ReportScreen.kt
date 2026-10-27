@@ -212,7 +212,7 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
             Text(stringResource(R.string.no_report))
             return@Column
         }
-        Section(stringResource(R.string.receipt_no, rec.receiptNo)) {
+        Section(stringResource(R.string.receipt_no, rec.receiptNo), key = true) {
             val sc = LocalStatusColors.current
             val st = ui.status ?: com.rentcare.core.IncidentStatus.RECEIVED
             val now by produceState(System.currentTimeMillis()) { while (true) { delay(30_000); value = System.currentTimeMillis() } }
@@ -239,7 +239,10 @@ fun StatusScreen(vm: AppViewModel, modifier: Modifier, onNew: () -> Unit) {
             )
             Text(stringResource(R.string.ack_not_dispatch), style = MaterialTheme.typography.bodySmall)
             ui.statusError?.let { Text(stringResource(R.string.status_error, it), color = MaterialTheme.colorScheme.error) }
-            OutlinedButton(onClick = vm::refreshStatusOnce) { Text(stringResource(R.string.refresh)) }
+            WrapRow {
+                OutlinedButton(onClick = vm::refreshStatusOnce, enabled = !ui.statusLoading) { Text(stringResource(R.string.refresh)) }
+                if (ui.statusLoading) Busy(stringResource(R.string.status_checking))
+            }
         }
         Section(stringResource(R.string.attach_title)) {
             Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {

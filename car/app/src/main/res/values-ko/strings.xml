@@ -252,4 +252,7 @@
     <string name="demo_fuel_value">모의 %1$d%%</string>
     <string name="demo_fuel_clear">차량 값 다시 사용</string>
     <string name="demo_banner">시연용: 테스트 업체로 접수됩니다. 실제 출동은 없습니다.</string>
+    <string name="navi_waiting">내비 응답을 기다리는 중…</string>
+    <string name="reading_car">차량 값을 읽는 중…</string>
+    <string name="status_checking">상태 확인 중…</string>
 </resources>

@@ -252,4 +252,7 @@
     <string name="demo_fuel_value">模擬 %1$d%%</string>
     <string name="demo_fuel_clear">車の値に戻す</string>
     <string name="demo_banner">デモ用: テスト用の会社に受付されます。実際の出動はありません。</string>
+    <string name="navi_waiting">ナビの応答を待っています…</string>
+    <string name="reading_car">車両の値を読み取り中…</string>
+    <string name="status_checking">状態を確認中…</string>
 </resources>

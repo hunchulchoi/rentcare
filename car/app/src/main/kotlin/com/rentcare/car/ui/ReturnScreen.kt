@@ -41,17 +41,18 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.return_title), style = MaterialTheme.typography.headlineSmall)
             OutlinedButton(onClick = vm::refreshReturn, enabled = !ui.loading) { Text(stringResource(R.string.refresh)) }
+            if (ui.loading) Busy(stringResource(R.string.reading_car))
         }
 
         val a = ui.assessment
         if (a != null) {
-            Section(stringResource(verdictLabel(a.verdict))) {
+            Section(stringResource(verdictLabel(a.verdict)), key = true) {
                 if (ui.simulatedLevel) {
                     Text(stringResource(R.string.simulated_level), color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.titleSmall)
                 }
-                KeyValue(stringResource(R.string.current_level), a.currentPercent?.let { "$it %" } ?: "-")
+                KeyValue(stringResource(R.string.current_level), a.currentPercent?.let { "$it %" } ?: "-", emphasis = true)
                 KeyValue(stringResource(R.string.target_level), a.targetPercent?.let { "$it %" } ?: stringResource(R.string.rule_ev_waived))
-                KeyValue(stringResource(R.string.arrival_level), a.projectedArrivalPercent?.let { "$it %" } ?: "-")
+                KeyValue(stringResource(R.string.arrival_level), a.projectedArrivalPercent?.let { "$it %" } ?: "-", emphasis = true)
                 KeyValue(stringResource(R.string.read_at), fmtTime(ui.state.soc?.readAtMillis ?: ui.state.fuelPercent?.readAtMillis))
                 a.shortfallMinPoints?.let { min ->
                     val max = a.shortfallMaxPoints
@@ -85,6 +86,7 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
                 KeyValue(
                     stringResource(R.string.latest_departure),
                     d.latestDepartureMillis?.let(::fmtDateTime) ?: stringResource(R.string.departure_unknown),
+                    emphasis = true,
                 )
                 if (d.alreadyLate) Text(stringResource(R.string.already_late), color = MaterialTheme.colorScheme.error)
             }
@@ -199,12 +201,13 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
             val keyword = stringResource(R.string.gas_station_keyword)
             Text(stringResource(R.string.navi_steps), style = MaterialTheme.typography.bodyMedium)
             WrapRow {
-                Button(onClick = vm::startGuidance) { Text(stringResource(R.string.start_guidance)) }
-                OutlinedButton(onClick = { vm.openStationSearch(keyword) }) {
+                Button(onClick = vm::startGuidance, enabled = !ui.naviBusy) { Text(stringResource(R.string.start_guidance)) }
+                OutlinedButton(onClick = { vm.openStationSearch(keyword) }, enabled = !ui.naviBusy) {
                     Text(stringResource(if (r.powertrain == Powertrain.EV) R.string.find_chargers_in_navi else R.string.find_gas_in_navi))
                 }
-                OutlinedButton(onClick = vm::importNaviWaypoints) { Text(stringResource(R.string.import_navi_waypoints)) }
+                OutlinedButton(onClick = vm::importNaviWaypoints, enabled = !ui.naviBusy) { Text(stringResource(R.string.import_navi_waypoints)) }
             }
+            if (ui.naviBusy) Busy(stringResource(R.string.navi_waiting))
             ui.naviStops.forEachIndexed { i, st ->
                 KeyValue(
                     "${i + 1}. ${st.name}",

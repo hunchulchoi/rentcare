@@ -252,4 +252,7 @@
     <string name="demo_fuel_value">Simulated %1$d %%</string>
     <string name="demo_fuel_clear">Use the car again</string>
     <string name="demo_banner">Demo: reports go to a test rental company. No real dispatch.</string>
+    <string name="navi_waiting">Waiting for the navigation…</string>
+    <string name="reading_car">Reading the car…</string>
+    <string name="status_checking">Checking status…</string>
 </resources>

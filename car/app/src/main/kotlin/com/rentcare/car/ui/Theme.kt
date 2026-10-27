@@ -63,6 +63,9 @@ private val PleosTypography = Typography(
     labelSmall = style(Type.LABEL_MEDIUM_SP, Type.LABEL_MEDIUM_LH),
 )
 
+/** Key values read at a glance (verdict, levels, departure time, receipt number): Pleos ≥ 5 mm. */
+val KeyTextStyle = style(Type.KEY_VALUE_SP, Type.TITLE_MEDIUM_LH, FontWeight.Bold)
+
 private val SoftShapes = Shapes(
     extraSmall = RoundedCornerShape(Radius.SMALL.dp),
     small = RoundedCornerShape(Radius.SMALL.dp),

@@ -76,6 +76,8 @@ data class ReturnUi(
     val departure: DeparturePlan? = null,
     val loading: Boolean = false,
     val routeMessage: String? = null,
+    /** Navigation request in flight (route, place search, waypoint import); buttons wait, a spinner shows. */
+    val naviBusy: Boolean = false,
     /** Stops the user set in the car navigation (read back, not sent by us). */
     val naviStops: List<NaviStop> = emptyList(),
 )
@@ -124,6 +126,7 @@ data class ReportUi(
     val resolvedAt: String? = null,
     val attachments: Int = 0,
     val statusError: String? = null,
+    val statusLoading: Boolean = false,
 )
 
 data class ProbeRow(val name: String, val value: String, val ok: Boolean, val atMillis: Long)
@@ -371,19 +374,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             _ret.update { it.copy(routeMessage = "NO_COORDINATES") }
             return
         }
-        work.launch { token ->
+        naviTask { token ->
             val res = deps.navi.routeWithWaypoints(
                 GeoPoint(lat, lon, r.returnPlace.name, r.returnPlace.address),
                 _inputs.value.stations.take(2),
             )
-            _ret.update { it.copy(routeMessage = res.fold({ "ROUTE_OK" }, { "ROUTE_FAIL: ${it.message}" })) }
+            if (work.isCurrent(token)) _ret.update { it.copy(routeMessage = res.fold({ "ROUTE_OK" }, { "ROUTE_FAIL: ${it.message}" })) }
+        }
+    }
+
+    /** One navigation request at a time; [ReturnUi.naviBusy] is set until it succeeds, fails or times out. */
+    private fun naviTask(block: suspend (RentalWork.Token) -> Unit) {
+        if (_ret.value.naviBusy) return
+        _ret.update { it.copy(naviBusy = true, routeMessage = null) }
+        work.launch { token ->
+            try {
+                block(token)
+            } finally {
+                if (work.isCurrent(token)) _ret.update { it.copy(naviBusy = false) }
+            }
         }
     }
 
     /** Let the user pick stops in the car navigation (no typing): chargers for EV, a place search otherwise. */
     fun openStationSearch(gasolineKeyword: String) {
         val ev = _rental.value?.powertrain == Powertrain.EV
-        work.launch { token ->
+        naviTask { token ->
             val ok = deps.navi.openScreen(
                 if (ev) NavigationScreenRequest.NearbyChargingStations else NavigationScreenRequest.SearchPlace(gasolineKeyword),
             )
@@ -393,9 +409,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Read the waypoints the user set in the car navigation (they are already in its route). */
     fun importNaviWaypoints() {
-        work.launch { token ->
+        naviTask { token ->
             val res = deps.navi.waypoints()
-            if (!work.isCurrent(token)) return@launch
+            if (!work.isCurrent(token)) return@naviTask
             res.onSuccess { list ->
                 val stops = list.map { w ->
                     val c = WaypointCoords.pick(w.latitude, w.longitude, w.displayLatitude, w.displayLongitude)
@@ -671,7 +687,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshStatusOnce() {
         val rec = _report.value.received ?: return
         work.launch { token ->
-            when (val res = deps.api.status(rec.id, rec.incidentToken)) {
+            _report.update { it.copy(statusLoading = true) }
+            val res = deps.api.status(rec.id, rec.incidentToken)
+            if (!work.isCurrent(token)) return@launch
+            _report.update { it.copy(statusLoading = false) }
+            when (res) {
                 is ApiResult.Ok -> _report.update {
                     it.copy(
                         acknowledged = res.value.status.reached(com.rentcare.core.IncidentStatus.ACKNOWLEDGED),
