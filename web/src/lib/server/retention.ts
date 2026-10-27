@@ -42,6 +42,8 @@ export async function purgeExpired(now = new Date(), days = config.retentionDays
 	}
 	// Rentals registered by the car (RENTCARE-13). Their reports keep their own copy of the rental fields.
 	result.rentals = (await db()`delete from rentals where created_at < ${cutoff} returning id`).length;
+	// Enrollment codes (v13) only matter for 30 minutes; keep a day for support questions.
+	await db()`delete from enrollment_codes where expires_at < now() - interval '1 day'`;
 	return result;
 }
 

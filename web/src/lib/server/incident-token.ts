@@ -1,9 +1,9 @@
 import { randomToken, safeEqual, sha256Hex } from './crypto';
 
 /**
- * Per-incident capability for the car that created it. The shared CAR_API_KEY only allows
- * creating incidents; reading status or adding files also needs this token, so one leaked
- * APK key cannot read or modify other cars' reports. Only the SHA-256 hash is stored.
+ * Per-incident capability for the car that created it. The car's rental token only allows
+ * creating incidents; reading status or adding files needs this token, so one car cannot read
+ * or modify another car's reports. Only the SHA-256 hash is stored (docs/api.md v13).
  */
 export const INCIDENT_TOKEN_HEADER = 'x-incident-token';
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // 32 random bytes, base64url

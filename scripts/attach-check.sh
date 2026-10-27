@@ -4,7 +4,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 B=${RENTCARE_BASE_URL:-$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)}
-car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
+car=$(scripts/car-token.sh "$B" E2E-ATT); tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
 pass=0; fail=0; ok(){ echo "  PASS $1"; pass=$((pass+1)); }; bad(){ echo "  FAIL $1"; fail=$((fail+1)); }
 d=$(mktemp -d); now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 body='{"vendorId":"demo-jeju","type":"OTHER","language":"en","note":"attach-check","occurredAt":"'$now'","demo":true,

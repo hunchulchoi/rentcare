@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { config } from './config';
-import { safeEqual } from './crypto';
+import { bearerToken } from '../car-auth.ts';
+import { findRentalByToken, type TokenRental } from './rentals';
 
 export type ApiErrorCode =
 	| 'unauthorized'
+	| 'forbidden'
 	| 'invalid_request'
 	| 'not_found'
 	| 'too_large'
@@ -18,20 +19,13 @@ export function apiError(status: number, error: ApiErrorCode, message: string, e
 	return json({ error, message, ...extra }, { status, headers: { 'cache-control': 'no-store' } });
 }
 
-let warnedMissingKey = false;
-
-/** Returns an error Response unless the request carries `Authorization: Bearer <CAR_API_KEY>`. */
-export function requireCarAuth(request: Request): Response | null {
-	const expected = config.carApiKey;
-	if (!expected) {
-		if (!warnedMissingKey) {
-			console.error('[rentcare] CAR_API_KEY is not set; rejecting all car API calls');
-			warnedMissingKey = true;
-		}
-		return apiError(401, 'unauthorized', 'Missing or invalid API key');
-	}
-	const header = request.headers.get('authorization') ?? '';
-	const m = /^Bearer (.+)$/.exec(header);
-	if (!m || !safeEqual(m[1], expected)) return apiError(401, 'unauthorized', 'Missing or invalid API key');
-	return null;
+/**
+ * The car's credential is its rental token (docs/api.md v13, RENTCARE-36): `Authorization: Bearer <rentalToken>`.
+ * Returns the rental (vendor, demo flag, rental fields) or a 401 Response. No shared key exists any more.
+ */
+export async function requireRental(request: Request): Promise<{ rental: TokenRental } | { denied: Response }> {
+	const token = bearerToken(request.headers.get('authorization'));
+	const rental = token ? await findRentalByToken(token) : null;
+	if (!rental) return { denied: apiError(401, 'unauthorized', 'Missing, expired or released rental token') };
+	return { rental };
 }

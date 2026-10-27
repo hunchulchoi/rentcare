@@ -51,9 +51,15 @@ class PhoneReportLinkTest {
         val req = PhoneReportLink.request(rental)
         val json = RentcareJson.encodeToString(RentalRegistration.serializer(), req)
         assertEquals(
-            """{"vendorId":"demo-jeju","language":"ko","demo":true,"rental":{"rentalId":"R-1","vehiclePlate":"12하3456","vehicleModel":"IONIQ 5","powertrain":"EV","returnPlace":"판교","returnAt":"2026-10-26T07:33:20Z"}}""",
+            """{"vendorId":"demo-jeju","language":"ko","demo":true,"rental":{"rentalId":"R-1","vehiclePlate":"12하3456","vehicleModel":"IONIQ 5","powertrain":"EV","returnPlace":"판교","returnAt":"2026-10-26T07:33:20Z"},"enrollmentCode":null}""",
             json,
         )
+    }
+
+    @Test fun `a vendor enrollment code is sent normalized, a blank one as null (v13)`() {
+        assertEquals("K7Q2M9AB", PhoneReportLink.request(rental, demo = false, enrollmentCode = " k7q2-m9ab ").enrollmentCode)
+        assertNull(PhoneReportLink.request(rental, demo = false, enrollmentCode = "  ").enrollmentCode)
+        assertNull(PhoneReportLink.request(rental).enrollmentCode)
     }
 
     @Test fun `QR follows the current language and never carries the code`() {

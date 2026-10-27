@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
@@ -228,29 +229,64 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val language: String get() = _rental.value?.language ?: "ko"
 
+    /**
+     * Vendor enrollment code typed on the rental screen (non-demo builds, docs/api.md v13). Memory only;
+     * used by the next new registration, then cleared. Demo builds register as the demo vendor without one.
+     */
+    private val _enrollmentCode = MutableStateFlow("")
+    val enrollmentCode: StateFlow<String> = _enrollmentCode
+    fun setEnrollmentCode(code: String) { _enrollmentCode.value = code.take(16) }
+
     /** Register (or re-register) the saved rental. Offline is fine: the card shows a retry. */
     fun registerPhoneLink() {
-        val r = _rental.value ?: return
+        work.launch { registerNow() }
+    }
+
+    /** One registration at a time: a replay rotates the token, so two in flight would void each other. */
+    private val registration = kotlinx.coroutines.sync.Mutex()
+
+    /**
+     * The car's rental token (its only server credential, RENTCARE-36), registering first when needed.
+     * Null when there is no rental or the server cannot be reached / refuses (the card shows why).
+     */
+    private suspend fun registerNow(): String? = registration.withLock {
+        val r = _rental.value ?: return@withLock null
         val plan = PhoneReportLink.plan(_phoneLink.value.link, r) { UUID.randomUUID().toString() }
         plan.releaseToken?.let { old -> viewModelScope.launch { withTimeoutOrNull(5_000) { deps.api.releaseRental(old) } } }
-        deps.store.savePhoneLink(plan.link)
-        _phoneLink.value = PhoneLinkUi(plan.link)
-        if (!plan.register) return
-        work.launch { token ->
-            _phoneLink.update { it.copy(registering = true, error = null) }
-            val res = deps.api.registerRental(PhoneReportLink.request(r, BuildConfig.DEMO_MODE), plan.link.idempotencyKey)
-            work.ifCurrent(token) {
-                when (res) {
-                    is ApiResult.Ok -> {
-                        val done = plan.link.copy(registered = res.value)
-                        deps.store.savePhoneLink(done)
-                        _phoneLink.value = PhoneLinkUi(done)
-                    }
-                    is ApiResult.Http -> _phoneLink.update { it.copy(registering = false, error = res.error?.error ?: "http_${res.code}") }
-                    is ApiResult.Network -> _phoneLink.update { it.copy(registering = false, error = "network") }
-                }
+        if (plan.link != _phoneLink.value.link) {
+            deps.store.savePhoneLink(plan.link)
+            _phoneLink.value = PhoneLinkUi(plan.link)
+        }
+        if (!plan.register) return@withLock plan.link.registered?.rentalToken
+        _phoneLink.update { it.copy(registering = true, error = null) }
+        val code = if (BuildConfig.DEMO_MODE) null else _enrollmentCode.value
+        val res = deps.api.registerRental(PhoneReportLink.request(r, BuildConfig.DEMO_MODE, code), plan.link.idempotencyKey)
+        if (_rental.value == null) return@withLock null // rental ended meanwhile
+        when (res) {
+            is ApiResult.Ok -> {
+                val done = plan.link.copy(registered = res.value)
+                deps.store.savePhoneLink(done)
+                _phoneLink.value = PhoneLinkUi(done)
+                _enrollmentCode.value = ""
+                res.value.rentalToken
+            }
+            is ApiResult.Http -> {
+                _phoneLink.update { it.copy(registering = false, error = res.error?.error ?: "http_${res.code}") }
+                null
+            }
+            is ApiResult.Network -> {
+                _phoneLink.update { it.copy(registering = false, error = "network") }
+                null
             }
         }
+    }
+
+    /** Server says the token is no longer valid (expired / released elsewhere): register again next time. */
+    private fun forgetRegistration() {
+        val link = _phoneLink.value.link ?: return
+        val reset = link.copy(registered = null, idempotencyKey = UUID.randomUUID().toString())
+        deps.store.savePhoneLink(reset)
+        _phoneLink.value = PhoneLinkUi(reset)
     }
 
     // ---- Rental ----
@@ -600,8 +636,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun transmit(pending: PendingReport) {
         work.launch { token ->
             _report.update { it.copy(send = SendState.Sending) }
-            val res = deps.api.createIncident(pending.request, pending.idempotencyKey)
+            // v13: the rental token is the car's credential; register first if the rental is not registered yet.
+            val rentalToken = registerNow()
             if (!work.isCurrent(token)) return@launch
+            if (rentalToken == null) {
+                _report.update { it.copy(send = SendState.Failed(_phoneLink.value.error ?: "not_registered", retryable = true)) }
+                return@launch
+            }
+            val res = deps.api.createIncident(pending.request, pending.idempotencyKey, rentalToken)
+            if (!work.isCurrent(token)) return@launch
+            if (res is ApiResult.Http && res.code == 401) {
+                // Token expired or revoked: keep the report, register again on the next try.
+                forgetRegistration()
+                _report.update { it.copy(send = SendState.Failed("401 ${res.error?.error ?: ""}".trim(), retryable = true)) }
+                return@launch
+            }
             when (res) {
                 is ApiResult.Ok -> {
                     deps.store.saveReceived(res.value)
@@ -635,7 +684,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun mapTile(z: Int, x: Int, y: Int): androidx.compose.ui.graphics.ImageBitmap? {
         val key = "$z/$x/$y"
         tileCache.get(key)?.let { return it }
-        val bytes = deps.api.mapTile(z, x, y) ?: return null
+        val rentalToken = _phoneLink.value.link?.registered?.rentalToken ?: return null
+        val bytes = deps.api.mapTile(z, x, y, rentalToken) ?: return null
         val img = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap() ?: return null
         tileCache.put(key, img)
         return img

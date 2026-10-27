@@ -12,7 +12,7 @@ under `STORAGE_DIR` with random names and are only served through an access-chec
 ## Setup
 
 ```sh
-cp .env.example .env          # then edit: set CAR_API_KEY and DEMO_VENDOR_TOKEN to random values
+cp .env.example .env          # then edit: set DEMO_VENDOR_TOKEN to a random value
 pnpm install
 docker compose up -d db        # from the repo root (../docker-compose.yml); applies db/schema.sql on first start
 pnpm db:migrate                # idempotent: applies db/schema.sql and stores SHA-256(DEMO_VENDOR_TOKEN) for demo-jeju
@@ -28,7 +28,6 @@ when the DB was initialized by docker compose.
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `CAR_API_KEY` | Shared bearer key for the car app (`Authorization: Bearer …`). If unset, all car calls get 401. |
 | `DEMO_VENDOR_TOKEN` | Staff login token for vendor `demo-jeju` (stored hashed only) |
 | `PUBLIC_BASE_URL` | Public origin; `attachUrl` = `${PUBLIC_BASE_URL}/m` (falls back to the request origin) |
 | `STORAGE_DIR` | Private upload directory, default `./storage` (git-ignored, never under `static/`) |

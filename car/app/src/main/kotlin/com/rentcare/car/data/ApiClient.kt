@@ -28,7 +28,11 @@ sealed interface ApiResult<out T> {
     data class Network(val message: String) : ApiResult<Nothing>
 }
 
-class ApiClient(private val baseUrl: String, private val apiKey: String) {
+/**
+ * Car ↔ server (docs/api.md v13). No shared key: report creation and map tiles use this car's rental token
+ * (from [registerRental]), report calls use the report's own incident token.
+ */
+class ApiClient(private val baseUrl: String) {
     private val http = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -37,11 +41,11 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
     private val jsonType = "application/json; charset=utf-8".toMediaType()
 
     /** Same [idempotencyKey] on retry → server returns the same incident, no duplicate. */
-    suspend fun createIncident(req: IncidentRequest, idempotencyKey: String): ApiResult<IncidentCreated> {
+    suspend fun createIncident(req: IncidentRequest, idempotencyKey: String, rentalToken: String): ApiResult<IncidentCreated> {
         val body = RentcareJson.encodeToString(IncidentRequest.serializer(), req).toRequestBody(jsonType)
         val request = Request.Builder()
             .url("$baseUrl/api/incidents")
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $rentalToken")
             .header("Idempotency-Key", idempotencyKey)
             .post(body)
             .build()
@@ -51,7 +55,6 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
     suspend fun status(id: String, incidentToken: String): ApiResult<IncidentStatusDto> {
         val request = Request.Builder()
             .url("$baseUrl/api/incidents/$id")
-            .header("Authorization", "Bearer $apiKey")
             .header("X-Incident-Token", incidentToken)
             .get()
             .build()
@@ -62,7 +65,6 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
     suspend fun release(id: String, incidentToken: String): Boolean = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/api/incidents/$id/release")
-            .header("Authorization", "Bearer $apiKey")
             .header("X-Incident-Token", incidentToken)
             .header("Origin", baseUrl)
             .post(ByteArray(0).toRequestBody(null))
@@ -70,12 +72,14 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
         runCatching { http.newCall(request).execute().use { it.code == 204 } }.getOrDefault(false)
     }
 
-    /** Rental saved (docs/api.md v11): returns the rental code for the phone basic report. */
+    /**
+     * Rental saved (docs/api.md v11, v13): returns the rental code for the phone basic report and this car's
+     * rental token. No Authorization: the body carries a vendor enrollment code or is a demo registration.
+     */
     suspend fun registerRental(req: RentalRegistration, idempotencyKey: String): ApiResult<RentalRegistered> {
         val body = RentcareJson.encodeToString(RentalRegistration.serializer(), req).toRequestBody(jsonType)
         val request = Request.Builder()
             .url("$baseUrl/api/rentals")
-            .header("Authorization", "Bearer $apiKey")
             .header("Idempotency-Key", idempotencyKey)
             .post(body)
             .build()
@@ -86,7 +90,6 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
     suspend fun releaseRental(rentalToken: String): Boolean = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/api/rentals/release")
-            .header("Authorization", "Bearer $apiKey")
             .header("X-Rental-Token", rentalToken)
             .header("Origin", baseUrl)
             .post(ByteArray(0).toRequestBody(null))
@@ -123,7 +126,6 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
             .addFormDataPart("file", fileName, part).build()
         val request = Request.Builder()
             .url("$baseUrl/api/incidents/$id/attachments")
-            .header("Authorization", "Bearer $apiKey")
             .header("X-Incident-Token", incidentToken)
             .header("Origin", baseUrl)
             .post(body)
@@ -132,10 +134,10 @@ class ApiClient(private val baseUrl: String, private val apiKey: String) {
     }
 
     /** Map tile PNG from our tile proxy (docs/api.md). Null when unavailable; the map just stays blank. */
-    suspend fun mapTile(z: Int, x: Int, y: Int): ByteArray? = withContext(Dispatchers.IO) {
+    suspend fun mapTile(z: Int, x: Int, y: Int, rentalToken: String): ByteArray? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$baseUrl/api/map/tiles/$z/$x/$y.png")
-            .header("Authorization", "Bearer $apiKey")
+            .header("Authorization", "Bearer $rentalToken")
             .get()
             .build()
         try {

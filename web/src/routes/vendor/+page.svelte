@@ -18,7 +18,7 @@
 	import { incidentMatches, locationText, type ListRow } from '#lib/incident-list.ts';
 	import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+	let { data, form }: PageProps = $props();
 	// Set once the page is interactive (used by scripts/browser-login-check.mjs).
 	let ready = $state(false);
 	onMount(() => (ready = true));
@@ -85,6 +85,17 @@
 </svelte:head>
 
 <h1>신고 목록</h1>
+
+<section class="enroll" aria-label="차량 등록 코드">
+	<form method="POST" action="?/enroll">
+		<button type="submit">차량 등록 코드 발급</button>
+		<span class="hint">차량 인도 시 대여 정보 화면의 '업체 등록 코드'에 입력합니다. 30분 동안 한 번만 쓸 수 있습니다.</span>
+	</form>
+	{#if form?.enrollment}
+		<p class="code" data-testid="enrollment-code">{form.enrollment.code}</p>
+		<p class="hint">{fmtKst(form.enrollment.expiresAt)}까지 유효 · 이 화면을 벗어나면 다시 볼 수 없습니다.</p>
+	{/if}
+</section>
 
 {#if data.incidents.length === 0}
 	<p>접수된 신고가 없습니다.</p>
@@ -307,5 +318,25 @@
 		width: auto;
 		margin: 0;
 		padding: 0.35rem 1rem;
+	}
+	.enroll {
+		margin: 0 0 1rem;
+	}
+	.enroll form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1rem;
+		align-items: center;
+	}
+	.enroll .code {
+		font-family: ui-monospace, monospace;
+		font-size: 2rem;
+		font-weight: 700;
+		letter-spacing: 0.15em;
+		margin: 0.5rem 0 0;
+	}
+	.enroll .hint {
+		color: var(--muted, #5f6169);
+		font-size: 0.9rem;
 	}
 </style>

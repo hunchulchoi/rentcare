@@ -7,21 +7,59 @@ import { db } from './db';
 import { createIncident, type CreatedIncident } from './incidents';
 import { issueIncidentToken } from './incident-token';
 import type { RentalRegistration } from './validate';
+import { DEMO_VENDOR_ID } from './db';
+import { enrollmentExpiry, type RegistrationAuth } from '../car-auth.ts';
 
 export type RegisterResult =
 	| { kind: 'created' | 'replayed'; rentalCode: string; rentalCodeExpiresAt: string; rentalToken: string }
 	| { kind: 'unknown_vendor' }
-	| { kind: 'key_conflict' };
+	| { kind: 'key_conflict' }
+	| { kind: 'code_invalid' }
+	| { kind: 'code_expired' };
 
-/** Register a rental, or replay with the same Idempotency-Key (new code and token, old ones stop working). */
-export async function registerRental(input: RentalRegistration, idempotencyKey: string, now = new Date()): Promise<RegisterResult> {
+/** Vendor screen: a single-use car enrollment code for this vendor, valid 30 minutes (docs/api.md v13). */
+export async function issueEnrollmentCode(vendorId: string, now = new Date()): Promise<{ code: string; expiresAt: Date }> {
+	const expiresAt = enrollmentExpiry(now);
+	for (let i = 0; i < 8; i++) {
+		const code = generateRentalCode();
+		const rows = await db()`
+			insert into enrollment_codes (code_hash, vendor_id, expires_at, created_at)
+			values (${sha256Hex(code)}, ${vendorId}, ${expiresAt}, ${now})
+			on conflict (code_hash) do nothing returning code_hash`;
+		if (rows.length === 1) return { code, expiresAt };
+	}
+	throw new Error('could not allocate a unique enrollment code');
+}
+
+/**
+ * Register a rental, or replay with the same Idempotency-Key (new code and token, old ones stop working).
+ * A new registration needs an enrollment code (vendor taken from the code) or is the open demo
+ * registration (demo vendor, always demo). A replay needs neither: the key is the car's own secret.
+ */
+export async function registerRental(
+	input: RentalRegistration,
+	idempotencyKey: string,
+	auth: Exclude<RegistrationAuth, { kind: 'denied' }>,
+	now = new Date()
+): Promise<RegisterResult> {
 	return db().begin(async (sql) => {
 		await sql`select pg_advisory_xact_lock(hashtextextended(${'rental:' + idempotencyKey}, 0))`;
 		const existing = await sql<{ id: string; vendor_id: string }[]>`
 			select id, vendor_id from rentals where idempotency_key = ${idempotencyKey}`;
-		if (existing.length && existing[0].vendor_id !== input.vendorId) return { kind: 'key_conflict' } as const;
+		let vendorId = auth.kind === 'demo' ? DEMO_VENDOR_ID : input.vendorId;
+		const demo = auth.kind === 'demo' ? true : input.demo;
+		let enrollment: string | null = null;
+		if (!existing.length && auth.kind === 'code') {
+			const [c] = await sql<{ vendor_id: string; expires_at: Date; used_at: Date | null }[]>`
+				select vendor_id, expires_at, used_at from enrollment_codes where code_hash = ${sha256Hex(auth.code)} for update`;
+			if (!c || c.used_at) return { kind: 'code_invalid' } as const;
+			if (c.expires_at.getTime() <= now.getTime()) return { kind: 'code_expired' } as const;
+			vendorId = c.vendor_id;
+			enrollment = sha256Hex(auth.code);
+		}
+		if (existing.length && existing[0].vendor_id !== vendorId) return { kind: 'key_conflict' } as const;
 		if (!existing.length) {
-			const vendor = await sql`select 1 from vendors where id = ${input.vendorId}`;
+			const vendor = await sql`select 1 from vendors where id = ${vendorId}`;
 			if (!vendor.length) return { kind: 'unknown_vendor' } as const;
 		}
 		const r = input.rental;
@@ -32,10 +70,11 @@ export async function registerRental(input: RentalRegistration, idempotencyKey: 
 			const [row] = await sql<{ id: string }[]>`
 				insert into rentals (vendor_id, idempotency_key, language, demo, rental_id, vehicle_plate, vehicle_model,
 					powertrain, return_place, return_at, car_token_hash, created_at)
-				values (${input.vendorId}, ${idempotencyKey}, ${input.language}, ${input.demo}, ${r.rentalId}, ${r.vehiclePlate},
+				values (${vendorId}, ${idempotencyKey}, ${input.language}, ${demo}, ${r.rentalId}, ${r.vehiclePlate},
 					${r.vehicleModel}, ${r.powertrain}, ${r.returnPlace}, ${r.returnAt}, ${token.hash}, ${now})
 				returning id`;
 			id = row.id;
+			if (enrollment) await sql`update enrollment_codes set used_at = ${now}, rental_ref = ${id} where code_hash = ${enrollment}`;
 		}
 		for (let i = 0; i < 8; i++) {
 			const code = generateRentalCode();
@@ -77,6 +116,28 @@ export async function releaseRental(token: string): Promise<boolean> {
 		await sql`update incidents set car_token_hash = null where id in (${reports})`;
 		return true;
 	});
+}
+
+/** The car's rental behind a rental token (v13): not released and not past the code expiry. */
+export interface TokenRental {
+	id: string;
+	vendorId: string;
+	demo: boolean;
+	rentalId: string;
+	vehiclePlate: string;
+	vehicleModel: string | null;
+	powertrain: string | null;
+	returnPlace: string | null;
+	returnAt: Date | null;
+}
+
+export async function findRentalByToken(token: string, now = new Date()): Promise<TokenRental | null> {
+	const rows = await db()<TokenRental[]>`
+		select id, vendor_id as "vendorId", demo, rental_id as "rentalId", vehicle_plate as "vehiclePlate",
+			vehicle_model as "vehicleModel", powertrain, return_place as "returnPlace", return_at as "returnAt"
+		from rentals
+		where car_token_hash = ${sha256Hex(token)} and released_at is null and code_expires_at > ${now}`;
+	return rows[0] ?? null;
 }
 
 export interface CodeRental {
@@ -142,7 +203,7 @@ export async function createPhoneReport(report: PhoneReport, language: Language,
 		},
 		report.key,
 		now,
-		{ rentalRef: r.id, maxReports: PHONE_REPORTS_PER_RENTAL }
+		{ rentalRef: r.id, maxReports: PHONE_REPORTS_PER_RENTAL, channel: 'PHONE' }
 	);
 	if (res.kind === 'too_many_reports') return { ok: false, error: 'too_many_reports' };
 	if (res.kind === 'created' || res.kind === 'replayed') return { ok: true, incident: res.incident, replayed: res.kind === 'replayed' };

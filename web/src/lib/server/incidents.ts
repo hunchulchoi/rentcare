@@ -50,13 +50,17 @@ export async function createIncident(
 	input: IncidentInput,
 	idempotencyKey: string,
 	now = new Date(),
-	/** Phone basic report (RENTCARE-13): filed with a rental code, no car token. */
-	phone?: { rentalRef: string; maxReports: number }
+	/**
+	 * Report tied to a registered rental: from a phone with the rental code (RENTCARE-13, no car token) or from
+	 * the car with its rental token (v13). maxReports caps reports of this channel per rental.
+	 */
+	link?: { rentalRef: string; maxReports: number; channel: 'CAR' | 'PHONE' }
 ): Promise<CreateResult | { kind: 'too_many_reports' }> {
 	return db().begin(async (sql) => {
 		// Serialize concurrent requests with the same key.
 		await sql`select pg_advisory_xact_lock(hashtextextended(${idempotencyKey}, 0))`;
 
+		const phone = link?.channel === 'PHONE';
 		const existing = await sql<{ id: string; receipt_no: string; status: IncidentStatus; vendor_id: string }[]>`
 			select id, receipt_no, status, vendor_id from incidents where idempotency_key = ${idempotencyKey}`;
 		if (existing.length) {
@@ -77,11 +81,11 @@ export async function createIncident(
 
 		const vendor = await sql`select 1 from vendors where id = ${input.vendorId}`;
 		if (!vendor.length) return { kind: 'unknown_vendor' } as const;
-		if (phone) {
-			await sql`select 1 from rentals where id = ${phone.rentalRef} for update`;
+		if (link) {
+			await sql`select 1 from rentals where id = ${link.rentalRef} for update`;
 			const [{ n }] = await sql<{ n: number }[]>`
-				select count(*)::int as n from incidents where rental_ref = ${phone.rentalRef} and channel = 'PHONE'`;
-			if (n >= phone.maxReports) return { kind: 'too_many_reports' } as const;
+				select count(*)::int as n from incidents where rental_ref = ${link.rentalRef} and channel = ${link.channel}`;
+			if (n >= link.maxReports) return { kind: 'too_many_reports' } as const;
 		}
 
 		const day = kstDayKey(now);
@@ -109,7 +113,7 @@ export async function createIncident(
 				${v !== null}, ${v?.fuelPercent ?? null}, ${v?.soc ?? null}, ${v?.readAt ?? null},
 				${l?.latitude ?? null}, ${l?.longitude ?? null}, ${l?.address ?? null}, ${l?.readAt ?? null},
 				${l?.source ?? null}, ${l?.edited ?? null},
-				${phone ? null : token.hash}, ${input.warnings}, ${now}, ${phone ? 'PHONE' : 'CAR'}, ${phone?.rentalRef ?? null}
+				${phone ? null : token.hash}, ${input.warnings}, ${now}, ${link?.channel ?? 'CAR'}, ${link?.rentalRef ?? null}
 			)
 			returning id`;
 

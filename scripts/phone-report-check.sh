@@ -4,7 +4,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 B=${RENTCARE_BASE_URL:-$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)}
-car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
+tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
 pass=0; fail=0; ok(){ echo "  PASS $1"; pass=$((pass+1)); }; bad(){ echo "  FAIL $1"; fail=$((fail+1)); }
 d=$(mktemp -d); key=$(uuidgen | tr A-Z a-z); ret=$(date -u -v+1d +%Y-%m-%dT%H:%M:%SZ)
 # SvelteKit action JSON: data is devalue-flattened; print one field (or the error).
@@ -14,7 +14,7 @@ if not isinstance(d,str): print(""); sys.exit()
 a=json.loads(d); o=a[0]; k=sys.argv[1]
 v=o.get(k); print(a[v] if isinstance(v,int) and v>=0 else "")' "$1"; }
 act() { curl -s -X POST "$B/r?lang=ko&/$1" -H "Origin: $B" -H 'Accept: application/json' -H 'x-sveltekit-action: true' "${@:2}"; }
-reg() { curl -s -w '\n%{http_code}' -X POST "$B/api/rentals" -H "Authorization: Bearer $car" -H "Idempotency-Key: $key" \
+reg() { curl -s -w '\n%{http_code}' -X POST "$B/api/rentals" -H "Idempotency-Key: $key" \
   -H 'Content-Type: application/json' -d '{"vendorId":"demo-jeju","language":"ko","demo":true,
   "rental":{"rentalId":"E2E-PHONE","vehiclePlate":"99하9999","vehicleModel":"IONIQ 5","powertrain":"EV","returnPlace":"판교","returnAt":"'$ret'"}}'; }
 
@@ -55,7 +55,7 @@ det=$(curl -s -b "$jar" "$B/vendor/incidents/$id")
 for i in 2 3 4 5; do rep "$(uuidgen | tr A-Z a-z)" OTHER >/dev/null; done
 [[ "$(rep "$(uuidgen | tr A-Z a-z)" OTHER)" == *too_many_reports* ]] && ok "6th phone report refused (max 5)" || bad "no per-rental limit"
 
-st=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/rentals/release" -H "Origin: $B" -H "Authorization: Bearer $car" -H "X-Rental-Token: $rtok")
+st=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/rentals/release" -H "Origin: $B" -H "X-Rental-Token: $rtok")
 [[ "$st" == 204 ]] && ok "rental end (204)" || bad "release http $st"
 [[ "$(act verify --data-urlencode "code=$c2")" == *code_invalid* ]] && ok "code revoked after rental end" || bad "code works after rental end"
 m=$(curl -s -X POST "$B/m?/verify" -H "Origin: $B" -H 'Accept: application/json' --data-urlencode "code=$acode")

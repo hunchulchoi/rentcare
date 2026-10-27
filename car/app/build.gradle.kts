@@ -9,14 +9,14 @@ plugins {
 
 fun prop(name: String, default: String) = (findProperty(name) as String?) ?: default
 
-// Server address and car key come from web/.env (one place for both sides). Gradle -P overrides.
+// Server address comes from web/.env (one place for both sides). Gradle -P overrides.
+// No car key ships in the app (RENTCARE-36): the car registers the rental and gets its own token.
 // Move hosts by editing PUBLIC_BASE_URL there, e.g. https://rentcare.devfor.link
 val webEnv: Map<String, String> = rootProject.file("../web/.env").takeIf { it.exists() }?.readLines()
     ?.mapNotNull { line -> line.trim().takeIf { it.isNotEmpty() && !it.startsWith("#") && '=' in it } }
     ?.associate { it.substringBefore('=').trim() to it.substringAfter('=').trim() }
     .orEmpty()
 val envBaseUrl = webEnv["PUBLIC_BASE_URL"].orEmpty()
-val envCarKey = webEnv["CAR_API_KEY"].orEmpty()
 
 android {
     namespace = "com.rentcare.car"
@@ -60,7 +60,6 @@ android {
             // Cleartext only to the emulator host loopback, see res/xml/network_security_config_debug.xml
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config_debug"
             buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.apiBaseUrl", envBaseUrl.ifEmpty { "http://10.0.2.2:5173" })}\"")
-            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.carApiKey", envCarKey.ifEmpty { "dev-car-key" })}\"")
         }
         release {
             isMinifyEnabled = false
@@ -69,7 +68,6 @@ android {
             manifestPlaceholders["networkConfig"] = "@xml/network_security_config"
             // No default: a release must name its HTTPS domain explicitly (Pleos security guide).
             buildConfigField("String", "API_BASE_URL", "\"${prop("rentcare.releaseApiBaseUrl", envBaseUrl)}\"")
-            buildConfigField("String", "CAR_API_KEY", "\"${prop("rentcare.releaseCarApiKey", envCarKey)}\"")
         }
     }
 
@@ -110,14 +108,12 @@ dependencies {
 // Fail release builds that would ship an HTTP / IP / empty server address.
 val checkReleaseConfig by tasks.registering {
     val url = prop("rentcare.releaseApiBaseUrl", envBaseUrl)
-    val key = prop("rentcare.releaseCarApiKey", envCarKey)
     doLast {
         val host = runCatching { URI(url).host }.getOrNull().orEmpty()
         val isIp = Regex("""^\d{1,3}(\.\d{1,3}){3}$""").matches(host) || host.contains(':') || !host.contains('.')
         require(url.startsWith("https://") && host.isNotEmpty() && !isIp && host != "localhost") {
             "rentcare.releaseApiBaseUrl must be an https:// domain (got '$url')"
         }
-        require(key.isNotBlank()) { "rentcare.releaseCarApiKey is required for release" }
         require(project.findProperty("rentcare.allowUnsigned") == "true" ||
             ((findProperty("rentcare.signing.storeFile") ?: System.getenv("RENTCARE_SIGNING_STORE_FILE")) != null)) {
             "release signing is not configured (set rentcare.signing.* or -Prentcare.allowUnsigned=true for a local check)"

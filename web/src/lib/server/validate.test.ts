@@ -222,4 +222,13 @@ describe('validateRentalRegistration (v11)', async () => {
 		expect(validateRentalRegistration({ ...body, rental: { ...body.rental, vehiclePlate: undefined } }).ok).toBe(false);
 		expect(validateRentalRegistration({ ...body, language: 'fr' }).ok).toBe(false);
 	});
+
+	it('takes an optional enrollment code, normalized; a malformed one is an error (v13)', () => {
+		const none = validateRentalRegistration(body);
+		expect(none.ok && none.value.enrollmentCode).toBeNull();
+		const typed = validateRentalRegistration({ ...body, enrollmentCode: ' k7q2-m9ab ' });
+		expect(typed.ok && typed.value.enrollmentCode).toBe('K7Q2M9AB');
+		expect(validateRentalRegistration({ ...body, enrollmentCode: null }).ok).toBe(true);
+		expect(validateRentalRegistration({ ...body, enrollmentCode: 'K7Q2' }).ok).toBe(false);
+	});
 });

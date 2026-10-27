@@ -54,7 +54,7 @@
 | 디버그 로그에 민감정보 금지, 릴리스에서 로그 비활성/마스킹 | ❌ SDK 검증 로그가 위치 좌표·주소를 debug·release 모두에 출력, 검증 화면이 release에도 노출 |
 | 자동 백업 비활성 또는 민감 파일 제외 | ✅ `allowBackup=false` |
 | 토큰·세션을 URL에 넣지 않음, `Authorization` 헤더 사용 | ✅ API 키는 헤더, QR에는 일반 주소만 |
-| AES-GCM 등 인증 모드, Keystore 키 보관, 하드코딩 키 금지 | ❌ 데모 `CAR_API_KEY`가 BuildConfig에 하드코딩 |
+| AES-GCM 등 인증 모드, Keystore 키 보관, 하드코딩 키 금지 | ✅ 공용 키 제거(v13, RENTCARE-36): 대여 등록 때 서버가 차량·대여 전용 토큰 발급, 만료·폐기 |
 | 모든 외부 통신 HTTPS, TLS 1.2 이상 | ⚠️ release는 cleartext 차단, OkHttp 4.12 기본 MODERN_TLS로 TLS 1.2/1.3만 허용. 서버 측 TLS는 배포 설정 의존 |
 | 필요한 서버만, IP 하드코딩 금지(도메인 사용) | ❌ `10.0.2.2` 기본값이 release에도 들어감(평문 예외만 debug 한정) → release 빌드는 HTTPS 도메인 필수로 막아야 함 (RENTCARE-28) |
 | 최소 권한 | ⚠️ main manifest는 사용 도메인만. debug manifest에 비공개 `PRIVATE_*` |

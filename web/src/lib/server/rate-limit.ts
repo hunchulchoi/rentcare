@@ -1,4 +1,5 @@
 // Tiny in-memory fixed-window limiter for failed attempts (per process; fine for a single node).
+import { DEMO_REGISTRATIONS_PER_HOUR } from '../car-auth.ts';
 
 export class FailureLimiter {
 	private hits = new Map<string, { count: number; resetAt: number }>();
@@ -40,3 +41,7 @@ export const attachCodeLimiter = new FailureLimiter(10, 10 * 60 * 1000);
 export const loginLimiter = new FailureLimiter(10, 15 * 60 * 1000);
 /** Failed rental-code checks on /r (verify + report). */
 export const rentalCodeLimiter = new FailureLimiter(10, 10 * 60 * 1000);
+/** Failed car enrollment codes on POST /api/rentals (v13). */
+export const enrollmentCodeLimiter = new FailureLimiter(10, 10 * 60 * 1000);
+/** Open demo registrations per IP (counted on every call, not only failures). */
+export const demoRegistrationLimiter = new FailureLimiter(DEMO_REGISTRATIONS_PER_HOUR, 60 * 60 * 1000);

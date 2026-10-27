@@ -220,6 +220,15 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
             }
         }
 
+        // Non-demo builds: staff type the code from the vendor screen (docs/api.md v13). Contest builds use the demo vendor.
+        if (!BuildConfig.DEMO_MODE) {
+            val code by vm.enrollmentCode.collectAsStateWithLifecycle()
+            Section(stringResource(R.string.enrollment_title)) {
+                Text(stringResource(R.string.enrollment_note), style = MaterialTheme.typography.bodySmall)
+                Field(stringResource(R.string.enrollment_code), code, vm::setEnrollmentCode, enabled = allowed)
+            }
+        }
+
         if (invalid) Text(stringResource(R.string.rental_invalid), color = MaterialTheme.colorScheme.error)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

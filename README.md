@@ -46,7 +46,7 @@ Pleos Connect 차량용 렌터카 앱 — 현대자동차그룹 차량용 앱 �
 ```bash
 # 서버 (로컬 PostgreSQL)
 docker compose up -d db
-cd web && cp .env.example .env          # CAR_API_KEY, DEMO_VENDOR_TOKEN 등 설정
+cd web && cp .env.example .env          # DEMO_VENDOR_TOKEN 등 설정
 pnpm install && pnpm db:migrate && pnpm build && pnpm start   # http://localhost:3000
 
 # 차량 앱 (JDK 17 또는 21)
@@ -63,10 +63,11 @@ release 빌드는 HTTPS 도메인과 서명 키가 있어야 만들어진다 (`c
 
 | 명령 | 범위 |
 |---|---|
-| `cd car && ./gradlew :core:test` | 반납 판정 등 순수 로직 (92개) |
-| `cd web && pnpm test && pnpm check` | 서버 검증·코드·보관·문자열 (100개), 타입 검사 |
-| `scripts/e2e.sh` | 에뮬레이터 + 로컬 서버 + 헤드리스 Chrome 통합 시나리오 (53개) |
+| `cd car && ./gradlew :core:test` | 반납 판정 등 순수 로직 (100개) |
+| `cd web && pnpm test && pnpm check` | 서버 검증·코드·보관·문자열 (115개), 타입 검사 |
+| `scripts/e2e.sh` | 에뮬레이터 + 로컬 서버 + 헤드리스 Chrome 통합 시나리오 (61개) |
 | `scripts/attach-check.sh`, `phone-report-check.sh`, `retention-check.sh`, `cross-vendor-check.sh`, `i18n-check.sh` | 첨부·휴대폰 접수·90일 삭제·업체 간 차단·번역 누락 |
+| `scripts/car-auth-check.sh`, `release-check.sh <apk>` | 공용 키 없는 차량 인증(등록 코드·대여 토큰·만료·폐기), 제출 APK 서명·권한 점검 |
 
 시험 환경: macOS, Pleos Connect 에뮬레이터 2.1.0(EV 프로필) + Virtual Console, Chrome headless, PostgreSQL 18, MinIO.
 
@@ -89,4 +90,6 @@ release 빌드는 Pleos가 3rd-party 사용을 확인할 때까지 이 권한이
 - HTTPS 전용(release), 서버 주소는 도메인만. URL·QR에 토큰·코드를 넣지 않는다.
 - 차량 저장값은 Android Keystore AES-GCM으로 암호화. 반납 완료 시 차량 데이터를 지우고 서버의 코드·토큰을 무효화.
 - 서버: 첨부 저장소 암호화(SSE), 접수·대여 등록은 90일 후 자동 삭제 (`docs/privacy.md`).
-- 차량 API 키는 앱에 들어 있으므로 접수 생성만 허용하고, 상태 조회·첨부는 접수별 토큰이 있어야 한다.
+- 앱에는 공용 API 키가 없다. 대여 등록 때 서버가 이 차량·대여 전용 토큰을 발급하고(업체 화면의 일회용 등록 코드,
+  시연 빌드는 데모 업체로만 등록), 업체·대여 범위는 서버가 토큰으로 정한다. 반납 완료나 반납 시각 + 24시간에 만료된다.
+  상태 조회·첨부는 접수별 토큰이 따로 필요하다 (`docs/api.md` v13).

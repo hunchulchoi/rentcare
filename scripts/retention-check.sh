@@ -3,7 +3,7 @@
 # into the past, restart the server (purge runs at start), expect report and file gone.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-L=$(grep ^LOCAL_BASE_URL web/.env | cut -d= -f2); car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2)
+L=$(grep ^LOCAL_BASE_URL web/.env | cut -d= -f2); car=$(scripts/car-token.sh "$L" RET)
 r=$(curl -s -X POST "$L/api/incidents" -H "Authorization: Bearer $car" -H "Idempotency-Key: $(uuidgen | tr A-Z a-z)" -H 'Content-Type: application/json' \
   -d '{"vendorId":"demo-jeju","type":"OTHER","language":"ko","note":"retention test","occurredAt":"2026-10-26T01:00:00Z","demo":true,"rental":{"rentalId":"RET","vehiclePlate":"0","vehicleModel":"x","powertrain":"EV","returnPlace":"x","returnAt":"2026-10-26T09:00:00Z"},"vehicle":null,"location":null}')
 rc=$(echo "$r" | grep -oE 'RC-[0-9]{8}-[0-9]{4}'); code=$(echo "$r" | grep -oE '"attachCode":"[A-Z0-9]+"' | cut -d'"' -f4)

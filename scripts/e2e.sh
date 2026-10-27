@@ -120,7 +120,7 @@ check "S4b 12V section shown when the lamp is on" "차량에 12V 배터리 부�
 $VC telltale LowVoltBattery Off >/dev/null
 
 echo "== S6a same Idempotency-Key x5 in parallel -> one incident"
-key=$(uuidgen | tr A-Z a-z); car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); out=$(mktemp -d)
+key=$(uuidgen | tr A-Z a-z); car=$(scripts/car-token.sh "$B" E2E-S6); out=$(mktemp -d)
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 body='{"vendorId":"demo-jeju","type":"OTHER","language":"ko","note":"e2e S6a","occurredAt":"'$now'","demo":true,
 "rental":{"rentalId":"E2E-S6","vehiclePlate":"00하0000","vehicleModel":"IONIQ 5","powertrain":"EV","returnPlace":"e2e","returnAt":"'$now'"},

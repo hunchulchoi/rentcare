@@ -34,7 +34,7 @@
 | 변수 | 비고 |
 |---|---|
 | `DATABASE_URL` | Infisical 값에서 호스트만 `postgres:5432`(postgres_default 네트워크)로 바꿈. TLS 필수 |
-| `CAR_API_KEY`, `DEMO_VENDOR_TOKEN` | `web/.env`와 같은 값 (차량 앱 빌드가 같은 키를 씀) |
+| `DEMO_VENDOR_TOKEN` | `web/.env`와 같은 값. `CAR_API_KEY`는 v13(RENTCARE-36)부터 쓰지 않음 — 남아 있어도 무시됨 |
 | `S3_BUCKET`, `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_FORCE_PATH_STYLE` | MinIO. 엔드포인트는 https 공개 주소 |
 | `PUBLIC_BASE_URL` | `https://rentcare.devfor.link` (ORIGIN도 이 값) |
 

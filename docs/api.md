@@ -5,9 +5,11 @@ All amounts and IDs are strings unless noted.
 
 ## Common
 
-- Car → server calls use `Authorization: Bearer <CAR_API_KEY>` (demo shared key, env on server).
+- **No shared key in the app (v13, 2026-10-27, RENTCARE-36).** The car gets its own credential when it registers
+  the rental (`rentalToken`, see "Car credentials") and sends it as `Authorization: Bearer <rentalToken>`.
+  Report calls also carry the report's own `X-Incident-Token`. `CAR_API_KEY` is no longer read by the server.
 - Errors: `{"error": "<code>", "message": "<human text>"}` with 4xx/5xx.
-  Codes: `unauthorized`, `invalid_request`, `not_found`, `too_large`, `unsupported_type`, `too_many_files`,
+  Codes: `unauthorized`, `forbidden` (v13), `invalid_request`, `not_found`, `too_large`, `unsupported_type`, `too_many_files`,
   `code_invalid`, `code_expired`, `rate_limited`.
   Validation errors (`invalid_request` on POST /api/incidents) also carry `"details": ["$.path: problem", …]`.
 - **Multipart POSTs from the car must send `Origin: <server origin>`** (the origin of `PUBLIC_BASE_URL`,
@@ -28,11 +30,26 @@ All amounts and IDs are strings unless noted.
 
 Languages: `ko`, `en` (later `ja`, `zh`).
 
+## Car credentials (v13, 2026-10-27)
+
+| credential | issued by | scope | ends |
+|---|---|---|---|
+| enrollment code | vendor screen "차량 등록 코드" (`/vendor`) | one vendor, one registration | 30 min or first use |
+| demo registration | none (open) | only the demo vendor `demo-jeju`, always `demo: true`; 60 per IP per hour | — |
+| `rentalToken` | `POST /api/rentals` | that vendor and rental: create reports, map tiles, release | `returnAt` + 24 h (same as the rental code), rental end, or re-registration |
+| `incidentToken` | `POST /api/incidents` | that report: status, car attach, release | rental end / report release |
+
+The server takes the vendor, rental and `demo` flag from the credential, never from the request body.
+A `vendorId` in a body that differs from the credential's vendor → `403 forbidden`. Missing, unknown, expired
+or released token → `401 unauthorized`.
+
 ## POST /api/incidents
 
 Create a basic incident report (no attachments needed).
 
-Headers: `Authorization`, `Idempotency-Key: <uuid>` (required).
+Headers: `Authorization: Bearer <rentalToken>`, `Idempotency-Key: <uuid>` (required).
+The report is linked to the registered rental (`rental_ref`); `vendorId` and `demo` come from it, and the
+`rental` object's fields are replaced by the registered ones. At most 30 car reports per rental (`429 rate_limited`).
 
 ```json
 {
@@ -105,14 +122,14 @@ a fresh attach code is issued and the previous one stops working):
 
 ### Incident token (v2, 2026-10-22)
 
-`CAR_API_KEY` alone only allows **creating** incidents. The create response carries `incidentToken`
+The rental token only allows **creating** incidents. The create response carries `incidentToken`
 (32 random bytes, base64url). The server stores only its SHA-256. Status polling and car attachments
 require it in `X-Incident-Token`. A replay with the same `Idempotency-Key` rotates the token
 (the previous one stops working), like the attach code. The car stores it encrypted and never logs it.
 
 ## GET /api/incidents/{id}
 
-Car polls status. Headers: `Authorization`, `X-Incident-Token: <incidentToken>`.
+Car polls status. Headers: `X-Incident-Token: <incidentToken>` (v13: no other auth).
 Missing or wrong token → `404 not_found` (same as an unknown id, so existence is not revealed).
 
 ```json
@@ -153,10 +170,13 @@ request while the container wakes. `/health` stays the plain liveness check.
 ## POST /api/rentals (v11, 2026-10-26)
 
 Car registers the rental when it is saved, so the renter can still report from a phone if the car screen
-cannot be used (e.g. the car does not start). Headers: `Authorization`, `Idempotency-Key` (UUID), JSON body:
+cannot be used (e.g. the car does not start). Headers: `Idempotency-Key` (UUID), JSON body. v13: no
+`Authorization`; the body carries an `enrollmentCode` from the vendor screen, or is a demo registration
+(`vendorId: "demo-jeju"`, `demo: true`, no code). Wrong or used code → `401 unauthorized` (`code_invalid` /
+`code_expired`); a non-demo registration without a code → `401`. 10 failed codes / 10 min per IP.
 
 ```json
-{ "vendorId": "demo-jeju", "language": "ko", "demo": true,
+{ "vendorId": "demo-jeju", "language": "ko", "demo": true, "enrollmentCode": null,
   "rental": { "rentalId": "R-1001", "vehiclePlate": "12하3456", "vehicleModel": "IONIQ 5", "powertrain": "EV",
               "returnPlace": "판교역 렌터카 반납장", "returnAt": "2026-10-23T09:00:00Z" } }
 ```
@@ -166,11 +186,12 @@ Response `201` (`200` on replay: new code and token, the previous ones stop work
 
 - `rentalCode`: 8 chars, same alphabet as attach codes, stored hashed, valid until `returnAt` + 24 h.
   Shown on the car's rental screen next to a QR of `reportUrl` (no code in the URL).
-- `rentalToken`: like the incident token — only for this car, used to release; never shown or logged.
+- `rentalToken`: the car's credential for this rental (see "Car credentials"); stored encrypted, never shown or logged.
+- Replay with the same `Idempotency-Key` returns a new code and token without a new enrollment code.
 
 ## POST /api/rentals/release (v11)
 
-Rental end. Headers: `Authorization`, `X-Rental-Token`, `Origin`. `204`, then `404` for the same token
+Rental end. Headers: `X-Rental-Token`, `Origin`. `204`, then `404` for the same token
 (already released — the car treats both as done). Revokes the rental code and the token, and the attach
 codes and car tokens of every report of this rental (same vendor, rental id and plate since registration,
 or filed with the rental code).
@@ -187,7 +208,7 @@ or filed with the rental code).
 
 ## POST /api/incidents/{id}/release (v9, 2026-10-26)
 
-Car calls this when the rental ends ("반납 완료"). Headers: `Authorization`, `X-Incident-Token`, `Origin` (CSRF check).
+Car calls this when the rental ends ("반납 완료"). Headers: `X-Incident-Token`, `Origin` (CSRF check).
 No body. Response `204`. Unknown id or wrong token → `404` (same as status).
 
 - Revokes the attach code (the phone page rejects it as invalid) and the car token (status and car attach
@@ -197,7 +218,7 @@ No body. Response `204`. Unknown id or wrong token → `404` (same as status).
 
 ## POST /api/incidents/{id}/attachments
 
-Car direct attach (only for files the car can legally access). Headers: `Authorization`, `X-Incident-Token`.
+Car direct attach (only for files the car can legally access). Headers: `X-Incident-Token`.
 `multipart/form-data`, field `file` (one file per request).
 
 - Allowed: `image/jpeg`, `image/png`, `image/heic`, `video/mp4`, `video/quicktime`.
@@ -210,7 +231,7 @@ Response `201`: `{ "attachmentId": "…", "attachments": 3 }`
 
 ## GET /api/map/tiles/{z}/{x}/{y}.png (v5, 2026-10-23)
 
-Map tile for the car's static location map. `Authorization: Bearer CAR_API_KEY`.
+Map tile for the car's static location map. `Authorization: Bearer <rentalToken>` (v13).
 
 - Web Mercator 256 px PNG. `z` 12..18 only (street level), `x`,`y` inside the world, plain integers. Otherwise 404.
 - The server fetches from `MAP_TILE_URL` (default OpenStreetMap, demo use) with an identifying User-Agent and
@@ -246,3 +267,6 @@ Phone location fallback when the car could not send one. Form fields `code` (att
   location (with read time and edited flag), attachments (download through an access-checked route),
   "확인" button → `ACKNOWLEDGED`.
 - Another vendor's incident/file IDs return 404.
+- `POST /vendor?/enroll` (v13) — issues a car enrollment code for the logged-in vendor: 8 chars (attach-code
+  alphabet), stored hashed, valid 30 min, single use. Staff type it into the car's rental screen
+  ("업체 등록 코드") when they hand over the car; the car sends it with `POST /api/rentals`.

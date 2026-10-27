@@ -1,3 +1,4 @@
+import { normalizeRentalCode } from '../rental-code.ts';
 // Strict validator for POST /api/incidents bodies. No dependencies; pure and unit-tested.
 import {
 	INCIDENT_TYPES,
@@ -172,22 +173,29 @@ export interface RentalRegistration {
 	language: Language;
 	demo: boolean;
 	rental: Rental;
+	/** Vendor-issued car enrollment code (v13); null for the open demo registration. */
+	enrollmentCode: string | null;
 }
 
 /** POST /api/rentals body (docs/api.md v11). */
 export function validateRentalRegistration(body: unknown): ValidationResult<RentalRegistration> {
 	const c = new Checker();
-	const o = c.object(body, '$', ['vendorId', 'language', 'demo', 'rental']);
+	const o = c.object(body, '$', ['vendorId', 'language', 'demo', 'rental', 'enrollmentCode']);
 	if (!o) return { ok: false, errors: c.errors };
 	const vendorId = parseVendorId(c, o.vendorId);
 	const language = c.oneOf(o.language, '$.language', LANGUAGES);
 	let demo = false;
 	if (o.demo !== undefined) demo = c.boolean(o.demo, '$.demo') ?? false;
 	const rental = c.has(o, 'rental', '$') ? parseRental(c, o.rental) : undefined;
+	let enrollmentCode: string | null = null;
+	if (o.enrollmentCode !== undefined && o.enrollmentCode !== null) {
+		enrollmentCode = normalizeRentalCode(o.enrollmentCode);
+		if (!enrollmentCode) c.errors.push('$.enrollmentCode: must be an 8-character code');
+	}
 	if (c.errors.length > 0 || !vendorId || !language || !rental) {
 		return { ok: false, errors: c.errors.length ? c.errors : ['$: invalid'] };
 	}
-	return { ok: true, value: { vendorId, language, demo, rental } };
+	return { ok: true, value: { vendorId, language, demo, rental, enrollmentCode } };
 }
 
 export function validateIncidentInput(body: unknown): ValidationResult<IncidentInput> {

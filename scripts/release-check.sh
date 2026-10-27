@@ -2,7 +2,7 @@
 # Audit the APK we submit (RENTCARE-37, Pleos app security guide). Run on the exact file you send.
 #   scripts/release-check.sh car/app/build/outputs/apk/release/team_RentCare_release.apk
 # Checks: v2/v3 signature verifies for minSdk 28, not the Android debug certificate, not debuggable,
-# no PRIVATE_* permission, allowBackup off, release HTTPS server. Prints the certificate SHA-256.
+# no PRIVATE_* permission, allowBackup off, release HTTPS server, no shared car key. Prints the certificate SHA-256.
 set -uo pipefail
 APK="${1:?usage: scripts/release-check.sh <apk>}"
 SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -33,6 +33,7 @@ priv="$("$BT/aapt" dump permissions "$APK" | grep -o "pleos.car.permission.PRIVA
 
 dex="$(mktemp -d)"; unzip -q -o "$APK" 'classes*.dex' -d "$dex"
 url="$(LC_ALL=C strings "$dex"/classes*.dex | grep -m1 -E '^https?://[a-z0-9.-]+\.[a-z]{2,}/?$' || true)"
+if LC_ALL=C strings "$dex"/classes*.dex | grep -q 'CAR_API_KEY'; then bad "shared CAR_API_KEY field in the app (RENTCARE-36)"; else ok "no shared car key in the app"; fi
 rm -rf "$dex"
 case "$url" in https://*) ok "server $url";; *) bad "server address not https ($url)";; esac
 

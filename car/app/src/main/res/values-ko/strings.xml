@@ -255,4 +255,7 @@
     <string name="navi_waiting">내비 응답을 기다리는 중…</string>
     <string name="reading_car">차량 값을 읽는 중…</string>
     <string name="status_checking">상태 확인 중…</string>
+    <string name="enrollment_title">업체 등록 코드</string>
+    <string name="enrollment_code">코드</string>
+    <string name="enrollment_note">차량을 인도할 때 업체 직원이 업체 화면의 코드를 입력합니다. 30분 동안 한 번만 쓸 수 있습니다.</string>
 </resources>

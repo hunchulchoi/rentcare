@@ -5,7 +5,7 @@
 # Portainer stack environment variables (secrets live there, copied from Infisical /postgres, /minio):
 #   DATABASE_URL          postgresql://…@postgres:5432/rentcare  (TLS required by default)
 #   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY / S3_BUCKET / AWS_ENDPOINT_URL_S3 / AWS_REGION / S3_FORCE_PATH_STYLE
-#   CAR_API_KEY / DEMO_VENDOR_TOKEN
+#   DEMO_VENDOR_TOKEN   (CAR_API_KEY is no longer used since v13 / RENTCARE-36; it may stay set, it is ignored)
 services:
   web:
     build:
@@ -15,7 +15,6 @@ services:
     restart: "no"
     environment:
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      CAR_API_KEY: ${CAR_API_KEY:?CAR_API_KEY is required}
       DEMO_VENDOR_TOKEN: ${DEMO_VENDOR_TOKEN:-}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://rentcare.devfor.link}
       S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required}

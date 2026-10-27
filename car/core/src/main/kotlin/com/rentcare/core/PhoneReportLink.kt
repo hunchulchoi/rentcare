@@ -5,14 +5,21 @@ import kotlinx.serialization.Serializable
 
 /** POST /api/rentals body (docs/api.md v11). */
 @Serializable
-data class RentalRegistration(val vendorId: String, val language: String, val demo: Boolean, val rental: RentalDto)
+data class RentalRegistration(
+    val vendorId: String,
+    val language: String,
+    val demo: Boolean,
+    val rental: RentalDto,
+    /** Vendor-issued car enrollment code (docs/api.md v13); null for the open demo registration. */
+    val enrollmentCode: String? = null,
+)
 
 @Serializable
 data class RentalRegistered(
     val rentalCode: String,
     val rentalCodeExpiresAt: String,
     val reportUrl: String,
-    /** Only for releasing at rental end (X-Rental-Token). Never shown or logged. */
+    /** The car's credential for this rental (v13): reports, map tiles, release. Never shown or logged. */
     val rentalToken: String,
 )
 
@@ -30,10 +37,11 @@ data class PhoneReportLink(
     data class Plan(val link: PhoneReportLink, val register: Boolean, val releaseToken: String?)
 
     companion object {
-        fun request(r: Rental, demo: Boolean = true) = RentalRegistration(
+        fun request(r: Rental, demo: Boolean = true, enrollmentCode: String? = null) = RentalRegistration(
             vendorId = r.vendorId,
             language = r.language,
             demo = demo,
+            enrollmentCode = enrollmentCode?.uppercase()?.filter { it.isLetterOrDigit() }?.ifEmpty { null },
             rental = RentalDto(
                 r.rentalId, r.vehiclePlate, r.vehicleModel, r.powertrain, r.returnPlace.name,
                 Instant.ofEpochMilli(r.returnAtMillis).toString(),

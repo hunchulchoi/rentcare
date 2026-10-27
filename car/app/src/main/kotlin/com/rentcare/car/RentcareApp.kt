@@ -30,6 +30,6 @@ class RentcareApp : Application() {
         navi = NaviGateway(this)
         driving = DrivingGateway(this)
         store = RentalStore(this)
-        api = ApiClient(BuildConfig.API_BASE_URL.trimEnd('/'), BuildConfig.CAR_API_KEY)
+        api = ApiClient(BuildConfig.API_BASE_URL.trimEnd('/'))
     }
 }

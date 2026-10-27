@@ -147,3 +147,15 @@ alter table incidents drop constraint if exists incidents_channel_check;
 alter table incidents add constraint incidents_channel_check check (channel in ('CAR', 'PHONE'));
 alter table incidents add column if not exists rental_ref uuid references rentals (id) on delete set null;
 create index if not exists incidents_rental_ref_idx on incidents (rental_ref);
+
+-- v9 (2026-10-27, RENTCARE-36): car enrollment codes issued on the vendor screen. The car registers the
+-- rental with one and gets its own rental token; no shared key ships in the app (docs/api.md v13).
+create table if not exists enrollment_codes (
+	code_hash text primary key, -- hex SHA-256 of the 8-char code
+	vendor_id text not null references vendors (id) on delete cascade,
+	expires_at timestamptz not null,
+	used_at timestamptz,
+	rental_ref uuid references rentals (id) on delete set null,
+	created_at timestamptz not null default now()
+);
+create index if not exists enrollment_codes_expires_idx on enrollment_codes (expires_at);

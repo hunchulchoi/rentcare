@@ -35,11 +35,11 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 ./gradlew :app:installDebug     # with the Pleos emulator running
 ```
 
-Server address and demo keys come from Gradle properties (`gradle.properties` defaults):
+Server address comes from Gradle properties (`gradle.properties` defaults). No car key ships in the app
+(docs/api.md v13): the car registers the rental and uses its own rental token.
 
 ```
 rentcare.apiBaseUrl=http://10.0.2.2:5173   # host machine as seen from the emulator
-rentcare.carApiKey=dev-car-key             # must match CAR_API_KEY on the server
 rentcare.vendorId=demo-jeju
 ```
 
@@ -52,7 +52,6 @@ The release build refuses to run unless all of these are set (Gradle `-P` or env
 | property | env | what |
 |---|---|---|
 | `rentcare.releaseApiBaseUrl` | – | `https://` domain (no IP, no localhost) |
-| `rentcare.releaseCarApiKey` | – | server `CAR_API_KEY` |
 | `rentcare.signing.storeFile` | `RENTCARE_SIGNING_STORE_FILE` | keystore path **outside the repo** |
 | `rentcare.signing.storePassword` | `RENTCARE_SIGNING_STORE_PASSWORD` | |
 | `rentcare.signing.keyAlias` | `RENTCARE_SIGNING_KEY_ALIAS` | |

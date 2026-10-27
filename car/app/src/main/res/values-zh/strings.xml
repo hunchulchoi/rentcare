@@ -255,4 +255,7 @@
     <string name="navi_waiting">正在等待导航响应…</string>
     <string name="reading_car">正在读取车辆数据…</string>
     <string name="status_checking">正在查询状态…</string>
+    <string name="enrollment_title">公司登记代码</string>
+    <string name="enrollment_code">代码</string>
+    <string name="enrollment_note">交车时由公司员工输入公司页面上的代码。30分钟内仅可使用一次。</string>
 </resources>

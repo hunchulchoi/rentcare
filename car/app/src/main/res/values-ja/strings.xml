@@ -255,4 +255,7 @@
     <string name="navi_waiting">ナビの応答を待っています…</string>
     <string name="reading_car">車両の値を読み取り中…</string>
     <string name="status_checking">状態を確認中…</string>
+    <string name="enrollment_title">会社の登録コード</string>
+    <string name="enrollment_code">コード</string>
+    <string name="enrollment_note">車の引き渡し時に、会社のスタッフが会社画面のコードを入力します。30分間、1回だけ使えます。</string>
 </resources>

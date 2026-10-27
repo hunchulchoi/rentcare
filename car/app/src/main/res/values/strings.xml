@@ -255,4 +255,7 @@
     <string name="navi_waiting">Waiting for the navigation…</string>
     <string name="reading_car">Reading the car…</string>
     <string name="status_checking">Checking status…</string>
+    <string name="enrollment_title">Vendor enrollment code</string>
+    <string name="enrollment_code">Code</string>
+    <string name="enrollment_note">Rental company staff enter the code from their screen when handing over the car. Valid 30 minutes, once.</string>
 </resources>

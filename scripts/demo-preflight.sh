@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.."
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
 VC=scripts/vconsole.sh
 PUB=$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)
-car=$(grep ^CAR_API_KEY web/.env | cut -d= -f2); tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
+tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
 pass=0; fail=0
 ok()  { echo "  PASS $1"; pass=$((pass+1)); }
 bad() { echo "  FAIL $1"; echo "       → $2"; fail=$((fail+1)); }
@@ -19,8 +19,9 @@ echo "== server $PUB"
 t0=$(date +%s); h=$(curl -s -m 90 "$PUB/api/health"); dt=$(( $(date +%s) - t0 ))
 [[ "$h" == *'"ok":true'* ]] && ok "server and database ready (${dt}s, includes wake-up)" \
   || bad "server/database not ready: $(echo "${h:-no answer}" | tr -d "\n\t" | cut -c1-80)" "Portainer 스택 rentcare 상태, Postgres(stage) 확인. docs/demo.md 복구 1"
-st=$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X POST "$PUB/api/incidents" -H "Authorization: Bearer $car" -H 'Content-Type: application/json' -H "Idempotency-Key: $(uuidgen | tr A-Z a-z)" -d '{}')
-[[ "$st" == 400 ]] && ok "car API key accepted (empty body → 400)" || bad "car API key: HTTP $st" "앱 빌드의 CAR_API_KEY와 서버 스택 환경변수가 같은지 확인"
+# v13: the car registers the demo rental itself (no shared key); a token back means the car API works.
+scripts/car-token.sh "$PUB" PREFLIGHT >/dev/null 2>&1 && ok "car demo registration returns a rental token" \
+  || bad "car demo registration failed" "서버가 v13(RENTCARE-36) 이상인지, /api/rentals 응답 확인"
 jar=$(mktemp); curl -s -c "$jar" -o /dev/null -X POST "$PUB/vendor/login" -H "Origin: $PUB" --data-urlencode "token=$tok" --data-urlencode "name=preflight"
 v=$(curl -s -b "$jar" -o /dev/null -w '%{http_code}' "$PUB/vendor"); rm -f "$jar"
 [[ "$v" == 200 ]] && ok "vendor login (demo token)" || bad "vendor login: HTTP $v" "DEMO_VENDOR_TOKEN 확인 (web/.env, Portainer)"
