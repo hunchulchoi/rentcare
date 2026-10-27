@@ -11,6 +11,9 @@
    `cd car && ./gradlew :app:assembleDebug -Prentcare.apiBaseUrl=<LOCAL_BASE_URL>` → 파일을 `demo-out/`에 복사.
 4. 휴대폰: QR 읽기 확인, 화면 밝기 최대, 업체 화면을 띄울 노트북 브라우저에 `/vendor` 로그인.
 
+5. **배포 서버에 `scripts/car-auth-check.sh`를 돌리지 않는다.** 일부러 401·409를 많이 내서 CrowdSec이
+   이 PC의 IP를 막는다(2026-10-27, devfor.link 전체 403). 에뮬레이터도 같은 IP라 앱 등록이 막힌다.
+
 ## 시작 15분 전
 
 ```bash

@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Car credentials without a shared key (RENTCARE-36, docs/api.md v13), no emulator needed.
-#   scripts/car-auth-check.sh                     # against PUBLIC_BASE_URL (or RENTCARE_BASE_URL)
+#   scripts/car-auth-check.sh                     # against LOCAL_BASE_URL (or RENTCARE_BASE_URL)
+# It sends many deliberate 401/409s. Against the deployed server that got this machine's IP banned by
+# CrowdSec (2026-10-27, every devfor.link host 403); run it there at most once, never right before a demo.
 set -uo pipefail
 cd "$(dirname "$0")/.."
-B=${RENTCARE_BASE_URL:-$(grep -E "^PUBLIC_BASE_URL=" web/.env | cut -d= -f2-)}
+B=${RENTCARE_BASE_URL:-$(grep -E "^LOCAL_BASE_URL=" web/.env | cut -d= -f2-)}
 tok=$(grep ^DEMO_VENDOR_TOKEN web/.env | cut -d= -f2)
 pass=0; fail=0; ok(){ echo "  PASS $1"; pass=$((pass+1)); }; bad(){ echo "  FAIL $1"; fail=$((fail+1)); }
 d=$(mktemp -d); trap 'rm -rf "$d"' EXIT
