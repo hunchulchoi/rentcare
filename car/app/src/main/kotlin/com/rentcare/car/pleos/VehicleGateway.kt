@@ -25,7 +25,8 @@ import kotlin.coroutines.resumeWithException
  * Every read can fail per car model / permission; callers must handle exceptions.
  */
 class VehicleGateway(context: Context) {
-    private val vehicle = Vehicle(context.applicationContext)
+    /** Shared with [PrivateSignals] (debug source set only). */
+    internal val vehicle = Vehicle(context.applicationContext)
     @Volatile private var started = false
 
     fun start() {
@@ -85,15 +86,8 @@ class VehicleGateway(context: Context) {
         vehicle.getTire().getLowTirePressure(WheelArea(wheel), ok, fail)
     }
 
-    /** Current tire pressure for one wheel (unit per SDK; kPa on the emulator console). */
-    suspend fun tirePressure(wheel: WheelValue): Float? = call { ok, fail ->
-        vehicle.getTire().getTirePressure(WheelArea(wheel), ok, fail)
-    }
-
-    /** Wheels that report a current pressure (empty = not supported). */
-    suspend fun tirePressureWheels(): List<WheelValue> = call<List<WheelValue>> { ok, fail ->
-        vehicle.getTire().checkTirePressureCapabilities({ _, areas -> ok(areas.flatMap { it.values.toList() }.distinct()) }, fail)
-    }
+    // Per-wheel pressure and the capability list need PRIVATE_* permissions: see PrivateSignals
+    // (debug source set). Release builds never reference those SDK calls (RENTCARE-39).
 
     /** Wheels that report a low-pressure threshold. */
     suspend fun lowTirePressureWheels(): List<WheelValue> = call<List<WheelValue>> { ok, fail ->
@@ -109,10 +103,6 @@ class VehicleGateway(context: Context) {
                     .map { ActiveTelltale(it.type, it.state, it.warningCount) },
             )
         }, fail)
-    }
-
-    suspend fun capabilityKeys(): List<String> = call<List<String>> { ok, fail ->
-        vehicle.getCarInfo().getCapabilityInfo({ ok(it?.keys?.sorted().orEmpty()) }, fail)
     }
 
     // ---- Subscriptions ----
@@ -149,7 +139,7 @@ class VehicleGateway(context: Context) {
      * The SDK binds to the vehicle service asynchronously after initialize().
      * A call right after start may fail; retry a couple of times before reporting.
      */
-    private suspend fun <T> call(
+    internal suspend fun <T> call(
         attempts: Int = 3,
         block: (ok: (T) -> Unit, fail: (Exception) -> Unit) -> Unit,
     ): T {

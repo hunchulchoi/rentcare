@@ -7,7 +7,7 @@
     <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />  <!-- Fuel, EvBattery -->
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />   <!-- Odometer (range) -->
     <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />  <!-- Tire, Safety (telltales) -->
-    <uses-permission android:name="pleos.car.permission.CAR_INFO" />    <!-- CarInfo capabilities -->
+    <uses-permission android:name="pleos.car.permission.CAR_INFO" />    <!-- EvBattery.getEvBatteryCapacity -->
 
     <!-- Pleos NaviHelper -->
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />        <!-- get*Info, requestTrip -->

@@ -527,7 +527,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 TireCheck.Wheel.FL to WheelValue.LEFT_FRONT, TireCheck.Wheel.FR to WheelValue.RIGHT_FRONT,
                 TireCheck.Wheel.RL to WheelValue.LEFT_REAR, TireCheck.Wheel.RR to WheelValue.RIGHT_REAR,
             )
-            val pressures = wheels.mapNotNull { (w, v) -> runCatching { deps.vehicle.tirePressure(v) }.getOrNull()?.let { w to it } }.toMap()
+            // Per-wheel pressure needs PRIVATE_CAR_SAFETY: debug builds only (RENTCARE-39).
+            val ps = deps.privateSignals
+            val pressures = if (!ps.available) emptyMap()
+            else wheels.mapNotNull { (w, v) -> runCatching { ps.tirePressure(v) }.getOrNull()?.let { w to it } }.toMap()
             val thresholds = wheels.mapNotNull { (w, v) -> runCatching { deps.vehicle.lowTirePressure(v) }.getOrNull()?.let { w to it } }.toMap()
             if (!work.isCurrent(token)) return@launch
             _telltales.value = list
@@ -731,8 +734,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             probe("EvBattery.getEvBatteryCapacity (Wh)") { v.evBatteryCapacity().toString() }
             probe("Odometer.getRangeRemainingDistance (unit?)") { v.rangeRemaining().toString() }
             probe("Gear.getCurrentGearSelectionState") { v.gear() }
-            probe("Tire.checkTirePressureCapabilities (wheels)") { v.tirePressureWheels().joinToString().ifEmpty { "(none)" } }
-            probe("Tire.getTirePressure (LEFT_FRONT)") { v.tirePressure(WheelValue.LEFT_FRONT).toString() }
+            probe("Tire.checkTirePressureCapabilities (wheels)") { deps.privateSignals.tirePressureWheels().joinToString().ifEmpty { "(none)" } }
+            probe("Tire.getTirePressure (LEFT_FRONT)") { deps.privateSignals.tirePressure(WheelValue.LEFT_FRONT).toString() }
             probe("Tire.checkLowTirePressureCapabilities (wheels)") { v.lowTirePressureWheels().joinToString().ifEmpty { "(none)" } }
             for (w in listOf(WheelValue.LEFT_FRONT, WheelValue.RIGHT_FRONT, WheelValue.LEFT_REAR, WheelValue.RIGHT_REAR)) {
                 probe("Tire.getLowTirePressure ($w)") { v.lowTirePressure(w).toString() }
@@ -740,7 +743,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             probe("Safety.getTelltalesInfo (ON/BLINK)") {
                 v.activeTelltales().joinToString { "${it.type}:${it.state}" }.ifEmpty { "(none on)" }
             }
-            probe("CarInfo.getCapabilityInfo (keys)") { v.capabilityKeys().joinToString().ifEmpty { "(empty)" } }
+            probe("CarInfo.getCapabilityInfo (keys)") { deps.privateSignals.capabilityKeys().joinToString().ifEmpty { "(empty)" } }
             val n = deps.navi
             probe("NaviHelper.initialize") {
                 n.start()
