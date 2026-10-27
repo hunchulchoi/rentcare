@@ -135,8 +135,10 @@ class NaviGateway(context: Context) {
      */
     suspend fun openScreen(request: NavigationScreenRequest): Boolean {
         if (!awaitConnected(5_000)) return false
-        navi.requestNavigationScreen(request)
-        return true
+        // Permission denied or navi service gone: report "unavailable" instead of crashing.
+        return runCatching { navi.requestNavigationScreen(request) }
+            .onFailure { android.util.Log.w("RentcareNavi", "requestNavigationScreen failed: ${it.javaClass.simpleName}") }
+            .isSuccess
     }
 
     /** Waypoints currently set in the car navigation (what the user added there). */
