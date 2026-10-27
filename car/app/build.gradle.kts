@@ -127,11 +127,14 @@ val checkReleaseConfig by tasks.registering {
 tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(checkReleaseConfig) }
 
 // Contest naming: <team>_<app>_release.apk (RENTCARE-30). Set rentcare.team, default "team".
+// Without a signing key (-Prentcare.allowUnsigned=true) the file is named *-unsigned.apk so it is never
+// mistaken for the submission file (RENTCARE-37). Audit the file you send: scripts/release-check.sh <apk>.
+val releaseSigned = (findProperty("rentcare.signing.storeFile") ?: System.getenv("RENTCARE_SIGNING_STORE_FILE")) != null
 androidComponents {
     onVariants(selector().withBuildType("release")) { variant ->
         variant.outputs.forEach { out ->
             (out as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(
-                "${prop("rentcare.team", "team")}_RentCare_release.apk",
+                "${prop("rentcare.team", "team")}_RentCare_release${if (releaseSigned) "" else "-unsigned"}.apk",
             )
         }
     }

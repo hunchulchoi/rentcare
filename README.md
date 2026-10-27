@@ -56,6 +56,8 @@ cd car && export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 release 빌드는 HTTPS 도메인과 서명 키가 있어야 만들어진다 (`car/app/build.gradle.kts`의 `checkReleaseConfig`).
 서명 키는 저장소 밖에 두고 Gradle 속성이나 환경변수(`RENTCARE_SIGNING_*`)로 넘긴다.
+서명 키 없이(`-Prentcare.allowUnsigned=true`) 만든 파일은 `*_release-unsigned.apk`로 이름이 달라 제출 파일과 섞이지 않는다.
+제출할 파일은 `scripts/release-check.sh <apk>`로 서명(v2/v3, debug 키 아님)·debuggable·PRIVATE 권한·HTTPS 서버를 확인한다.
 
 ## 시험
 
