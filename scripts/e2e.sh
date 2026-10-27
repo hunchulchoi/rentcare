@@ -61,11 +61,21 @@ $VC soc 60 >/dev/null
 echo "== S3 driving lock"
 $UI tap "고장·사고 접수"; sleep 4
 $VC gear Drive >/dev/null
-curl -s -X POST -m 5 "http://127.0.0.1:8088/vehicle/controls?speed_kph=40&accelerator_pct=30&brake_pct=0" >/dev/null
+$VC speed 40 >/dev/null
 wait_for "S3 inputs locked while driving" "주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119." 10
-curl -s -X POST -m 5 "http://127.0.0.1:8088/vehicle/controls?speed_kph=0&accelerator_pct=0&brake_pct=50" >/dev/null
+$VC speed 0 >/dev/null
 $VC gear Park >/dev/null; sleep 3
 if $UI has "주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119."; then bad "S3 unlock in Park"; else ok "S3 unlock in Park"; fi
+# RENTCARE-35: rental and return-preparation inputs are locked too, not only the report form.
+# The platform covers the app while in D (2026-10-27), so open each screen in Park, then shift; the
+# uiautomator tree still shows our screen under the system cover.
+for tab in "대여 정보" "반납 준비"; do
+  $UI tap "$tab"; sleep 2
+  $VC gear Drive >/dev/null
+  wait_for "S3 $tab locked in Drive" "주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119." 10
+  $VC gear Park >/dev/null; sleep 3
+  if $UI has "주행 중에는 입력이 잠깁니다. 안전하게 정차하세요. 긴급 시 112·119."; then bad "S3 $tab unlock in Park"; else ok "S3 $tab unlock in Park"; fi
+done
 
 echo "== S4 warning light -> report -> vendor"
 node scripts/browser-login-check.mjs "$B" --list-check >/dev/null && ok "S4 browser: vendor login (Origin/CSRF) + list search/filter/sort" || bad "S4 browser login (CSRF?)"

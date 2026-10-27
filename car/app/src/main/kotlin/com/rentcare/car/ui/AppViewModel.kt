@@ -255,7 +255,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- Rental ----
 
+    /** RENTCARE-35: detailed input, saves and contract edits only while parked (UI is disabled too). */
+    private val parked get() = inputGate.value == InputGate.Decision.ALLOWED
+
     fun saveRental(r: Rental) {
+        if (!parked) return
         deps.store.saveRental(r)
         _rental.value = r
         refreshReturn()
@@ -268,6 +272,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Rental ended: wipe rental data, reports, codes. Vehicle state is not ours to reset. */
     fun endRental() {
+        if (!parked) return
         // Tell the server first (best effort, 5 s): the attach code and car token stop working.
         // Offline is fine: local data is wiped anyway and the code expires on its own (24 h).
         _report.value.received?.let { rec ->
@@ -291,13 +296,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Return preparation ----
 
     fun updateInputs(f: (ReturnInputs) -> ReturnInputs) {
+        if (!parked) return
         _inputs.update(f)
         recompute()
     }
 
     /** Debug only: set or clear the simulated demo fuel level, then re-read. */
     fun setDemoFuel(percent: Int?) {
-        if (!BuildConfig.DEBUG) return
+        if (!BuildConfig.DEBUG || !parked) return
         _inputs.update { it.copy(demoFuelPercent = percent?.coerceIn(0, 100)) }
         refreshReturn()
     }

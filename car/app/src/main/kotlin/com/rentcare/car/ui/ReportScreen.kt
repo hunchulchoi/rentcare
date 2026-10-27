@@ -70,12 +70,7 @@ fun ReportScreen(vm: AppViewModel, modifier: Modifier, onSent: () -> Unit) {
         Text(stringResource(R.string.parked_notice), style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.emergency_contact, r.vendorName, r.vendorPhone), fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.not_insurance), style = MaterialTheme.typography.bodySmall)
-        if (!allowed) {
-            Text(
-                stringResource(if (gate == InputGate.Decision.BLOCKED_DRIVING) R.string.blocked_driving else R.string.blocked_not_parked),
-                color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold,
-            )
-        }
+        InputLockNotice(gate)
 
         ui.pending?.let { p ->
             PendingPanel(p, ui.send, vm)

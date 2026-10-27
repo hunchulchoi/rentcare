@@ -70,8 +70,11 @@ scripts/e2e.sh                  # wipes app data on the emulator, 57 checks, aga
 - Telltales and capability list need `PRIVATE_CAR_SAFETY` / `PRIVATE_CAR_INFO` → declared in the
   **debug manifest only** until Pleos confirms third-party use (RENTCARE-26). Never add them to release.
 - Navi results arrive as listener events; subscribe before sending the request.
-- The emulator does **not** block a non-DO app while driving (Requires DO = true, app stays resumed).
-  Detailed input is gated by `InputGate` (CarUxRestrictions + gear). Test with `scripts/vconsole.sh gear Drive`.
+- Driving block (re-checked 2026-10-27): in D (idling or moving) the platform covers our non-DO app with
+  "주행 중에는 사용할 수 없습니다" and taps hit the cover; the 2026-10-22 note that it is not blocked is outdated.
+  The app still gates detailed input itself (`InputGate`, all screens, RENTCARE-35) because the policy is regional.
+  uiautomator still reads our screen under the cover: open the screen in Park, then `scripts/vconsole.sh gear Drive`
+  (`vconsole.sh speed 40` for moving; the console drops writes 3 s after its session call).
 
 - Emulator crashes on macOS 27 in the host Metal driver (qemu EXC_BAD_ACCESS / MTLReportFailure,
   2026-10-22/23). AVD set to `hw.gpu.mode=swiftshader_indirect` (backup `config.ini.bak-2026-10-23`); if it still

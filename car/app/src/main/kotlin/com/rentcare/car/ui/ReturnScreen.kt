@@ -33,6 +33,8 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
     val ui by vm.ret.collectAsStateWithLifecycle()
     val inputs by vm.inputs.collectAsStateWithLifecycle()
     val telltales by vm.telltales.collectAsStateWithLifecycle()
+    val gate by vm.inputGate.collectAsStateWithLifecycle()
+    val allowed = gate == com.rentcare.core.InputGate.Decision.ALLOWED
     val r = rental ?: return Column(modifier) { NoRental() }
 
     LaunchedEffect(r.rentalId) { vm.refreshReturn() }
@@ -43,6 +45,7 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
             OutlinedButton(onClick = vm::refreshReturn, enabled = !ui.loading) { Text(stringResource(R.string.refresh)) }
             if (ui.loading) Busy(stringResource(R.string.reading_car))
         }
+        InputLockNotice(gate)
 
         val a = ui.assessment
         if (a != null) {
@@ -103,35 +106,35 @@ fun ReturnScreen(vm: AppViewModel, modifier: Modifier) {
             }
         }
 
-        if (r.powertrain == Powertrain.EV) ChargerInputs(inputs.charger) { c -> vm.updateInputs { it.copy(charger = c) } }
-        else GasolineInputs(inputs.gasolineModel, inputs.fuelWonPerLiter) { m, p -> vm.updateInputs { it.copy(gasolineModel = m, fuelWonPerLiter = p) } }
-        if (BuildConfig.DEBUG && r.powertrain == Powertrain.GASOLINE) DemoFuelInputs(inputs.demoFuelPercent, vm::setDemoFuel)
+        if (r.powertrain == Powertrain.EV) ChargerInputs(inputs.charger, allowed) { c -> vm.updateInputs { it.copy(charger = c) } }
+        else GasolineInputs(inputs.gasolineModel, inputs.fuelWonPerLiter, allowed) { m, p -> vm.updateInputs { it.copy(gasolineModel = m, fuelWonPerLiter = p) } }
+        if (BuildConfig.DEBUG && r.powertrain == Powertrain.GASOLINE) DemoFuelInputs(inputs.demoFuelPercent, allowed, vm::setDemoFuel)
     }
 }
 
 /** Debug build only: the emulator has no fuel API, so the gasoline demo uses a labelled simulated value. */
 @Composable
-private fun DemoFuelInputs(current: Int?, onApply: (Int?) -> Unit) {
+private fun DemoFuelInputs(current: Int?, allowed: Boolean, onApply: (Int?) -> Unit) {
     Section(stringResource(R.string.demo_fuel_title)) {
         Text(stringResource(R.string.demo_fuel_note), style = MaterialTheme.typography.bodySmall)
         WrapRow {
             listOf(30, 60, 95).forEach { p ->
-                FilterChip(current == p, { onApply(p) }, { Text(stringResource(R.string.demo_fuel_value, p)) })
+                FilterChip(current == p, { onApply(p) }, { Text(stringResource(R.string.demo_fuel_value, p)) }, enabled = allowed)
             }
-            FilterChip(current == null, { onApply(null) }, { Text(stringResource(R.string.demo_fuel_clear)) })
+            FilterChip(current == null, { onApply(null) }, { Text(stringResource(R.string.demo_fuel_clear)) }, enabled = allowed)
         }
     }
 }
 
 @Composable
-private fun ChargerInputs(current: ChargeOption?, onApply: (ChargeOption?) -> Unit) {
+private fun ChargerInputs(current: ChargeOption?, allowed: Boolean, onApply: (ChargeOption?) -> Unit) {
     var kw by remember { mutableStateOf(current?.chargerKw?.toString().orEmpty()) }
     var price by remember { mutableStateOf(current?.wonPerKwh?.toString().orEmpty()) }
     Section(stringResource(R.string.charger_title)) {
         WrapRow {
-            Field(stringResource(R.string.charger_kw), kw, { kw = it }, number = true)
-            Field(stringResource(R.string.charger_price), price, { price = it }, number = true)
-            Button(onClick = { onApply(kw.toDoubleOrNull()?.let { ChargeOption(it, price.toIntOrNull()) }) }) {
+            Field(stringResource(R.string.charger_kw), kw, { kw = it }, number = true, enabled = allowed)
+            Field(stringResource(R.string.charger_price), price, { price = it }, number = true, enabled = allowed)
+            Button(enabled = allowed, onClick = { onApply(kw.toDoubleOrNull()?.let { ChargeOption(it, price.toIntOrNull()) }) }) {
                 Text(stringResource(R.string.apply))
             }
         }
@@ -139,17 +142,17 @@ private fun ChargerInputs(current: ChargeOption?, onApply: (ChargeOption?) -> Un
 }
 
 @Composable
-private fun GasolineInputs(model: GasolineModel?, price: Int?, onApply: (GasolineModel?, Int?) -> Unit) {
+private fun GasolineInputs(model: GasolineModel?, price: Int?, allowed: Boolean, onApply: (GasolineModel?, Int?) -> Unit) {
     var tank by remember { mutableStateOf(model?.tankLiters?.toString().orEmpty()) }
     var kmpl by remember { mutableStateOf(model?.kmPerLiter?.toString().orEmpty()) }
     var won by remember { mutableStateOf(price?.toString().orEmpty()) }
     Section(stringResource(R.string.model_title)) {
         Text(stringResource(R.string.model_note), style = MaterialTheme.typography.bodySmall)
         WrapRow {
-            Field(stringResource(R.string.tank_liters), tank, { tank = it }, number = true)
-            Field(stringResource(R.string.km_per_liter), kmpl, { kmpl = it }, number = true)
-            Field(stringResource(R.string.fuel_price), won, { won = it }, number = true)
-            Button(onClick = {
+            Field(stringResource(R.string.tank_liters), tank, { tank = it }, number = true, enabled = allowed)
+            Field(stringResource(R.string.km_per_liter), kmpl, { kmpl = it }, number = true, enabled = allowed)
+            Field(stringResource(R.string.fuel_price), won, { won = it }, number = true, enabled = allowed)
+            Button(enabled = allowed, onClick = {
                 val t = tank.toDoubleOrNull()
                 val k = kmpl.toDoubleOrNull()
                 onApply(if (t != null && k != null && t > 0 && k > 0) GasolineModel(t, k) else null, won.toIntOrNull())
@@ -164,6 +167,8 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
     val ui by vm.ret.collectAsStateWithLifecycle()
     val inputs by vm.inputs.collectAsStateWithLifecycle()
     val r = rental ?: return Column(modifier) { NoRental() }
+    val gate by vm.inputGate.collectAsStateWithLifecycle()
+    val allowed = gate == com.rentcare.core.InputGate.Decision.ALLOWED
     var name by remember { mutableStateOf("") }
     var lat by remember { mutableStateOf("") }
     var lon by remember { mutableStateOf("") }
@@ -193,7 +198,7 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
             inputs.stations.forEachIndexed { i, s ->
                 WrapRow {
                     Text("${i + 1}. ${s.name} (${s.latitude}, ${s.longitude})")
-                    OutlinedButton(onClick = { vm.updateInputs { it.copy(stations = it.stations - s) } }) {
+                    OutlinedButton(onClick = { vm.updateInputs { it.copy(stations = it.stations - s) } }, enabled = allowed) {
                         Text(stringResource(R.string.remove))
                     }
                 }
@@ -215,7 +220,7 @@ fun RouteScreen(vm: AppViewModel, modifier: Modifier) {
                 )
             }
             // Typing coordinates is for development only; renters pick stops in the car navigation.
-            if (BuildConfig.DEBUG && inputs.stations.size < 2) {
+            if (BuildConfig.DEBUG && allowed && inputs.stations.size < 2) {
                 WrapRow {
                     Field(stringResource(R.string.station_name), name, { name = it })
                     Field(stringResource(R.string.return_lat), lat, { lat = it }, number = true)

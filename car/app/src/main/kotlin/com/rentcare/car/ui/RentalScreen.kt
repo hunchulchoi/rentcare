@@ -126,6 +126,8 @@ private data class RentalForm(
 @Composable
 fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
     val rental by vm.rental.collectAsStateWithLifecycle()
+    val gate by vm.inputGate.collectAsStateWithLifecycle()
+    val allowed = gate == com.rentcare.core.InputGate.Decision.ALLOWED
     var form by remember(rental) { mutableStateOf(rental?.let(RentalForm::from) ?: RentalForm()) }
     var invalid by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
@@ -135,7 +137,9 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
     Column(modifier.verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.rental_title), style = MaterialTheme.typography.headlineSmall)
 
+        // The phone code stays visible (read only); everything below is input and waits for Park.
         if (rental != null) PhoneLinkCard(vm, rental!!.language)
+        InputLockNotice(gate)
 
         WrapRow {
             Text(stringResource(R.string.lang_label))
@@ -150,32 +154,33 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
                         if (rental != null) vm.setLanguage(code)
                     },
                     label = { Text(label) },
+                    enabled = allowed,
                 )
             }
         }
 
         WrapRow {
-            OutlinedButton(onClick = { form = RentalForm.demo(ev = true).copy(language = form.language) }) {
+            OutlinedButton(onClick = { form = RentalForm.demo(ev = true).copy(language = form.language) }, enabled = allowed) {
                 Text(stringResource(R.string.demo_ev))
             }
-            OutlinedButton(onClick = { form = RentalForm.demo(ev = false).copy(language = form.language) }) {
+            OutlinedButton(onClick = { form = RentalForm.demo(ev = false).copy(language = form.language) }, enabled = allowed) {
                 Text(stringResource(R.string.demo_gas))
             }
         }
 
         Section(stringResource(R.string.section_vehicle)) {
             WrapRow {
-                Field(stringResource(R.string.rental_id), form.rentalId, { form = form.copy(rentalId = it) }, Modifier.weight(1f))
-                Field(stringResource(R.string.plate), form.plate, { form = form.copy(plate = it) }, Modifier.weight(1f))
-                Field(stringResource(R.string.model), form.model, { form = form.copy(model = it) }, Modifier.weight(1f))
+                Field(stringResource(R.string.rental_id), form.rentalId, { form = form.copy(rentalId = it) }, Modifier.weight(1f), enabled = allowed)
+                Field(stringResource(R.string.plate), form.plate, { form = form.copy(plate = it) }, Modifier.weight(1f), enabled = allowed)
+                Field(stringResource(R.string.model), form.model, { form = form.copy(model = it) }, Modifier.weight(1f), enabled = allowed)
             }
             WrapRow {
                 FilterChip(form.powertrain == Powertrain.EV, {
                     form = form.copy(powertrain = Powertrain.EV, rule = RuleKind.EV_SAME)
-                }, { Text(stringResource(R.string.powertrain_ev)) })
+                }, { Text(stringResource(R.string.powertrain_ev)) }, enabled = allowed)
                 FilterChip(form.powertrain == Powertrain.GASOLINE, {
                     form = form.copy(powertrain = Powertrain.GASOLINE, rule = RuleKind.FUEL_TARGET)
-                }, { Text(stringResource(R.string.powertrain_gasoline)) })
+                }, { Text(stringResource(R.string.powertrain_gasoline)) }, enabled = allowed)
             }
         }
 
@@ -187,13 +192,13 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
             }
             WrapRow {
                 kinds.forEach { (k, label) ->
-                    FilterChip(form.rule == k, { form = form.copy(rule = k) }, { Text(stringResource(label)) })
+                    FilterChip(form.rule == k, { form = form.copy(rule = k) }, { Text(stringResource(label)) }, enabled = allowed)
                 }
             }
             if (form.rule != RuleKind.EV_WAIVED) {
                 WrapRow {
-                    Field(stringResource(R.string.target_percent), form.percent, { form = form.copy(percent = it) }, Modifier.weight(1f), number = true)
-                    Field(stringResource(R.string.settlement_rate), form.settlement, { form = form.copy(settlement = it) }, Modifier.weight(1f), number = true)
+                    Field(stringResource(R.string.target_percent), form.percent, { form = form.copy(percent = it) }, Modifier.weight(1f), number = true, enabled = allowed)
+                    Field(stringResource(R.string.settlement_rate), form.settlement, { form = form.copy(settlement = it) }, Modifier.weight(1f), number = true, enabled = allowed)
                 }
                 Text(stringResource(R.string.settlement_hint), style = MaterialTheme.typography.bodySmall)
             }
@@ -201,24 +206,24 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
 
         Section(stringResource(R.string.section_return)) {
             WrapRow {
-                Field(stringResource(R.string.return_place), form.placeName, { form = form.copy(placeName = it) }, Modifier.weight(2f))
-                Field(stringResource(R.string.return_lat), form.lat, { form = form.copy(lat = it) }, Modifier.weight(1f), number = true)
-                Field(stringResource(R.string.return_lon), form.lon, { form = form.copy(lon = it) }, Modifier.weight(1f), number = true)
+                Field(stringResource(R.string.return_place), form.placeName, { form = form.copy(placeName = it) }, Modifier.weight(2f), enabled = allowed)
+                Field(stringResource(R.string.return_lat), form.lat, { form = form.copy(lat = it) }, Modifier.weight(1f), number = true, enabled = allowed)
+                Field(stringResource(R.string.return_lon), form.lon, { form = form.copy(lon = it) }, Modifier.weight(1f), number = true, enabled = allowed)
             }
             WrapRow {
-                Field(stringResource(R.string.return_at), form.returnAt, { form = form.copy(returnAt = it) }, Modifier.weight(1f))
-                Field(stringResource(R.string.buffer_minutes), form.buffer, { form = form.copy(buffer = it) }, Modifier.weight(1f), number = true)
+                Field(stringResource(R.string.return_at), form.returnAt, { form = form.copy(returnAt = it) }, Modifier.weight(1f), enabled = allowed)
+                Field(stringResource(R.string.buffer_minutes), form.buffer, { form = form.copy(buffer = it) }, Modifier.weight(1f), number = true, enabled = allowed)
             }
             WrapRow {
-                Field(stringResource(R.string.vendor_name), form.vendorName, { form = form.copy(vendorName = it) }, Modifier.weight(1f))
-                Field(stringResource(R.string.vendor_phone), form.vendorPhone, { form = form.copy(vendorPhone = it) }, Modifier.weight(1f))
+                Field(stringResource(R.string.vendor_name), form.vendorName, { form = form.copy(vendorName = it) }, Modifier.weight(1f), enabled = allowed)
+                Field(stringResource(R.string.vendor_phone), form.vendorPhone, { form = form.copy(vendorPhone = it) }, Modifier.weight(1f), enabled = allowed)
             }
         }
 
         if (invalid) Text(stringResource(R.string.rental_invalid), color = MaterialTheme.colorScheme.error)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = {
+            Button(enabled = allowed, onClick = {
                 val r = form.toRental()
                 invalid = r == null
                 if (r != null) {
@@ -229,7 +234,7 @@ fun RentalScreen(vm: AppViewModel, modifier: Modifier, onSaved: () -> Unit) {
                 }
             }) { Text(stringResource(R.string.save)) }
             if (rental != null) {
-                OutlinedButton(onClick = { confirmEnd = true }) { Text(stringResource(R.string.end_rental)) }
+                OutlinedButton(onClick = { confirmEnd = true }, enabled = allowed) { Text(stringResource(R.string.end_rental)) }
             }
         }
     }

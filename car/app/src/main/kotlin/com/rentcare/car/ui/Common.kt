@@ -107,6 +107,16 @@ fun Busy(label: String) {
     }
 }
 
+/** RENTCARE-17/35: shown on every screen with detailed input while the car is not parked. */
+@Composable
+fun InputLockNotice(gate: com.rentcare.core.InputGate.Decision) {
+    if (gate == com.rentcare.core.InputGate.Decision.ALLOWED) return
+    Text(
+        stringResource(if (gate == com.rentcare.core.InputGate.Decision.BLOCKED_DRIVING) R.string.blocked_driving else R.string.blocked_not_parked),
+        color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold,
+    )
+}
+
 @Composable
 fun NoRental() {
     Text(stringResource(R.string.no_rental))
