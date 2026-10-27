@@ -25,7 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,7 +80,7 @@ fun MarkersMap(
         val grid = remember(view, w, h) { MapTiles.grid(view.center.lat, view.center.lon, view.zoom, w, h) }
         grid.tiles.forEach { t ->
             key(t.zoom, t.x, t.y) {
-                val img by produceState<ImageBitmap?>(null, t.zoom, t.x, t.y) { value = vm.mapTile(t.zoom, t.x, t.y) }
+                val img = rememberTile(vm, t.zoom, t.x, t.y)
                 img?.let {
                     Image(it, contentDescription = null, modifier = Modifier.offset(t.left.dp, t.top.dp).size(MapTiles.TILE.dp))
                 }
@@ -102,6 +102,14 @@ fun MarkersMap(
         Text(droppedNote(km), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     }
+}
+
+/** Map tile loaded off the main thread; null until it arrives (or when offline). */
+@Composable
+private fun rememberTile(vm: AppViewModel, z: Int, x: Int, y: Int): ImageBitmap? {
+    var img by remember(z, x, y) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(z, x, y) { img = vm.mapTile(z, x, y) }
+    return img
 }
 
 /** Pin whose tip sits on (x, y), with an optional tag above it. */
@@ -151,7 +159,7 @@ fun MapPicker(vm: AppViewModel, start: MapTiles.Point, onPick: (MapTiles.Point) 
             ) {
                 grid.tiles.forEach { t ->
                     key(t.zoom, t.x, t.y) {
-                        val img by produceState<ImageBitmap?>(null, t.zoom, t.x, t.y) { value = vm.mapTile(t.zoom, t.x, t.y) }
+                        val img = rememberTile(vm, t.zoom, t.x, t.y)
                         img?.let { Image(it, contentDescription = null, modifier = Modifier.offset(t.left.dp, t.top.dp).size(MapTiles.TILE.dp)) }
                     }
                 }
