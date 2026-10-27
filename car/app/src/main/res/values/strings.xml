@@ -240,7 +240,7 @@
     <string name="not_insurance">This goes to the rental company only. It is not an insurance claim; contact the insurer separately if needed.</string>
     <!-- RENTCARE-13: phone basic report -->
     <string name="phone_link_title">Phone report code</string>
-    <string name="phone_link_intro">If this screen cannot be used (e.g. the car does not start), scan the QR with your phone and type this code to report without the car. Take a photo of it now.</string>
+    <string name="phone_link_intro">Car screen not working? Scan the QR with your phone and enter this code to report. Take a photo of it now.</string>
     <string name="phone_link_valid">Valid until %1$s</string>
     <string name="phone_link_registering">Getting the code…</string>
     <string name="phone_link_failed">Could not get the code (%1$s). The car report works without it.</string>
@@ -248,7 +248,7 @@
     <!-- Debug-only gasoline demo (emulator has no fuel API) -->
     <string name="simulated_level">Simulated value for the demo, not read from the car</string>
     <string name="demo_fuel_title">Demo: simulated fuel level (debug build)</string>
-    <string name="demo_fuel_note">This emulator does not support the fuel API. The value below is shown as simulated and is never sent to the rental company as a car reading.</string>
+    <string name="demo_fuel_note">No fuel API on this emulator. The value below is simulated and never sent to the rental company.</string>
     <string name="demo_fuel_value">Simulated %1$d %%</string>
     <string name="demo_fuel_clear">Use the car again</string>
     <string name="demo_banner">Demo: reports go to a test rental company. No real dispatch.</string>

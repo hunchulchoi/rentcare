@@ -240,7 +240,7 @@
     <string name="not_insurance">이 접수는 렌터카 업체에만 전달됩니다. 보험사 사고 접수가 아니므로 필요하면 보험사에 따로 연락하세요.</string>
     <!-- RENTCARE-13: 휴대폰 기본 접수 -->
     <string name="phone_link_title">휴대폰 접수 코드</string>
-    <string name="phone_link_intro">시동이 안 걸리는 등 이 화면을 쓸 수 없을 때, 휴대폰으로 QR을 찍고 이 코드를 입력하면 차량 없이 신고할 수 있습니다. 지금 사진으로 찍어 두세요.</string>
+    <string name="phone_link_intro">차량 화면을 쓸 수 없으면 휴대폰으로 QR을 찍고 이 코드를 입력해 신고하세요. 지금 사진으로 찍어 두세요.</string>
     <string name="phone_link_valid">%1$s까지 유효</string>
     <string name="phone_link_registering">코드 받는 중…</string>
     <string name="phone_link_failed">코드를 받지 못했습니다 (%1$s). 차량 신고는 코드 없이도 됩니다.</string>
@@ -248,7 +248,7 @@
     <!-- 디버그 전용 휘발유 시연 (에뮬레이터 연료 API 없음) -->
     <string name="simulated_level">시연용 모의 값 (차량에서 읽은 값 아님)</string>
     <string name="demo_fuel_title">시연용 모의 연료 잔량 (디버그 빌드)</string>
-    <string name="demo_fuel_note">이 에뮬레이터는 연료 잔량 API를 지원하지 않습니다. 아래 값은 모의 값으로 표시되며 업체에 차량 값으로 보내지 않습니다.</string>
+    <string name="demo_fuel_note">이 에뮬레이터에는 연료 잔량 API가 없습니다. 아래 값은 모의 값이며 업체로 보내지 않습니다.</string>
     <string name="demo_fuel_value">모의 %1$d%%</string>
     <string name="demo_fuel_clear">차량 값 다시 사용</string>
     <string name="demo_banner">시연용: 테스트 업체로 접수됩니다. 실제 출동은 없습니다.</string>

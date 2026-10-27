@@ -241,14 +241,14 @@
     <string name="map_pick_hint">車のある場所を押してください。+/− で拡大・縮小します。ご自身で入力した位置として表示されます。</string>
     <string name="not_insurance">この受付はレンタカー会社にのみ送られます。保険会社への事故報告ではないため、必要なら保険会社に別途連絡してください。</string>
     <string name="phone_link_title">スマートフォン受付コード</string>
-    <string name="phone_link_intro">エンジンがかからないなどでこの画面が使えないときは、スマートフォンでQRを読み取りこのコードを入力すると、車なしで受付できます。今、写真に撮っておいてください。</string>
+    <string name="phone_link_intro">車の画面が使えないときは、スマホでQRを読み取り、このコードを入力して受付できます。今、写真に撮っておいてください。</string>
     <string name="phone_link_valid">%1$s まで有効</string>
     <string name="phone_link_registering">コードを取得中…</string>
     <string name="phone_link_failed">コードを取得できませんでした(%1$s)。車からの受付はコードなしでもできます。</string>
     <string name="phone_link_retry">再試行</string>
     <string name="simulated_level">デモ用の模擬値(車から読んだ値ではありません)</string>
     <string name="demo_fuel_title">デモ用の模擬燃料残量(デバッグビルド)</string>
-    <string name="demo_fuel_note">このエミュレーターは燃料残量APIに対応していません。下の値は模擬値として表示され、車両の値として会社に送ることはありません。</string>
+    <string name="demo_fuel_note">このエミュレーターには燃料残量APIがありません。下の値は模擬値で、会社には送りません。</string>
     <string name="demo_fuel_value">模擬 %1$d%%</string>
     <string name="demo_fuel_clear">車の値に戻す</string>
     <string name="demo_banner">デモ用: テスト用の会社に受付されます。実際の出動はありません。</string>

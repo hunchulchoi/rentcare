@@ -241,14 +241,14 @@
     <string name="map_pick_hint">请点击车辆所在位置。用 +/− 放大或缩小。将显示为您输入的位置。</string>
     <string name="not_insurance">此报修只发送给租车公司，不是向保险公司的事故报案。如有需要，请另行联系保险公司。</string>
     <string name="phone_link_title">手机报修码</string>
-    <string name="phone_link_intro">如因无法启动等原因无法使用此屏幕，用手机扫描二维码并输入此代码，即可不用车辆报修。请现在拍照保存。</string>
+    <string name="phone_link_intro">车辆屏幕无法使用时，用手机扫描二维码并输入此代码即可报修。请现在拍照保存。</string>
     <string name="phone_link_valid">有效期至 %1$s</string>
     <string name="phone_link_registering">正在获取代码…</string>
     <string name="phone_link_failed">无法获取代码(%1$s)。没有代码也可以在车上报修。</string>
     <string name="phone_link_retry">重试</string>
     <string name="simulated_level">演示用模拟值(不是从车辆读取的值)</string>
     <string name="demo_fuel_title">演示用模拟燃油量(调试版本)</string>
-    <string name="demo_fuel_note">此模拟器不支持燃油剩余量API。下面的值以模拟值显示，不会作为车辆数值发送给公司。</string>
+    <string name="demo_fuel_note">此模拟器没有燃油剩余量API。下面的值为模拟值，不会发送给公司。</string>
     <string name="demo_fuel_value">模拟 %1$d%%</string>
     <string name="demo_fuel_clear">恢复使用车辆数值</string>
     <string name="demo_banner">演示用: 报修将发送到测试公司，不会实际出动。</string>
