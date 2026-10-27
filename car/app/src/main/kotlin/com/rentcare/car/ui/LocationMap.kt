@@ -46,9 +46,9 @@ data class MapMarker(val lat: Double, val lon: Double, val label: String?, val c
 fun LocationMap(vm: AppViewModel, lat: Double, lon: Double, height: Dp = 300.dp) =
     MarkersMap(vm, listOf(MapMarker(lat, lon, null, PinRed)), height)
 
-val PinRed = Color(0xFFE5361B)
-val PinTeal = Color(0xFF00756F)
-val PinBlue = Color(0xFF0064FF)
+val PinRed = Color(0xFF000000 or com.rentcare.core.DesignTokens.MapPins.RETURN.toLong())
+val PinTeal = Color(0xFF000000 or com.rentcare.core.DesignTokens.MapPins.STATION.toLong())
+val PinBlue = Color(0xFF000000 or com.rentcare.core.DesignTokens.MapPins.CURRENT.toLong())
 
 /**
  * Static map fitted to all markers (no pan, zoom or motion: glanceable while parked).

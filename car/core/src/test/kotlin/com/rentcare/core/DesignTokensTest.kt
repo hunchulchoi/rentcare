@@ -20,6 +20,24 @@ class DesignTokensTest {
         }
     }
 
+    @Test fun `status badges - text and check icon on a filled status color meet 4_5 to 1`() {
+        // ReportStepper draws the state word, step number and check mark on the status color.
+        for (p in listOf(DesignTokens.Day, DesignTokens.Night)) {
+            for ((name, bg) in listOf("positive" to p.positive, "info" to p.info, "progress" to p.progress, "active" to p.active)) {
+                val r = Contrast.ratio(p.onStatus, bg)
+                assertTrue(r >= 4.5, "${p.name} onStatus on $name contrast $r < 4.5")
+            }
+            assertTrue(p.textPairs().any { it.first == "onStatus on progress" }, "badge pairs are part of textPairs")
+        }
+    }
+
+    @Test fun `map pin tags - white label on each pin color meets 4_5 to 1`() {
+        for ((name, pin) in DesignTokens.MapPins.all) {
+            val r = Contrast.ratio(0xFFFFFF, pin)
+            assertTrue(r >= 4.5, "white on pin $name contrast $r < 4.5")
+        }
+    }
+
     @Test fun `type scale follows Pleos sizes and keeps body text at least 3 mm on Connect-S-17`() {
         // Connect-S-17: 2560x1440 at 17 inch, density 160 → about 6.8 px (= dp) per mm.
         val pxPerMm = 6.8

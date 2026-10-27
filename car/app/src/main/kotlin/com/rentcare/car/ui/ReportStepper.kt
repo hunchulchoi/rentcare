@@ -65,7 +65,7 @@ fun ReportStepper(items: List<ReportProgress.Item>, below: @Composable (Step) ->
                 Modifier.fillMaxWidth().height(IntrinsicSize.Min).semantics(mergeDescendants = true) { contentDescription = "$label · $stateWord" },
             ) {
                 Column(Modifier.width(48.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Marker(item.state, color, muted, n + 1)
+                    Marker(item.state, color, sc.onStatus, muted, n + 1)
                     if (!last) {
                         Box(
                             Modifier.width(4.dp).weight(1f).padding(vertical = 4.dp)
@@ -86,7 +86,7 @@ fun ReportStepper(items: List<ReportProgress.Item>, below: @Composable (Step) ->
                         )
                         if (item.state == State.CURRENT) {
                             Text(
-                                stateWord, color = Color.White, style = MaterialTheme.typography.labelMedium,
+                                stateWord, color = sc.onStatus, style = MaterialTheme.typography.labelMedium,
                                 modifier = Modifier.padding(top = 6.dp).background(color, RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 2.dp),
                             )
                         }
@@ -100,14 +100,14 @@ fun ReportStepper(items: List<ReportProgress.Item>, below: @Composable (Step) ->
 }
 
 @Composable
-private fun Marker(state: State, color: Color, muted: Color, number: Int) {
+private fun Marker(state: State, color: Color, onColor: Color, muted: Color, number: Int) {
     val m = Modifier.size(40.dp)
     when (state) {
         State.DONE -> Box(m.background(color, CircleShape), contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
+            Icon(Icons.Filled.Check, contentDescription = null, tint = onColor, modifier = Modifier.size(26.dp))
         }
         State.CURRENT -> Box(m.border(4.dp, color.copy(alpha = 0.35f), CircleShape).padding(5.dp).background(color, CircleShape), contentAlignment = Alignment.Center) {
-            Text("$number", color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text("$number", color = onColor, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         }
         State.TODO -> Box(m.border(2.dp, muted, CircleShape), contentAlignment = Alignment.Center) {
             Text("$number", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)

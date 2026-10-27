@@ -72,10 +72,16 @@ private val SoftShapes = Shapes(
 )
 
 /** Pleos informative colors for status (always paired with a text label). */
-data class StatusColors(val positive: Color, val active: Color, val negative: Color, val info: Color, val progress: Color)
+data class StatusColors(
+    val positive: Color, val active: Color, val negative: Color, val info: Color, val progress: Color,
+    /** Text/icons on a filled status color. */
+    val onStatus: Color,
+)
+
+private fun DesignTokens.Palette.status() = StatusColors(c(positive), c(active), c(error), c(info), c(progress), c(onStatus))
 
 val LocalStatusColors = staticCompositionLocalOf {
-    DesignTokens.Day.let { StatusColors(c(it.positive), c(it.active), c(it.error), c(it.info), c(it.progress)) }
+    DesignTokens.Day.status()
 }
 
 /** Icon/text color for the report state; null = default color. */
@@ -96,7 +102,7 @@ fun toneColor(tone: ReportTone): Color? {
 @Composable
 fun RentcareTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val p = if (dark) DesignTokens.Night else DesignTokens.Day
-    CompositionLocalProvider(LocalStatusColors provides StatusColors(c(p.positive), c(p.active), c(p.error), c(p.info), c(p.progress))) {
+    CompositionLocalProvider(LocalStatusColors provides p.status()) {
         MaterialTheme(
             colorScheme = p.scheme(dark),
             typography = PleosTypography,

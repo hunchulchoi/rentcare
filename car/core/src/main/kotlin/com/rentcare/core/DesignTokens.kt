@@ -45,6 +45,8 @@ object DesignTokens {
         /** Pleos regulation_orange: being handled. */
         val progress: Int,
         val outline: Int,
+        /** Text and icons drawn on a filled status color (stepper badge, check mark, step number). */
+        val onStatus: Int,
     ) {
         /** (name, foreground, background) pairs that carry text or icons. */
         fun textPairs(): List<Triple<String, Int, Int>> {
@@ -55,7 +57,9 @@ object DesignTokens {
                 "positive" to positive, "active" to active, "info" to info, "progress" to progress)
             return grounds.flatMap { (g, bg) -> texts.map { (t, fg) -> Triple("$t on $g", fg, bg) } } +
                 Triple("onPrimary on primary", onPrimary, primary) +
-                Triple("onPrimaryContainer on primaryContainer", onPrimaryContainer, primaryContainer)
+                Triple("onPrimaryContainer on primaryContainer", onPrimaryContainer, primaryContainer) +
+                listOf("positive" to positive, "info" to info, "progress" to progress, "active" to active)
+                    .map { (n, bg) -> Triple("onStatus on $n", onStatus, bg) }
         }
     }
 
@@ -77,6 +81,7 @@ object DesignTokens {
         info = 0x5A46FA, // informative_autonomous_driving
         progress = 0xA84800, // regulation_orange #FF8A00, darkened
         outline = 0xC7C9CE, // basic_300
+        onStatus = 0xFFFFFF, // status colors are dark in day
     )
 
     val Night = Palette(
@@ -97,6 +102,7 @@ object DesignTokens {
         info = 0xB0A4FF, // informative_autonomous_driving (dark) #6A57FF, lightened
         progress = 0xFFA94D, // regulation_orange (dark), lightened
         outline = 0x686A72, // basic_300 (dark)
+        onStatus = 0x131417, // status colors are light in night: dark text (white was 1.8–2.2:1)
     )
 
     /** Pleos type scale (size / line height, in sp). */
@@ -114,6 +120,14 @@ object DesignTokens {
         const val SMALLEST_SP = LABEL_MEDIUM_SP // 24 sp ≈ 3.5 mm on Connect-S-17 (Label Small 20 sp would be 2.9 mm)
         /** Key values the driver reads at a glance (verdict, receipt number, attach code). */
         const val KEY_VALUE_SP = TITLE_MEDIUM_SP
+    }
+
+    /** Map pins (same in day and night: the map tiles are light). Tags draw white text on them. */
+    object MapPins {
+        const val RETURN = 0xD8321A // red, darkened from 0xE5361B (4.3:1 with white)
+        const val STATION = 0x00756F // brand teal
+        const val CURRENT = 0x0064FF // informative_positive
+        val all = listOf("return" to RETURN, "station" to STATION, "current" to CURRENT)
     }
 
     /** Corner radii (dp). The guide gives none; RentCare uses soft rounded corners. */
